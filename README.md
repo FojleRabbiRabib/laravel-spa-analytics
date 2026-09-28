@@ -1,8 +1,10 @@
 # Laravel SPA Analytics
 
-[![Tests](https://github.com/FojleRabbiRabib/laravel-spa-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/FojleRabbiRabib/laravel-spa-analytics/actions/workflows/ci.yml)
+[![Tests](https://github.com/FojleRabbiRabib/laravel-spa-analytics/actions/workflows/run-tests.yml/badge.svg)](https://github.com/FojleRabbiRabib/laravel-spa-analytics/actions/workflows/run-tests.yml)
+[![Code Style](https://github.com/FojleRabbiRabib/laravel-spa-analytics/actions/workflows/pint.yml/badge.svg)](https://github.com/FojleRabbiRabib/laravel-spa-analytics/actions/workflows/pint.yml)
+[![Static Analysis](https://github.com/FojleRabbiRabib/laravel-spa-analytics/actions/workflows/phpstan.yml/badge.svg)](https://github.com/FojleRabbiRabib/laravel-spa-analytics/actions/workflows/phpstan.yml)
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/fojlerabbirabib/laravel-spa-analytics.svg)](https://packagist.org/packages/fojlerabbirabib/laravel-spa-analytics)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 
 A self-hosted, first-party analytics package for Laravel. The goal is feature
 parity with mainstream analytics tools (GA4, Plausible, Fathom) — real-time
@@ -85,4 +87,4 @@ See [CHANGELOG.md](CHANGELOG.md) for a history of changes.
 
 ## License
 
-The MIT License (MIT). See [LICENSE](LICENSE) for details.
+The MIT License (MIT). See [LICENSE.md](LICENSE.md) for details.

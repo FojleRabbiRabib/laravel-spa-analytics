@@ -1,0 +1,40 @@
+name: Bug report
+description: Report a bug in this package
+labels: [bug]
+body:
+  - type: input
+    id: package-version
+    attributes:
+      label: Package version
+      description: Which version of fojlerabbirabib/laravel-spa-analytics are you using?
+    validations:
+      required: true
+
+  - type: input
+    id: laravel-version
+    attributes:
+      label: Laravel version
+    validations:
+      required: true
+
+  - type: input
+    id: php-version
+    attributes:
+      label: PHP version
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened, and what did you expect to happen instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
