@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace FojleRabbiRabib\LaravelSpaAnalytics;
 
+use FojleRabbiRabib\LaravelSpaAnalytics\Events\VisitorIdentified;
 use FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware\CapturePageView;
 use FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware\ResolveVisitorIdentity;
+use FojleRabbiRabib\LaravelSpaAnalytics\Listeners\StoreVisitorFingerprint;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\BotDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\ReferrerClassifier;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -13,6 +15,7 @@ use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -60,6 +63,10 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
 
         if (config('laravel-spa-analytics.enabled') && config('laravel-spa-analytics.identity.register_middleware')) {
             $this->app->make(Kernel::class)->appendMiddlewareToGroup('web', ResolveVisitorIdentity::class);
+        }
+
+        if (config('laravel-spa-analytics.enabled')) {
+            Event::listen(VisitorIdentified::class, StoreVisitorFingerprint::class);
         }
 
         if (config('laravel-spa-analytics.enabled') && config('laravel-spa-analytics.tracking.register_middleware')) {
