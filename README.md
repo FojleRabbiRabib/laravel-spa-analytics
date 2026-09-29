@@ -65,6 +65,8 @@ All keys live in `config/spa-analytics.php`.
 | `identity.nonce_ttl_seconds` | `60` | How long a handshake nonce stays valid |
 | `identity.route_prefix` | `spa-analytics` | URL prefix of the handshake and identify endpoints |
 | `identity.rate_limit_per_minute` | `30` | Per-client limit on both endpoints |
+| `identity.relink` | `false` | Adopt a previous visitor id when a first-time fingerprint matches exactly one known visitor (see [Re-linking](#re-linking-returning-visitors)) |
+| `sessions.timeout_minutes` | `30` | Inactivity gap after which the next page view starts a new session |
 | `tracking.register_middleware` | `true` | Append the page view capture middleware to the `web` group |
 | `tracking.write_mode` | `defer` | `defer` (after the response is sent), `queue` (queued job) or `sync` |
 | `tracking.connection` / `tracking.queue` | `null` | Queue connection and queue name used by `queue` mode |
@@ -97,14 +99,40 @@ identity yourself.
   rate limiting. It is not a secret from a determined attacker.
 - **Limits:** fingerprinting is probabilistic. Two identical devices can share
   a stable hash, and a visitor whose cookie is cleared and whose volatile
-  hashes all changed will look new. Later releases will only re-link a
-  returning visitor when exactly one known visitor matches.
+  hashes all changed will look new.
 - **Storage:** each identified visitor's hashes are kept in
   `analytics_visitor_fingerprints` (one row per visitor, with first and last
-  seen). Events reference the visitor id only.
+  seen). Events and sessions reference the visitor id only.
 - **Hook:** the identify endpoint dispatches a `VisitorIdentified` event
   carrying the resolved identity and fingerprint, so your own code can react
   to it.
+
+### Re-linking returning visitors
+
+Off by default. With `identity.relink` set to `true`, a visitor who arrives
+without their cookie is recognised when their **first** fingerprint matches
+**exactly one** known visitor: the new id's events and sessions move to the
+old id, the cookie is re-issued with the old id, and `VisitorRelinked` (new and
+old id) is dispatched before `VisitorIdentified`. The identify response then
+reports `source: "relinked"`. Zero matches, several matches or more than 50
+candidates never re-link, so the package does not guess.
+
+Turn it on only if you accept the trade-off: two people with identical devices
+(for example two of the same phone model with the same browser) share a stable
+hash and often identical rendering hashes, so the second person can be merged
+into the first when their cookie is missing. Late queued writes for the
+abandoned id are routed to the adopted id through `analytics_visitor_links`.
+
+Things to know before enabling it:
+
+- **The visitor id is not a credential.** Device signals come from the client
+  and the transport is not a secret, so anyone who reproduces a device's
+  signals can be handed that visitor's id. Never tie anything private to it.
+- **Sessions are not merged.** Moved sessions keep their own rows and can
+  overlap the adopted visitor's existing sessions.
+- **Listeners must be idempotent.** A second tab that identifies with the
+  abandoned id before it receives the new cookie re-runs the re-link, so
+  `VisitorRelinked` can fire more than once for the same pair.
 
 ## Page view tracking
 
@@ -116,7 +144,7 @@ records one row per page view in `analytics_events`.
 | GET HTML document, any status | Yes |
 | Inertia visit | Yes |
 | Inertia partial reload, prefetch, redirect, non-GET, JSON or asset, excluded path | No |
-| Bot user agent | Yes, with `is_bot = true` (filter with `Event::notBots()`) |
+| Bot user agent | Yes, with `is_bot = true` (filter with `AnalyticsEvent::notBots()`) |
 | Request without a resolved visitor identity | No |
 
 Each row stores the visitor id, path (never the query string), response status,
@@ -145,6 +173,35 @@ Route::fallback(fn () => abort(404));
 - **Manual wiring:** if you set `tracking.register_middleware` to `false`,
   attach the `spa-analytics.capture` alias to your routes after
   `spa-analytics.identity`; without an identity nothing is recorded.
+
+## Sessions
+
+Every recorded page view is attached to a session in `analytics_sessions`; no
+session cookie is used. A session continues while the visitor's next page view
+arrives within `sessions.timeout_minutes` of their last one, otherwise a new
+one starts.
+
+| Field | Meaning |
+|---|---|
+| `started_at`, `last_seen_at` | First and latest page view; duration is their difference |
+| `entry_path`, `exit_path` | First and latest path |
+| `page_views` | Count; a bounce is a session with one page view (derive it at query time) |
+| `referrer_host`, `referrer_type`, `utm_*` | Taken from the session's first page view only |
+| `is_new_visitor` | The visitor had no earlier session |
+| `is_bot` | From the first page view |
+
+Session writes take a per-visitor cache lock (`Cache::lock`). In production use
+a cache store shared by all app servers, such as `redis`, `database` or
+`memcached`. `file` is only safe on a single server, and `array` keeps locks in
+one process's memory, so it protects nothing and is meant for tests.
+
+Filter with the scopes on the models:
+
+```php
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
+
+AnalyticsSession::query()->notBots()->between($from, $to)->get(); // between() uses started_at
+```
 
 ## Planned capabilities
 

@@ -83,7 +83,9 @@ return [
     |
     | A session continues while the visitor's next page view arrives within
     | timeout_minutes of their previous one; otherwise a new session starts.
-    | Session writes use cache locks, so the cache store must support them.
+    | Session writes use cache locks: in production use a cache store shared by
+    | all app servers (redis, database, memcached). The array store only locks
+    | within one process, so it is for tests.
     |
     */
 

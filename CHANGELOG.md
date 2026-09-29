@@ -19,4 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `defer`, `queue` and `sync` write modes with failure isolation.
 - Visitor fingerprints persisted in `analytics_visitor_fingerprints` on identification.
 - `EventType`, `ReferrerType` and `WriteMode` enums, `Event` and `VisitorFingerprint` models with factories, and publishable migrations.
+- Sessions: page views are attached to sessions (30 minute inactivity timeout, no session cookie) stored in `analytics_sessions`, with `session_id` on events.
+- Optional re-linking (`identity.relink`, off by default): a first-time fingerprint matching exactly one known visitor adopts that visitor's id, moves events and sessions, re-issues the cookie and dispatches `VisitorRelinked`; identify responses report `source: "relinked"`.
+- `analytics_visitor_links` routes late writes for an abandoned id to the adopted id.
 - Publish tags `spa-analytics-config`, `spa-analytics-migrations` and `spa-analytics-assets`.
