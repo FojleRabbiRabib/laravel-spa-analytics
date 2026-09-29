@@ -66,7 +66,7 @@ return [
         'write_mode' => 'defer',
         'connection' => null,
         'queue' => null,
-        'excluded_paths' => ['up', 'spa-analytics/*'],
+        'excluded_paths' => ['up', 'spa-analytics/*', 'reset-password/*', 'password/reset/*'],
         'bot_patterns' => ['bot', 'crawl', 'spider', 'slurp', 'headless', 'curl', 'wget', 'python-requests', 'lighthouse', 'preview'],
         'search_hosts' => ['google.', 'bing.', 'duckduckgo.', 'yahoo.', 'baidu.', 'yandex.', 'ecosia.', 'brave.'],
         'social_hosts' => ['facebook.', 'fb.', 't.co', 'twitter.', 'x.com', 'linkedin.', 'instagram.', 'reddit.', 'youtube.', 'pinterest.', 'tiktok.', 'lnkd.in'],

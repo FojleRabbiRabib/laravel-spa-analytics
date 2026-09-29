@@ -60,6 +60,20 @@ class EventWriterTest extends TestCase
         $this->assertSame(0, Event::query()->count());
     }
 
+    public function test_queue_mode_survives_real_job_serialization(): void
+    {
+        config()->set('laravel-spa-analytics.tracking.write_mode', 'queue');
+        config()->set('queue.default', 'sync');
+
+        app(EventWriter::class)->write($this->pageView());
+
+        $event = Event::query()->sole();
+
+        $this->assertSame(EventType::PageView, $event->type);
+        $this->assertSame(ReferrerType::Direct, $event->referrer_type);
+        $this->assertSame('2026-09-29 10:00:00', $event->occurred_at->toDateTimeString());
+    }
+
     public function test_the_job_inserts_the_event(): void
     {
         (new WriteEvent($this->pageView()->toArray()))->handle();

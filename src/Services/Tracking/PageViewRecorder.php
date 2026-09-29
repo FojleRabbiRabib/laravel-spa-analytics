@@ -75,7 +75,20 @@ class PageViewRecorder
         }
 
         return ! $request->ajax()
-            && str_starts_with((string) $response->headers->get('Content-Type'), 'text/html');
+            && str_starts_with((string) $response->headers->get('Content-Type'), 'text/html')
+            && $this->isDocumentRequest($request);
+    }
+
+    /**
+     * Whether the client asked for an HTML document rather than an image, script or other resource.
+     */
+    private function isDocumentRequest(Request $request): bool
+    {
+        if ($request->headers->has('Sec-Fetch-Dest') && $request->headers->get('Sec-Fetch-Dest') !== 'document') {
+            return false;
+        }
+
+        return str_contains((string) $request->headers->get('Accept'), 'text/html');
     }
 
     private function isPrefetch(Request $request): bool

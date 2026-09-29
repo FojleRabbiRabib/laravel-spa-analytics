@@ -40,8 +40,12 @@ class PageViewCaptureTest extends TestCase
             $router->post('/submit', fn () => '<html>posted</html>');
             $router->get('/up', fn () => '<html>up</html>');
             $router->get('/spa-analytics/other', fn () => '<html>own</html>');
+            $router->get('/reset-password/{token}', fn () => '<html>reset</html>');
+            $router->get('/password/reset/{token}', fn () => '<html>reset</html>');
             $router->get('/conflict', fn () => response('<html>x</html>', 409));
         });
+
+        $router->fallback(fn () => abort(404))->middleware('web');
 
         $router->middleware(CapturePageView::class)->get('/no-identity', fn () => '<html>anon</html>');
     }
@@ -92,6 +96,32 @@ class PageViewCaptureTest extends TestCase
         $this->visit('/boom');
 
         $this->assertSame([404, 500], Event::query()->orderBy('id')->pluck('status')->all());
+    }
+
+    public function test_a_web_group_fallback_route_records_unmatched_urls(): void
+    {
+        $this->visit('/no/such/page')->assertNotFound();
+
+        $event = Event::query()->sole();
+
+        $this->assertSame('/no/such/page', $event->path);
+        $this->assertSame(404, $event->status);
+    }
+
+    public function test_asset_requests_hitting_the_fallback_are_skipped(): void
+    {
+        $this->visit('/favicon.ico', ['Accept' => 'image/avif,image/webp,*/*'])->assertNotFound();
+        $this->visit('/missing.png', ['Sec-Fetch-Dest' => 'image'])->assertNotFound();
+        $this->visit('/app.js.map', ['Accept' => '*/*'])->assertNotFound();
+
+        $this->assertSame(0, Event::query()->count());
+    }
+
+    public function test_document_navigation_with_fetch_metadata_is_recorded(): void
+    {
+        $this->visit('/page', ['Sec-Fetch-Dest' => 'document']);
+
+        $this->assertSame(1, Event::query()->count());
     }
 
     public function test_referrer_is_classified(): void
@@ -153,6 +183,8 @@ class PageViewCaptureTest extends TestCase
     {
         $this->visit('/up');
         $this->visit('/spa-analytics/other');
+        $this->visit('/reset-password/secret-token');
+        $this->visit('/password/reset/secret-token');
 
         $this->assertSame(0, Event::query()->count());
     }
