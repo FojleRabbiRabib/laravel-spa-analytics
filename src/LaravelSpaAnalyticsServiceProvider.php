@@ -15,11 +15,13 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\PatternBotDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\ReferrerClassifier;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
+use Spatie\LaravelPackageTools\Commands\InstallCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -40,7 +42,14 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
                 'create_analytics_visitor_fingerprints_table',
                 'create_analytics_sessions_table',
                 'create_analytics_visitor_links_table',
-            ]);
+            ])
+            ->hasInstallCommand(function (InstallCommand $command): void {
+                $command
+                    ->publishConfigFile()
+                    ->publishMigrations()
+                    ->publishAssets()
+                    ->askToRunMigrations();
+            });
     }
 
     /**
@@ -70,6 +79,13 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
 
         $this->app->make(Router::class)->aliasMiddleware('spa-analytics.identity', ResolveVisitorIdentity::class);
         $this->app->make(Router::class)->aliasMiddleware('spa-analytics.capture', CapturePageView::class);
+
+        AboutCommand::add('SPA Analytics', fn (): array => [
+            'Tracking' => config('spa-analytics.enabled') ? 'ENABLED' : 'DISABLED',
+            'Write mode' => (string) config('spa-analytics.tracking.write_mode'),
+            'Session timeout' => config('spa-analytics.sessions.timeout_minutes').' minutes',
+            'Re-linking' => config('spa-analytics.identity.relink') ? 'ON' : 'OFF',
+        ]);
 
         RateLimiter::for('spa-analytics-identity', fn (Request $request): Limit => Limit::perMinute(
             (int) config('spa-analytics.identity.rate_limit_per_minute'),

@@ -22,4 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Sessions: page views are attached to sessions (30 minute inactivity timeout, no session cookie) stored in `analytics_sessions`, with `session_id` on events.
 - Optional re-linking (`identity.relink`, off by default): a first-time fingerprint matching exactly one known visitor adopts that visitor's id, moves events and sessions, re-issues the cookie and dispatches `VisitorRelinked`; identify responses report `source: "relinked"`.
 - `analytics_visitor_links` routes late writes for an abandoned id to the adopted id.
+- `php artisan spa-analytics:install` (publishes config, migrations and assets, offers to migrate) and a "SPA Analytics" section in `php artisan about`.
+- `BotDetector` and `EventStore` contracts, bound in the register phase so an app can replace them.
 - Publish tags `spa-analytics-config`, `spa-analytics-migrations` and `spa-analytics-assets`.

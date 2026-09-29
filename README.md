@@ -28,7 +28,15 @@ calls, no data sharing.
 composer require fojlerabbirabib/laravel-spa-analytics
 ```
 
-Publish the config file, the migrations and the browser collector, then migrate:
+Run the install command. It publishes the config file, the migrations and the
+browser collector, then offers to run the migrations:
+
+```bash
+php artisan spa-analytics:install
+```
+
+The command is hidden from `php artisan list` (a package-tools default) but
+works as shown. To do the steps yourself:
 
 ```bash
 php artisan vendor:publish --tag="spa-analytics-config"
@@ -36,6 +44,9 @@ php artisan vendor:publish --tag="spa-analytics-migrations"
 php artisan vendor:publish --tag="spa-analytics-assets"
 php artisan migrate
 ```
+
+`php artisan about` shows the tracking state, write mode, session timeout and
+re-linking under "SPA Analytics".
 
 After updating the package, re-publish the collector with
 `php artisan vendor:publish --tag="spa-analytics-assets" --force`. An
@@ -202,6 +213,34 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 
 AnalyticsSession::query()->notBots()->between($from, $to)->get(); // between() uses started_at
 ```
+
+## Extending
+
+Two seams are contracts you can replace. Bind your own implementation in your
+app's `AppServiceProvider::register()` (not `boot()`); the package's defaults
+are bound in the register phase and yours wins.
+
+| Contract | Default | Purpose |
+|---|---|---|
+| `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\BotDetector` | `PatternBotDetector` (user agent substrings from config) | Decide whether a request is a bot |
+| `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore` | `DatabaseEventStore` (session plus event rows, under a lock) | Persist a page view |
+
+```php
+use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\BotDetector;
+
+public function register(): void
+{
+    $this->app->bind(BotDetector::class, MyDeviceDetectorBotDetector::class);
+}
+```
+
+A custom `EventStore` may throw; the writer logs the exception class and code
+and never lets the failure reach the visitor.
+
+Only these two seams are swappable. Re-linking, the session model scopes and the
+visitor link lookup read and write the package's own tables directly, so a store
+that writes elsewhere gets no rows in `analytics_sessions` and re-linking finds
+nothing to move.
 
 ## Planned capabilities
 
