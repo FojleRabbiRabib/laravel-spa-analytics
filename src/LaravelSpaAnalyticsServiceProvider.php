@@ -32,7 +32,12 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
             ->hasConfigFile('laravel-spa-analytics')
             ->hasViews('laravel-spa-analytics')
             ->hasRoute('web')
-            ->hasMigrations(['create_analytics_events_table', 'create_analytics_visitor_fingerprints_table']);
+            ->hasMigrations([
+                'create_analytics_events_table',
+                'create_analytics_visitor_fingerprints_table',
+                'create_analytics_sessions_table',
+                'create_analytics_visitor_links_table',
+            ]);
     }
 
     /**

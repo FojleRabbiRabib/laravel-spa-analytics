@@ -24,6 +24,8 @@ class ServiceProviderTest extends TestCase
 
         $this->assertContains('create_analytics_events_table.php.stub', $sources);
         $this->assertContains('create_analytics_visitor_fingerprints_table.php.stub', $sources);
+        $this->assertContains('create_analytics_sessions_table.php.stub', $sources);
+        $this->assertContains('create_analytics_visitor_links_table.php.stub', $sources);
     }
 
     public function test_config_file_is_merged(): void

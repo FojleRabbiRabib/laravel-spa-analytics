@@ -5,22 +5,21 @@ declare(strict_types=1);
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Models;
 
 use Carbon\CarbonInterface;
-use FojleRabbiRabib\LaravelSpaAnalytics\Database\Factories\EventFactory;
-use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
+use FojleRabbiRabib\LaravelSpaAnalytics\Database\Factories\SessionFactory;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[UseFactory(EventFactory::class)]
-class Event extends Model
+#[UseFactory(SessionFactory::class)]
+class Session extends Model
 {
     use HasFactory;
 
-    protected $table = 'analytics_events';
+    protected $table = 'analytics_sessions';
 
     public $timestamps = false;
 
@@ -32,25 +31,25 @@ class Event extends Model
     protected function casts(): array
     {
         return [
-            'type' => EventType::class,
+            'started_at' => 'datetime',
+            'last_seen_at' => 'datetime',
+            'page_views' => 'integer',
             'referrer_type' => ReferrerType::class,
-            'status' => 'integer',
+            'is_new_visitor' => 'boolean',
             'is_bot' => 'boolean',
-            'occurred_at' => 'datetime',
-            'properties' => 'array',
         ];
     }
 
     /**
-     * @return BelongsTo<Session, $this>
+     * @return HasMany<Event, $this>
      */
-    public function session(): BelongsTo
+    public function events(): HasMany
     {
-        return $this->belongsTo(Session::class, 'session_id');
+        return $this->hasMany(Event::class, 'session_id');
     }
 
     /**
-     * Exclude events flagged as bot traffic.
+     * Exclude sessions flagged as bot traffic.
      *
      * @param  Builder<static>  $query
      */
@@ -61,13 +60,13 @@ class Event extends Model
     }
 
     /**
-     * Limit events to an inclusive occurred_at range.
+     * Limit sessions to an inclusive started_at range.
      *
      * @param  Builder<static>  $query
      */
     #[Scope]
     protected function between(Builder $query, CarbonInterface $from, CarbonInterface $to): void
     {
-        $query->whereBetween('occurred_at', [$from, $to]);
+        $query->whereBetween('started_at', [$from, $to]);
     }
 }
