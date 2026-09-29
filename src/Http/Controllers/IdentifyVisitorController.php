@@ -5,23 +5,30 @@ declare(strict_types=1);
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Http\Controllers;
 
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Identity\VisitorIdentity;
+use FojleRabbiRabib\LaravelSpaAnalytics\Enums\IdentitySource;
 use FojleRabbiRabib\LaravelSpaAnalytics\Events\VisitorIdentified;
+use FojleRabbiRabib\LaravelSpaAnalytics\Events\VisitorRelinked;
 use FojleRabbiRabib\LaravelSpaAnalytics\Exceptions\InvalidPayload;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Identity\FingerprintHasher;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Identity\PayloadDecoder;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Identity\VisitorCookieFactory;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Identity\VisitorRelinker;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
 
 class IdentifyVisitorController
 {
     /**
-     * Decode the encrypted signals, attach the fingerprint to the identity and announce it.
+     * Decode the encrypted signals, attach the fingerprint, re-link a returning visitor and announce it.
      */
     public function __invoke(
         Request $request,
         VisitorIdentity $identity,
         PayloadDecoder $decoder,
         FingerprintHasher $hasher,
+        VisitorRelinker $relinker,
+        VisitorCookieFactory $cookies,
     ): JsonResponse {
         try {
             $signals = $decoder->decode($request->getContent(), $identity->id);
@@ -33,6 +40,16 @@ class IdentifyVisitorController
         $tls = is_string($header) && $header !== '' ? $request->header($header) : null;
 
         $identified = $identity->withFingerprint($hasher->hash($signals, is_string($tls) ? $tls : null));
+
+        $adopted = $relinker->relink($identified);
+
+        if ($adopted !== null) {
+            $identified = new VisitorIdentity($adopted, IdentitySource::Relinked, $identified->fingerprint);
+
+            Cookie::queue($cookies->make($adopted, $request->isSecure()));
+
+            VisitorRelinked::dispatch($identity->id, $adopted);
+        }
 
         app()->instance(VisitorIdentity::class, $identified);
 
