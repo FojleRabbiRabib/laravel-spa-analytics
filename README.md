@@ -28,11 +28,13 @@ calls, no data sharing.
 composer require fojlerabbirabib/laravel-spa-analytics
 ```
 
-Publish the config file and the browser collector:
+Publish the config file, the migrations and the browser collector, then migrate:
 
 ```bash
-php artisan vendor:publish --tag="laravel-spa-analytics-config"
+php artisan vendor:publish --tag="spa-analytics-config"
+php artisan vendor:publish --tag="spa-analytics-migrations"
 php artisan vendor:publish --tag="laravel-spa-analytics-assets"
+php artisan migrate
 ```
 
 After updating the package, re-publish the collector with
@@ -63,6 +65,12 @@ All keys live in `config/laravel-spa-analytics.php`.
 | `identity.nonce_ttl_seconds` | `60` | How long a handshake nonce stays valid |
 | `identity.route_prefix` | `spa-analytics` | URL prefix of the handshake and identify endpoints |
 | `identity.rate_limit_per_minute` | `30` | Per-client limit on both endpoints |
+| `tracking.register_middleware` | `true` | Append the page view capture middleware to the `web` group |
+| `tracking.write_mode` | `defer` | `defer` (after the response is sent), `queue` (queued job) or `sync` |
+| `tracking.connection` / `tracking.queue` | `null` | Queue connection and queue name used by `queue` mode |
+| `tracking.excluded_paths` | `up`, `spa-analytics/*`, `reset-password/*`, `password/reset/*` | `request()->is()` patterns that are never recorded; add any other URL that carries a secret |
+| `tracking.bot_patterns` | see file | Case-insensitive user agent substrings that flag a request as a bot |
+| `tracking.search_hosts` / `tracking.social_hosts` | see file | Case-insensitive host substrings used to classify referrers |
 
 If you set `identity.register_middleware` to `false`, attach the
 `spa-analytics.identity` middleware alias to the routes that need a visitor
@@ -89,12 +97,54 @@ identity yourself.
   rate limiting. It is not a secret from a determined attacker.
 - **Limits:** fingerprinting is probabilistic. Two identical devices can share
   a stable hash, and a visitor whose cookie is cleared and whose volatile
-  hashes all changed will look new. Later releases store fingerprints per
-  event and only re-link a returning visitor when exactly one known visitor
-  matches.
+  hashes all changed will look new. Later releases will only re-link a
+  returning visitor when exactly one known visitor matches.
+- **Storage:** each identified visitor's hashes are kept in
+  `analytics_visitor_fingerprints` (one row per visitor, with first and last
+  seen). Events reference the visitor id only.
 - **Hook:** the identify endpoint dispatches a `VisitorIdentified` event
   carrying the resolved identity and fingerprint, so your own code can react
   to it.
+
+## Page view tracking
+
+The capture middleware joins the `web` group after the identity middleware and
+records one row per page view in `analytics_events`.
+
+| Request | Recorded |
+|---|---|
+| GET HTML document, any status | Yes |
+| Inertia visit | Yes |
+| Inertia partial reload, prefetch, redirect, non-GET, JSON or asset, excluded path | No |
+| Bot user agent | Yes, with `is_bot = true` (filter with `Event::notBots()`) |
+| Request without a resolved visitor identity | No |
+
+Each row stores the visitor id, path (never the query string), response status,
+referrer host and type (`direct`, `search`, `social`, `referral`; same-site
+referrers count as direct), the five UTM values, first `Accept-Language` tag,
+IP address, user agent (truncated to 512 characters) and time.
+
+- **Write modes:** `defer` (default) writes after the response is sent and still
+  records 4xx and 5xx responses; `queue` dispatches a `WriteEvent` job (a failed
+  job keeps its payload, including the IP, in `failed_jobs`); `sync` writes
+  inline. A failed write never breaks the request; only the exception class and
+  code are logged.
+- **404 limit:** URLs that match no route and implicit-binding 404s throw before
+  web middleware runs, so only 404s and errors from matched routes are
+  recorded. To capture unmatched URLs, register a fallback route. In
+  `routes/web.php` it already runs in the `web` group:
+
+```php
+Route::fallback(fn () => abort(404));
+```
+
+  Elsewhere, add the group yourself: `Route::fallback(...)->middleware('web')`.
+  Requests for images, scripts and other non-document resources (by `Accept`
+  and `Sec-Fetch-Dest`) are never recorded, so missing assets and
+  `/favicon.ico` do not count as page views.
+- **Manual wiring:** if you set `tracking.register_middleware` to `false`,
+  attach the `spa-analytics.capture` alias to your routes after
+  `spa-analytics.identity`; without an identity nothing is recorded.
 
 ## Planned capabilities
 

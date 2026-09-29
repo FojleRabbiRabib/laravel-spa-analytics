@@ -15,4 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Handshake and identify endpoints: signed single-use nonce, per-session key, AES-GCM encrypted binary payload, rate limiting and CSRF protection.
 - `VisitorIdentified` event dispatched after a successful identify.
 - Browser collector (TypeScript, prebuilt to `resources/dist/client.js`) and the `@spaAnalytics` Blade directive.
-- Publish tags `laravel-spa-analytics-config` and `laravel-spa-analytics-assets`.
+- Page view tracking: capture middleware for GET HTML documents and Inertia visits, stored in `analytics_events` with referrer classification, UTM values, bot flag and response status.
+- `defer`, `queue` and `sync` write modes with failure isolation.
+- Visitor fingerprints persisted in `analytics_visitor_fingerprints` on identification.
+- `EventType`, `ReferrerType` and `WriteMode` enums, `Event` and `VisitorFingerprint` models with factories, and publishable migrations.
+- Publish tags `spa-analytics-config`, `spa-analytics-migrations` and `laravel-spa-analytics-assets`.
