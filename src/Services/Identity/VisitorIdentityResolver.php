@@ -16,7 +16,7 @@ class VisitorIdentityResolver
      */
     public function resolve(Request $request): VisitorIdentity
     {
-        $cookie = $request->cookie((string) config('laravel-spa-analytics.identity.cookie_name'));
+        $cookie = $request->cookie((string) config('spa-analytics.identity.cookie_name'));
 
         if (is_string($cookie) && Str::isUuid($cookie)) {
             return new VisitorIdentity($cookie, IdentitySource::Cookie);

@@ -22,7 +22,7 @@ class ResolveVisitorIdentity
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (! config('laravel-spa-analytics.enabled')) {
+        if (! config('spa-analytics.enabled')) {
             return $next($request);
         }
 
@@ -31,9 +31,9 @@ class ResolveVisitorIdentity
         app()->instance(VisitorIdentity::class, $identity);
 
         Cookie::queue(
-            (string) config('laravel-spa-analytics.identity.cookie_name'),
+            (string) config('spa-analytics.identity.cookie_name'),
             $identity->id,
-            (int) config('laravel-spa-analytics.identity.cookie_lifetime_days') * 1440,
+            (int) config('spa-analytics.identity.cookie_lifetime_days') * 1440,
             '/',
             null,
             $request->isSecure(),

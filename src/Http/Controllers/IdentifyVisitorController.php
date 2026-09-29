@@ -29,7 +29,7 @@ class IdentifyVisitorController
             return response()->json(['message' => 'Invalid payload'], 422);
         }
 
-        $header = config('laravel-spa-analytics.identity.tls_fingerprint_header');
+        $header = config('spa-analytics.identity.tls_fingerprint_header');
         $tls = is_string($header) && $header !== '' ? $request->header($header) : null;
 
         $identified = $identity->withFingerprint($hasher->hash($signals, is_string($tls) ? $tls : null));

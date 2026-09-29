@@ -52,7 +52,7 @@ uses one). It renders nothing when `SPA_ANALYTICS_ENABLED=false`.
 
 ## Configuration
 
-All keys live in `config/laravel-spa-analytics.php`.
+All keys live in `config/spa-analytics.php`.
 
 | Key | Default | Purpose |
 |---|---|---|
@@ -165,7 +165,7 @@ Route::fallback(fn () => abort(404));
 Raw events are kept in full by default — no forced pruning. Daily/hourly
 rollup tables exist for fast dashboard queries, but they supplement raw
 data rather than replacing it. A retention window is configurable via
-`config/laravel-spa-analytics.php` if disk usage ever becomes a concern.
+`config/spa-analytics.php` if disk usage ever becomes a concern.
 
 ## Testing
 

@@ -16,7 +16,7 @@ class SessionTracker
      */
     public function attach(PageViewData $data): AnalyticsSession
     {
-        $timeout = (int) config('laravel-spa-analytics.sessions.timeout_minutes');
+        $timeout = (int) config('spa-analytics.sessions.timeout_minutes');
 
         $latest = AnalyticsSession::query()
             ->where('visitor_id', $data->visitorId)

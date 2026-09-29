@@ -23,7 +23,7 @@ class DeferredCaptureTest extends TestCase
 
     public function test_default_defer_mode_records_success_and_error_responses_through_the_real_stack(): void
     {
-        $this->assertSame('defer', config('laravel-spa-analytics.tracking.write_mode'));
+        $this->assertSame('defer', config('spa-analytics.tracking.write_mode'));
 
         $this->withCookie('spa_analytics_vid', '22222222-2222-4222-8222-222222222222');
 

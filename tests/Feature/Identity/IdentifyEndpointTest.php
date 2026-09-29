@@ -22,7 +22,7 @@ class IdentifyEndpointTest extends TestCase
 
     protected function disableMiddlewareRegistration($app): void
     {
-        $app['config']->set('laravel-spa-analytics.identity.register_middleware', false);
+        $app['config']->set('spa-analytics.identity.register_middleware', false);
     }
 
     /**
@@ -119,7 +119,7 @@ class IdentifyEndpointTest extends TestCase
 
     public function test_ja4_header_is_hashed_when_configured(): void
     {
-        config()->set('laravel-spa-analytics.identity.tls_fingerprint_header', 'X-JA4');
+        config()->set('spa-analytics.identity.tls_fingerprint_header', 'X-JA4');
 
         $this->identify($this->validBody($this->handshake()), headers: ['X-JA4' => 't13d1516h2_abc'])->assertOk();
 
@@ -149,7 +149,7 @@ class IdentifyEndpointTest extends TestCase
 
     public function test_rate_limit_applies(): void
     {
-        config()->set('laravel-spa-analytics.identity.rate_limit_per_minute', 2);
+        config()->set('spa-analytics.identity.rate_limit_per_minute', 2);
 
         $this->postJson(route('spa-analytics.identity.handshake'))->assertOk();
         $this->postJson(route('spa-analytics.identity.handshake'))->assertOk();

@@ -20,7 +20,7 @@ class StoreVisitorFingerprintTest extends TestCase
 
     protected function disableTracking($app): void
     {
-        $app['config']->set('laravel-spa-analytics.enabled', false);
+        $app['config']->set('spa-analytics.enabled', false);
     }
 
     private function identity(?Fingerprint $fingerprint, string $id = self::VISITOR): VisitorIdentity

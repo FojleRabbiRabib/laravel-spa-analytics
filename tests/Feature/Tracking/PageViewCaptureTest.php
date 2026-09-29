@@ -28,7 +28,7 @@ class PageViewCaptureTest extends TestCase
     {
         parent::defineEnvironment($app);
 
-        $app['config']->set('laravel-spa-analytics.tracking.write_mode', 'sync');
+        $app['config']->set('spa-analytics.tracking.write_mode', 'sync');
     }
 
     protected function defineRoutes($router): void
@@ -208,7 +208,7 @@ class PageViewCaptureTest extends TestCase
 
     public function test_disabled_config_records_nothing(): void
     {
-        config()->set('laravel-spa-analytics.enabled', false);
+        config()->set('spa-analytics.enabled', false);
 
         $this->visit('/page');
 

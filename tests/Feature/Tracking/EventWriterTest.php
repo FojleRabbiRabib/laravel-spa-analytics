@@ -43,7 +43,7 @@ class EventWriterTest extends TestCase
 
     public function test_sync_mode_inserts_immediately(): void
     {
-        config()->set('laravel-spa-analytics.tracking.write_mode', 'sync');
+        config()->set('spa-analytics.tracking.write_mode', 'sync');
 
         app(EventWriter::class)->write($this->pageView());
 
@@ -55,9 +55,9 @@ class EventWriterTest extends TestCase
     public function test_queue_mode_pushes_a_job_on_the_configured_connection_and_queue(): void
     {
         Queue::fake();
-        config()->set('laravel-spa-analytics.tracking.write_mode', 'queue');
-        config()->set('laravel-spa-analytics.tracking.connection', 'redis');
-        config()->set('laravel-spa-analytics.tracking.queue', 'analytics');
+        config()->set('spa-analytics.tracking.write_mode', 'queue');
+        config()->set('spa-analytics.tracking.connection', 'redis');
+        config()->set('spa-analytics.tracking.queue', 'analytics');
 
         app(EventWriter::class)->write($this->pageView());
 
@@ -67,7 +67,7 @@ class EventWriterTest extends TestCase
 
     public function test_queue_mode_survives_real_job_serialization(): void
     {
-        config()->set('laravel-spa-analytics.tracking.write_mode', 'queue');
+        config()->set('spa-analytics.tracking.write_mode', 'queue');
         config()->set('queue.default', 'sync');
 
         app(EventWriter::class)->write($this->pageView());
@@ -89,7 +89,7 @@ class EventWriterTest extends TestCase
 
     public function test_defer_mode_writes_after_the_deferred_callbacks_run(): void
     {
-        config()->set('laravel-spa-analytics.tracking.write_mode', 'defer');
+        config()->set('spa-analytics.tracking.write_mode', 'defer');
 
         app(EventWriter::class)->write($this->pageView());
 
@@ -102,7 +102,7 @@ class EventWriterTest extends TestCase
 
     public function test_defer_mode_callbacks_are_marked_always_so_error_responses_are_written(): void
     {
-        config()->set('laravel-spa-analytics.tracking.write_mode', 'defer');
+        config()->set('spa-analytics.tracking.write_mode', 'defer');
 
         app(EventWriter::class)->write($this->pageView());
 
@@ -112,7 +112,7 @@ class EventWriterTest extends TestCase
 
     public function test_unknown_write_mode_falls_back_to_defer(): void
     {
-        config()->set('laravel-spa-analytics.tracking.write_mode', 'bogus');
+        config()->set('spa-analytics.tracking.write_mode', 'bogus');
 
         app(EventWriter::class)->write($this->pageView());
 
@@ -126,7 +126,7 @@ class EventWriterTest extends TestCase
     public function test_a_failing_insert_is_swallowed_and_logged_without_the_message(): void
     {
         Log::spy();
-        config()->set('laravel-spa-analytics.tracking.write_mode', 'sync');
+        config()->set('spa-analytics.tracking.write_mode', 'sync');
         Schema::drop('analytics_events');
 
         app(EventWriter::class)->write($this->pageView());
@@ -140,7 +140,7 @@ class EventWriterTest extends TestCase
     public function test_a_held_session_lock_is_swallowed_and_logged_without_the_message(): void
     {
         Log::spy();
-        config()->set('laravel-spa-analytics.tracking.write_mode', 'sync');
+        config()->set('spa-analytics.tracking.write_mode', 'sync');
         $this->app->bind(EventStore::class, fn ($app) => new EventStore(
             $app->make(VisitorLinkResolver::class),
             $app->make(SessionTracker::class),
@@ -159,7 +159,7 @@ class EventWriterTest extends TestCase
     public function test_a_failing_deferred_insert_is_swallowed_and_logged(): void
     {
         Log::spy();
-        config()->set('laravel-spa-analytics.tracking.write_mode', 'defer');
+        config()->set('spa-analytics.tracking.write_mode', 'defer');
         Schema::drop('analytics_events');
 
         app(EventWriter::class)->write($this->pageView());

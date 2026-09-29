@@ -21,7 +21,7 @@ class BladeDirectiveTest extends TestCase
 
     public function test_directive_renders_nothing_when_disabled(): void
     {
-        config()->set('laravel-spa-analytics.enabled', false);
+        config()->set('spa-analytics.enabled', false);
 
         $this->assertSame('', trim(Blade::render('@spaAnalytics', deleteCachedView: true)));
     }

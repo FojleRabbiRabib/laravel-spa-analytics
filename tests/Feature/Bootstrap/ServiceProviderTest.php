@@ -30,7 +30,7 @@ class ServiceProviderTest extends TestCase
 
     public function test_config_file_is_merged(): void
     {
-        $this->assertTrue(config()->has('laravel-spa-analytics'));
-        $this->assertTrue(config('laravel-spa-analytics.enabled'));
+        $this->assertTrue(config()->has('spa-analytics'));
+        $this->assertTrue(config('spa-analytics.enabled'));
     }
 }

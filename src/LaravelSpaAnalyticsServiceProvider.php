@@ -23,13 +23,13 @@ use Spatie\LaravelPackageTools\PackageServiceProvider;
 class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
 {
     /**
-     * Register the config file, views and routes under the full package name.
+     * Register the config file (spa-analytics), views (laravel-spa-analytics) and routes.
      */
     public function configurePackage(Package $package): void
     {
         $package
             ->name('laravel-spa-analytics')
-            ->hasConfigFile('laravel-spa-analytics')
+            ->hasConfigFile('spa-analytics')
             ->hasViews('laravel-spa-analytics')
             ->hasRoute('web')
             ->hasMigrations([
@@ -53,28 +53,28 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
         $this->app->make(Router::class)->aliasMiddleware('spa-analytics.capture', CapturePageView::class);
 
         $this->app->bind(BotDetector::class, fn (): BotDetector => new BotDetector(
-            (array) config('laravel-spa-analytics.tracking.bot_patterns'),
+            (array) config('spa-analytics.tracking.bot_patterns'),
         ));
         $this->app->bind(ReferrerClassifier::class, fn (): ReferrerClassifier => new ReferrerClassifier(
-            (array) config('laravel-spa-analytics.tracking.search_hosts'),
-            (array) config('laravel-spa-analytics.tracking.social_hosts'),
+            (array) config('spa-analytics.tracking.search_hosts'),
+            (array) config('spa-analytics.tracking.social_hosts'),
         ));
 
         RateLimiter::for('spa-analytics-identity', fn (Request $request): Limit => Limit::perMinute(
-            (int) config('laravel-spa-analytics.identity.rate_limit_per_minute'),
+            (int) config('spa-analytics.identity.rate_limit_per_minute'),
         )->by(hash_hmac('sha256', (string) $request->ip(), (string) config('app.key'))));
 
         Blade::directive('spaAnalytics', fn (): string => "<?php echo view('laravel-spa-analytics::client-script')->render(); ?>");
 
-        if (config('laravel-spa-analytics.enabled') && config('laravel-spa-analytics.identity.register_middleware')) {
+        if (config('spa-analytics.enabled') && config('spa-analytics.identity.register_middleware')) {
             $this->app->make(Kernel::class)->appendMiddlewareToGroup('web', ResolveVisitorIdentity::class);
         }
 
-        if (config('laravel-spa-analytics.enabled')) {
+        if (config('spa-analytics.enabled')) {
             Event::listen(VisitorIdentified::class, StoreVisitorFingerprint::class);
         }
 
-        if (config('laravel-spa-analytics.enabled') && config('laravel-spa-analytics.tracking.register_middleware')) {
+        if (config('spa-analytics.enabled') && config('spa-analytics.tracking.register_middleware')) {
             $this->app->make(Kernel::class)->appendMiddlewareToGroup('web', CapturePageView::class);
         }
     }

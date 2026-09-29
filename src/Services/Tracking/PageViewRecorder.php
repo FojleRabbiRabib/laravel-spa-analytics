@@ -51,7 +51,7 @@ class PageViewRecorder
 
     private function shouldRecord(Request $request, Response $response): bool
     {
-        if (! config('laravel-spa-analytics.enabled') || ! app()->bound(VisitorIdentity::class)) {
+        if (! config('spa-analytics.enabled') || ! app()->bound(VisitorIdentity::class)) {
             return false;
         }
 
@@ -61,7 +61,7 @@ class PageViewRecorder
             return false;
         }
 
-        if ($request->is(...(array) config('laravel-spa-analytics.tracking.excluded_paths'))) {
+        if ($request->is(...(array) config('spa-analytics.tracking.excluded_paths'))) {
             return false;
         }
 

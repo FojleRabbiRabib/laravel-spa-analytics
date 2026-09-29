@@ -49,7 +49,7 @@ class PayloadDecoder
 
         $nonceId = $this->issuer->verify($nonce, $visitorId) ?? throw InvalidPayload::because('invalid nonce');
 
-        $ttl = (int) config('laravel-spa-analytics.identity.nonce_ttl_seconds') + 5;
+        $ttl = (int) config('spa-analytics.identity.nonce_ttl_seconds') + 5;
 
         if (! Cache::add('identity-nonce:'.bin2hex($nonceId), true, $ttl)) {
             throw InvalidPayload::because('nonce already used');

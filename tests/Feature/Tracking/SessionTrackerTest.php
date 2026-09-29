@@ -86,7 +86,7 @@ class SessionTrackerTest extends TestCase
 
     public function test_the_timeout_is_configurable(): void
     {
-        config()->set('laravel-spa-analytics.sessions.timeout_minutes', 5);
+        config()->set('spa-analytics.sessions.timeout_minutes', 5);
 
         $this->tracker()->attach($this->pageView());
         $this->tracker()->attach($this->pageView('2026-09-29 10:06:00'));

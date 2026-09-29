@@ -28,7 +28,7 @@ class ResolveVisitorIdentityTest extends TestCase
 
     protected function disableMiddlewareRegistration($app): void
     {
-        $app['config']->set('laravel-spa-analytics.identity.register_middleware', false);
+        $app['config']->set('spa-analytics.identity.register_middleware', false);
     }
 
     public function test_first_visit_mints_a_uuid_and_sets_the_cookie(): void
@@ -70,7 +70,7 @@ class ResolveVisitorIdentityTest extends TestCase
 
     public function test_disabled_config_is_a_no_op(): void
     {
-        config()->set('laravel-spa-analytics.enabled', false);
+        config()->set('spa-analytics.enabled', false);
 
         $this->get('/plain')->assertOk()->assertCookieMissing(self::COOKIE);
     }

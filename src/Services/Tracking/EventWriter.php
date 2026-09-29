@@ -18,14 +18,14 @@ class EventWriter
      */
     public function write(PageViewData $data): void
     {
-        $mode = WriteMode::tryFrom((string) config('laravel-spa-analytics.tracking.write_mode')) ?? WriteMode::default();
+        $mode = WriteMode::tryFrom((string) config('spa-analytics.tracking.write_mode')) ?? WriteMode::default();
 
         match ($mode) {
             WriteMode::Sync => $this->safely($data),
             WriteMode::Queue => dispatch(
                 (new WriteEvent($data->toArray()))
-                    ->onConnection(config('laravel-spa-analytics.tracking.connection'))
-                    ->onQueue(config('laravel-spa-analytics.tracking.queue')),
+                    ->onConnection(config('spa-analytics.tracking.connection'))
+                    ->onQueue(config('spa-analytics.tracking.queue')),
             ),
             WriteMode::Defer => defer(fn () => $this->safely($data), always: true),
         };

@@ -14,7 +14,7 @@ class HandshakeTokenIssuer
     public function issue(string $visitorId): Handshake
     {
         $id = random_bytes(16);
-        $expiresAt = now()->addSeconds((int) config('laravel-spa-analytics.identity.nonce_ttl_seconds'))->timestamp;
+        $expiresAt = now()->addSeconds((int) config('spa-analytics.identity.nonce_ttl_seconds'))->timestamp;
         $body = $id.pack('N', $expiresAt);
 
         $nonce = $this->encode($body).'.'.$this->encode($this->mac($body, $visitorId));
