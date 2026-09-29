@@ -18,4 +18,11 @@ abstract class TestCase extends Orchestra
             LaravelSpaAnalyticsServiceProvider::class,
         ];
     }
+
+    protected function defineEnvironment($app): void
+    {
+        $app['config']->set('app.key', 'base64:'.base64_encode(str_repeat('k', 32)));
+        $app['config']->set('cache.default', 'array');
+        $app['config']->set('session.driver', 'array');
+    }
 }
