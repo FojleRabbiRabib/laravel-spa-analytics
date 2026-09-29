@@ -9,3 +9,9 @@
 /phpstan.neon.dist export-ignore
 /phpunit.xml.dist export-ignore
 /pint.json export-ignore
+/canvas.yaml export-ignore
+/resources/js export-ignore
+/package.json export-ignore
+/package-lock.json export-ignore
+/tsconfig.json export-ignore
+/eslint.config.js export-ignore

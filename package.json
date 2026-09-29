@@ -1,0 +1,19 @@
+{
+    "name": "laravel-spa-analytics-collector",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "esbuild resources/js/identity/index.ts --bundle --minify --format=iife --target=es2020 --outfile=resources/dist/client.js",
+        "test": "vitest run",
+        "lint": "eslint resources/js",
+        "types": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "@eslint/js": "^10.0.1",
+        "esbuild": "^0.28.2",
+        "eslint": "^10.11.0",
+        "typescript": "^6.0.3",
+        "typescript-eslint": "^8.71.0",
+        "vitest": "^5.0.2"
+    }
+}
