@@ -6,6 +6,7 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware;
 
 use Closure;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Identity\VisitorIdentity;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Identity\VisitorCookieFactory;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Identity\VisitorIdentityResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
@@ -13,7 +14,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ResolveVisitorIdentity
 {
-    public function __construct(private readonly VisitorIdentityResolver $resolver) {}
+    public function __construct(
+        private readonly VisitorIdentityResolver $resolver,
+        private readonly VisitorCookieFactory $cookies,
+    ) {}
 
     /**
      * Resolve the visitor identity, bind it into the container and queue the visitor cookie.
@@ -30,17 +34,7 @@ class ResolveVisitorIdentity
 
         app()->instance(VisitorIdentity::class, $identity);
 
-        Cookie::queue(
-            (string) config('spa-analytics.identity.cookie_name'),
-            $identity->id,
-            (int) config('spa-analytics.identity.cookie_lifetime_days') * 1440,
-            '/',
-            null,
-            $request->isSecure(),
-            true,
-            false,
-            'lax',
-        );
+        Cookie::queue($this->cookies->make($identity->id, $request->isSecure()));
 
         return $next($request);
     }
