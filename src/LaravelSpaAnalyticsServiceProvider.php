@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace FojleRabbiRabib\LaravelSpaAnalytics;
 
+use FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware\CapturePageView;
 use FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware\ResolveVisitorIdentity;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\BotDetector;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\ReferrerClassifier;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
@@ -30,7 +33,7 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
     }
 
     /**
-     * Publish assets, alias the middleware, define the rate limiter and directive, and join the web group.
+     * Publish assets, alias middleware, bind tracking services, define the rate limiter and directive, and join the web group.
      */
     public function packageBooted(): void
     {
@@ -39,6 +42,15 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
         ], 'laravel-spa-analytics-assets');
 
         $this->app->make(Router::class)->aliasMiddleware('spa-analytics.identity', ResolveVisitorIdentity::class);
+        $this->app->make(Router::class)->aliasMiddleware('spa-analytics.capture', CapturePageView::class);
+
+        $this->app->bind(BotDetector::class, fn (): BotDetector => new BotDetector(
+            (array) config('laravel-spa-analytics.tracking.bot_patterns'),
+        ));
+        $this->app->bind(ReferrerClassifier::class, fn (): ReferrerClassifier => new ReferrerClassifier(
+            (array) config('laravel-spa-analytics.tracking.search_hosts'),
+            (array) config('laravel-spa-analytics.tracking.social_hosts'),
+        ));
 
         RateLimiter::for('spa-analytics-identity', fn (Request $request): Limit => Limit::perMinute(
             (int) config('laravel-spa-analytics.identity.rate_limit_per_minute'),
@@ -48,6 +60,10 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
 
         if (config('laravel-spa-analytics.enabled') && config('laravel-spa-analytics.identity.register_middleware')) {
             $this->app->make(Kernel::class)->appendMiddlewareToGroup('web', ResolveVisitorIdentity::class);
+        }
+
+        if (config('laravel-spa-analytics.enabled') && config('laravel-spa-analytics.tracking.register_middleware')) {
+            $this->app->make(Kernel::class)->appendMiddlewareToGroup('web', CapturePageView::class);
         }
     }
 }
