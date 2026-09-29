@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking;
 
+use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\BotDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Identity\VisitorIdentity;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;

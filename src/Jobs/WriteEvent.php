@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Jobs;
 
+use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
-use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\EventStore;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 

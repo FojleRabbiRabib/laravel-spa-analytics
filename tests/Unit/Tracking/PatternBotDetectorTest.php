@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Unit\Tracking;
 
-use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\BotDetector;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\PatternBotDetector;
 use PHPUnit\Framework\TestCase;
 
-class BotDetectorTest extends TestCase
+class PatternBotDetectorTest extends TestCase
 {
-    private function detector(): BotDetector
+    private function detector(): PatternBotDetector
     {
-        return new BotDetector(['bot', 'headless', 'curl']);
+        return new PatternBotDetector(['bot', 'headless', 'curl']);
     }
 
     public function test_known_bots_are_detected(): void

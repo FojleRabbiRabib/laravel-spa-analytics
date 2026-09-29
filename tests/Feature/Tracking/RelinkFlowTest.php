@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Feature\Tracking;
 
 use Carbon\CarbonImmutable;
+use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
-use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\EventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\Support\IdentifiesVisitors;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
 

@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace FojleRabbiRabib\LaravelSpaAnalytics;
 
+use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\BotDetector;
+use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Events\VisitorIdentified;
 use FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware\CapturePageView;
 use FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware\ResolveVisitorIdentity;
 use FojleRabbiRabib\LaravelSpaAnalytics\Listeners\StoreVisitorFingerprint;
-use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\BotDetector;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\DatabaseEventStore;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\PatternBotDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\ReferrerClassifier;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Http\Kernel;
@@ -41,7 +44,23 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
     }
 
     /**
-     * Publish assets, alias middleware, bind tracking services, define the rate limiter and directive, and join the web group.
+     * Bind the tracking services in the register phase, so an app binding the same contracts in its own
+     * register() replaces these defaults (a bind made at boot would override the app's).
+     */
+    public function packageRegistered(): void
+    {
+        $this->app->bind(BotDetector::class, fn (): PatternBotDetector => new PatternBotDetector(
+            (array) config('spa-analytics.tracking.bot_patterns'),
+        ));
+        $this->app->bind(EventStore::class, DatabaseEventStore::class);
+        $this->app->bind(ReferrerClassifier::class, fn (): ReferrerClassifier => new ReferrerClassifier(
+            (array) config('spa-analytics.tracking.search_hosts'),
+            (array) config('spa-analytics.tracking.social_hosts'),
+        ));
+    }
+
+    /**
+     * Publish assets, alias middleware, define the rate limiter and directive, and join the web group.
      */
     public function packageBooted(): void
     {
@@ -51,14 +70,6 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
 
         $this->app->make(Router::class)->aliasMiddleware('spa-analytics.identity', ResolveVisitorIdentity::class);
         $this->app->make(Router::class)->aliasMiddleware('spa-analytics.capture', CapturePageView::class);
-
-        $this->app->bind(BotDetector::class, fn (): BotDetector => new BotDetector(
-            (array) config('spa-analytics.tracking.bot_patterns'),
-        ));
-        $this->app->bind(ReferrerClassifier::class, fn (): ReferrerClassifier => new ReferrerClassifier(
-            (array) config('spa-analytics.tracking.search_hosts'),
-            (array) config('spa-analytics.tracking.social_hosts'),
-        ));
 
         RateLimiter::for('spa-analytics-identity', fn (Request $request): Limit => Limit::perMinute(
             (int) config('spa-analytics.identity.rate_limit_per_minute'),

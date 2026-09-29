@@ -11,7 +11,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\VisitorLink;
-use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\EventStore;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\DatabaseEventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\SessionTracker;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\VisitorLinkResolver;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
@@ -19,7 +19,7 @@ use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 
-class EventStoreTest extends TestCase
+class DatabaseEventStoreTest extends TestCase
 {
     private function pageView(string $visitor = 'visitor-1', string $at = '2026-09-29 10:00:00'): PageViewData
     {
@@ -41,15 +41,15 @@ class EventStoreTest extends TestCase
 
     public function test_the_event_carries_the_session_id(): void
     {
-        app(EventStore::class)->store($this->pageView());
+        app(DatabaseEventStore::class)->store($this->pageView());
 
         $this->assertSame(AnalyticsSession::query()->sole()->id, AnalyticsEvent::query()->sole()->session_id);
     }
 
     public function test_views_within_the_timeout_share_a_session(): void
     {
-        app(EventStore::class)->store($this->pageView());
-        app(EventStore::class)->store($this->pageView('visitor-1', '2026-09-29 10:10:00'));
+        app(DatabaseEventStore::class)->store($this->pageView());
+        app(DatabaseEventStore::class)->store($this->pageView('visitor-1', '2026-09-29 10:10:00'));
 
         $this->assertSame(1, AnalyticsSession::query()->count());
         $this->assertSame(2, AnalyticsEvent::query()->count());
@@ -60,7 +60,7 @@ class EventStoreTest extends TestCase
     {
         VisitorLink::factory()->create(['visitor_id' => 'new', 'linked_to' => 'old']);
 
-        app(EventStore::class)->store($this->pageView('new'));
+        app(DatabaseEventStore::class)->store($this->pageView('new'));
 
         $this->assertSame('old', AnalyticsEvent::query()->sole()->visitor_id);
         $this->assertSame('old', AnalyticsSession::query()->sole()->visitor_id);
@@ -71,7 +71,7 @@ class EventStoreTest extends TestCase
         Schema::drop('analytics_events');
 
         try {
-            app(EventStore::class)->store($this->pageView());
+            app(DatabaseEventStore::class)->store($this->pageView());
             $this->fail('Expected the insert to fail.');
         } catch (\Throwable) {
             $this->assertSame(0, AnalyticsSession::query()->count());
@@ -91,7 +91,7 @@ class EventStoreTest extends TestCase
             }
         });
 
-        app(EventStore::class)->store($this->pageView());
+        app(DatabaseEventStore::class)->store($this->pageView());
 
         $this->assertFalse($lockAvailableAtInsert);
         $this->assertTrue(Cache::lock('session:visitor-1', 1)->get(), 'The lock must be released after the write.');
@@ -102,7 +102,7 @@ class EventStoreTest extends TestCase
         $lock = Cache::lock('session:visitor-1', 10);
         $lock->get();
 
-        $store = new EventStore(app(VisitorLinkResolver::class), app(SessionTracker::class), 0);
+        $store = new DatabaseEventStore(app(VisitorLinkResolver::class), app(SessionTracker::class), 0);
 
         $this->expectException(LockTimeoutException::class);
 

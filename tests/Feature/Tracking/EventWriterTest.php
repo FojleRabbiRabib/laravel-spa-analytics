@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Feature\Tracking;
 
 use Carbon\CarbonImmutable;
+use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Jobs\WriteEvent;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
-use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\EventStore;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\DatabaseEventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\EventWriter;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\SessionTracker;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\VisitorLinkResolver;
@@ -141,7 +142,7 @@ class EventWriterTest extends TestCase
     {
         Log::spy();
         config()->set('spa-analytics.tracking.write_mode', 'sync');
-        $this->app->bind(EventStore::class, fn ($app) => new EventStore(
+        $this->app->bind(EventStore::class, fn ($app) => new DatabaseEventStore(
             $app->make(VisitorLinkResolver::class),
             $app->make(SessionTracker::class),
             0,

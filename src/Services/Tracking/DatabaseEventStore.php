@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking;
 
+use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
-class EventStore
+class DatabaseEventStore implements EventStore
 {
     public function __construct(
         private readonly VisitorLinkResolver $links,

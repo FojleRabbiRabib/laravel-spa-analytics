@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Feature\Tracking;
 
+use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
@@ -11,7 +12,6 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware\CapturePageView;
 use FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware\ResolveVisitorIdentity;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
-use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\EventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\EventWriter;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
 use Illuminate\Contracts\Http\Kernel;

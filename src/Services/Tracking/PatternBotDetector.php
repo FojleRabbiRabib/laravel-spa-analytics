@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking;
 
-class BotDetector
+use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\BotDetector;
+
+class PatternBotDetector implements BotDetector
 {
     /**
      * @param  array<int, string>  $patterns  Case-insensitive user agent substrings.
