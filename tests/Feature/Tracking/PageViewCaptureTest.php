@@ -10,6 +10,8 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware\CapturePageView;
 use FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware\ResolveVisitorIdentity;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\Event;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\Session;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\EventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\EventWriter;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
 use Illuminate\Contracts\Http\Kernel;
@@ -75,6 +77,7 @@ class PageViewCaptureTest extends TestCase
         $this->assertFalse($event->is_bot);
         $this->assertSame(ReferrerType::Direct, $event->referrer_type);
         $this->assertNull($event->referrer_host);
+        $this->assertSame(Session::query()->sole()->id, $event->session_id);
     }
 
     public function test_query_string_is_stripped_and_utm_is_captured(): void
@@ -233,7 +236,7 @@ class PageViewCaptureTest extends TestCase
     public function test_a_failing_writer_never_breaks_the_response(): void
     {
         Log::spy();
-        $this->app->bind(EventWriter::class, fn () => new class extends EventWriter
+        $this->app->bind(EventWriter::class, fn ($app) => new class($app->make(EventStore::class)) extends EventWriter
         {
             public function write(PageViewData $data): void
             {

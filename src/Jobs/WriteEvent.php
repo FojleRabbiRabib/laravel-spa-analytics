@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Jobs;
 
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Event;
+use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\EventStore;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -20,10 +21,10 @@ class WriteEvent implements ShouldQueue
     public function __construct(private readonly array $attributes) {}
 
     /**
-     * Insert the event row.
+     * Attach the page view to a session and insert the event row.
      */
-    public function handle(): void
+    public function handle(EventStore $store): void
     {
-        Event::query()->create($this->attributes);
+        $store->store(PageViewData::fromArray($this->attributes));
     }
 }

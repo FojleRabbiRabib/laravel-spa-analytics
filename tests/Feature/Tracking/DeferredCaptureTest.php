@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Feature\Tracking;
 
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\Event;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\Session;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -24,11 +25,15 @@ class DeferredCaptureTest extends TestCase
     {
         $this->assertSame('defer', config('laravel-spa-analytics.tracking.write_mode'));
 
+        $this->withCookie('spa_analytics_vid', '22222222-2222-4222-8222-222222222222');
+
         $this->get('/page')->assertOk();
         $this->get('/missing')->assertNotFound();
         $this->get('/boom')->assertStatus(500);
 
         $this->assertSame([200, 404, 500], Event::query()->orderBy('id')->pluck('status')->all());
+        $this->assertSame(1, Session::query()->count());
+        $this->assertSame(3, Session::query()->sole()->page_views);
     }
 
     public function test_default_defer_mode_survives_a_failing_insert(): void

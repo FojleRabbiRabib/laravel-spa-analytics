@@ -10,9 +10,13 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Jobs\WriteEvent;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\Event;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\EventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\EventWriter;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\SessionTracker;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\VisitorLinkResolver;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
 use Illuminate\Support\Defer\DeferredCallbackCollection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
@@ -45,6 +49,7 @@ class EventWriterTest extends TestCase
 
         $this->assertSame(1, Event::query()->count());
         $this->assertSame('news', Event::query()->first()->utm_source);
+        $this->assertNotNull(Event::query()->first()->session_id);
     }
 
     public function test_queue_mode_pushes_a_job_on_the_configured_connection_and_queue(): void
@@ -76,7 +81,7 @@ class EventWriterTest extends TestCase
 
     public function test_the_job_inserts_the_event(): void
     {
-        (new WriteEvent($this->pageView()->toArray()))->handle();
+        (new WriteEvent($this->pageView()->toArray()))->handle(app(EventStore::class));
 
         $this->assertSame(1, Event::query()->count());
         $this->assertSame('/pricing', Event::query()->first()->path);
@@ -129,6 +134,25 @@ class EventWriterTest extends TestCase
         Log::shouldHaveReceived('warning')->once()->withArgs(
             fn (string $message, array $context): bool => array_keys($context) === ['exception', 'code']
                 && ! str_contains(json_encode($context), '203.0.113.9'),
+        );
+    }
+
+    public function test_a_held_session_lock_is_swallowed_and_logged_without_the_message(): void
+    {
+        Log::spy();
+        config()->set('laravel-spa-analytics.tracking.write_mode', 'sync');
+        $this->app->bind(EventStore::class, fn ($app) => new EventStore(
+            $app->make(VisitorLinkResolver::class),
+            $app->make(SessionTracker::class),
+            0,
+        ));
+        Cache::lock('session:visitor-1', 10)->get();
+
+        app(EventWriter::class)->write($this->pageView());
+
+        $this->assertSame(0, Event::query()->count());
+        Log::shouldHaveReceived('warning')->once()->withArgs(
+            fn (string $message, array $context): bool => array_keys($context) === ['exception', 'code'],
         );
     }
 
