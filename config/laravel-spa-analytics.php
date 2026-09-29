@@ -48,4 +48,28 @@ return [
         'rate_limit_per_minute' => 30,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Tracking
+    |--------------------------------------------------------------------------
+    |
+    | Page view capture. write_mode is defer (after the response is sent),
+    | queue (a queued job, using connection and queue below) or sync. Paths in
+    | excluded_paths use request()->is() patterns. Host and user agent lists
+    | are case-insensitive substring matches used to classify referrers and
+    | flag bots; bots are stored with is_bot = true, never dropped.
+    |
+    */
+
+    'tracking' => [
+        'register_middleware' => true,
+        'write_mode' => 'defer',
+        'connection' => null,
+        'queue' => null,
+        'excluded_paths' => ['up', 'spa-analytics/*'],
+        'bot_patterns' => ['bot', 'crawl', 'spider', 'slurp', 'headless', 'curl', 'wget', 'python-requests', 'lighthouse', 'preview'],
+        'search_hosts' => ['google.', 'bing.', 'duckduckgo.', 'yahoo.', 'baidu.', 'yandex.', 'ecosia.', 'brave.'],
+        'social_hosts' => ['facebook.', 'fb.', 't.co', 'twitter.', 'x.com', 'linkedin.', 'instagram.', 'reddit.', 'youtube.', 'pinterest.', 'tiktok.', 'lnkd.in'],
+    ],
+
 ];

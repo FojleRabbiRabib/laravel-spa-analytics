@@ -9,11 +9,11 @@ enum EventType: string
     case PageView = 'page_view';
 
     /**
-     * Whether this case equals the given case.
+     * Whether this case equals any of the given cases.
      */
-    public function is(self $type): bool
+    public function is(self ...$types): bool
     {
-        return $this === $type;
+        return in_array($this, $types, true);
     }
 
     /**
