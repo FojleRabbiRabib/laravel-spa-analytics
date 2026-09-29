@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Feature\Tracking;
 
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Event;
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Session;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -31,9 +31,9 @@ class DeferredCaptureTest extends TestCase
         $this->get('/missing')->assertNotFound();
         $this->get('/boom')->assertStatus(500);
 
-        $this->assertSame([200, 404, 500], Event::query()->orderBy('id')->pluck('status')->all());
-        $this->assertSame(1, Session::query()->count());
-        $this->assertSame(3, Session::query()->sole()->page_views);
+        $this->assertSame([200, 404, 500], AnalyticsEvent::query()->orderBy('id')->pluck('status')->all());
+        $this->assertSame(1, AnalyticsSession::query()->count());
+        $this->assertSame(3, AnalyticsSession::query()->sole()->page_views);
     }
 
     public function test_default_defer_mode_survives_a_failing_insert(): void

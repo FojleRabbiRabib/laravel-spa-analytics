@@ -6,15 +6,15 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Database\Factories;
 
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Event;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Event>
+ * @extends Factory<AnalyticsEvent>
  */
-class EventFactory extends Factory
+class AnalyticsEventFactory extends Factory
 {
-    protected $model = Event::class;
+    protected $model = AnalyticsEvent::class;
 
     /**
      * @return array<string, mixed>

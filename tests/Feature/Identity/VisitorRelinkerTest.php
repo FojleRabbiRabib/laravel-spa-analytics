@@ -7,8 +7,8 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Feature\Identity;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Identity\Fingerprint;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Identity\VisitorIdentity;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\IdentitySource;
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Event;
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Session;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\VisitorFingerprint;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\VisitorLink;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Identity\FingerprintMatcher;
@@ -56,16 +56,16 @@ class VisitorRelinkerTest extends TestCase
     public function test_a_single_match_adopts_the_old_id_and_moves_history(): void
     {
         $this->known('old');
-        Event::factory()->count(2)->create(['visitor_id' => 'new']);
-        Event::factory()->create(['visitor_id' => 'old']);
-        Session::factory()->create(['visitor_id' => 'new', 'is_new_visitor' => true]);
+        AnalyticsEvent::factory()->count(2)->create(['visitor_id' => 'new']);
+        AnalyticsEvent::factory()->create(['visitor_id' => 'old']);
+        AnalyticsSession::factory()->create(['visitor_id' => 'new', 'is_new_visitor' => true]);
 
         $this->assertSame('old', $this->relink());
 
-        $this->assertSame(3, Event::query()->where('visitor_id', 'old')->count());
-        $this->assertSame(0, Event::query()->where('visitor_id', 'new')->count());
+        $this->assertSame(3, AnalyticsEvent::query()->where('visitor_id', 'old')->count());
+        $this->assertSame(0, AnalyticsEvent::query()->where('visitor_id', 'new')->count());
 
-        $session = Session::query()->sole();
+        $session = AnalyticsSession::query()->sole();
         $this->assertSame('old', $session->visitor_id);
         $this->assertFalse($session->is_new_visitor);
     }
@@ -85,11 +85,11 @@ class VisitorRelinkerTest extends TestCase
     {
         $this->known('old-a');
         $this->known('old-b');
-        Event::factory()->create(['visitor_id' => 'new']);
+        AnalyticsEvent::factory()->create(['visitor_id' => 'new']);
 
         $this->assertNull($this->relink());
 
-        $this->assertSame(1, Event::query()->where('visitor_id', 'new')->count());
+        $this->assertSame(1, AnalyticsEvent::query()->where('visitor_id', 'new')->count());
         $this->assertSame(0, VisitorLink::query()->count());
     }
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking;
 
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Event as AnalyticsEvent;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 

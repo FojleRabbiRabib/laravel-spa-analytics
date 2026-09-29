@@ -6,8 +6,8 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Identity;
 
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Identity\Fingerprint;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Identity\VisitorIdentity;
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Event as AnalyticsEvent;
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Session as AnalyticsSession;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\VisitorFingerprint;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\VisitorLink;
 use Illuminate\Support\Facades\Cache;

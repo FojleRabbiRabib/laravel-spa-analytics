@@ -8,7 +8,7 @@ use Carbon\CarbonImmutable;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Session;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\SessionTracker;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
 
@@ -64,7 +64,7 @@ class SessionTrackerTest extends TestCase
         $second = $this->tracker()->attach($this->pageView('2026-09-29 10:20:00', '/b'));
 
         $this->assertTrue($second->is($first));
-        $this->assertSame(1, Session::query()->count());
+        $this->assertSame(1, AnalyticsSession::query()->count());
 
         $session = $second->fresh();
         $this->assertSame(2, $session->page_views);
@@ -79,7 +79,7 @@ class SessionTrackerTest extends TestCase
         $this->tracker()->attach($this->pageView());
         $second = $this->tracker()->attach($this->pageView('2026-09-29 11:00:00', '/c'));
 
-        $this->assertSame(2, Session::query()->count());
+        $this->assertSame(2, AnalyticsSession::query()->count());
         $this->assertFalse($second->is_new_visitor);
         $this->assertSame('/c', $second->entry_path);
     }
@@ -91,7 +91,7 @@ class SessionTrackerTest extends TestCase
         $this->tracker()->attach($this->pageView());
         $this->tracker()->attach($this->pageView('2026-09-29 10:06:00'));
 
-        $this->assertSame(2, Session::query()->count());
+        $this->assertSame(2, AnalyticsSession::query()->count());
     }
 
     public function test_referrer_and_utm_come_from_the_first_view_only(): void
@@ -103,7 +103,7 @@ class SessionTrackerTest extends TestCase
             'utm_source' => 'other',
         ]));
 
-        $session = Session::query()->sole();
+        $session = AnalyticsSession::query()->sole();
 
         $this->assertSame('google.com', $session->referrer_host);
         $this->assertSame(ReferrerType::Search, $session->referrer_type);
@@ -115,7 +115,7 @@ class SessionTrackerTest extends TestCase
         $this->tracker()->attach($this->pageView('2026-09-29 10:00:05', '/b'));
         $this->tracker()->attach($this->pageView('2026-09-29 10:00:00', '/a'));
 
-        $session = Session::query()->sole();
+        $session = AnalyticsSession::query()->sole();
 
         $this->assertSame(2, $session->page_views);
         $this->assertSame('/a', $session->entry_path);
@@ -130,7 +130,7 @@ class SessionTrackerTest extends TestCase
         $old = $this->tracker()->attach($this->pageView('2026-09-29 06:00:00', '/old'));
 
         $this->assertFalse($old->is($latest));
-        $this->assertSame(2, Session::query()->count());
+        $this->assertSame(2, AnalyticsSession::query()->count());
 
         $latest = $latest->fresh();
         $this->assertSame(1, $latest->page_views);
@@ -142,7 +142,7 @@ class SessionTrackerTest extends TestCase
         $this->tracker()->attach($this->pageView(visitor: 'v1'));
         $second = $this->tracker()->attach($this->pageView(visitor: 'v2'));
 
-        $this->assertSame(2, Session::query()->count());
+        $this->assertSame(2, AnalyticsSession::query()->count());
         $this->assertTrue($second->is_new_visitor);
     }
 

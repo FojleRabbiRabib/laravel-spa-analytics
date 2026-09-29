@@ -9,8 +9,8 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware\CapturePageView;
 use FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware\ResolveVisitorIdentity;
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Event;
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Session;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\EventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\EventWriter;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
@@ -64,7 +64,7 @@ class PageViewCaptureTest extends TestCase
     {
         $response = $this->visit('/page', ['Accept-Language' => 'fr-CA,fr;q=0.9']);
 
-        $event = Event::query()->sole();
+        $event = AnalyticsEvent::query()->sole();
 
         $this->assertSame(EventType::PageView, $event->type);
         $this->assertSame('/page', $event->path);
@@ -77,14 +77,14 @@ class PageViewCaptureTest extends TestCase
         $this->assertFalse($event->is_bot);
         $this->assertSame(ReferrerType::Direct, $event->referrer_type);
         $this->assertNull($event->referrer_host);
-        $this->assertSame(Session::query()->sole()->id, $event->session_id);
+        $this->assertSame(AnalyticsSession::query()->sole()->id, $event->session_id);
     }
 
     public function test_query_string_is_stripped_and_utm_is_captured(): void
     {
         $this->visit('/page?utm_source=news&utm_medium=email&secret=token123');
 
-        $event = Event::query()->sole();
+        $event = AnalyticsEvent::query()->sole();
 
         $this->assertSame('/page', $event->path);
         $this->assertSame('news', $event->utm_source);
@@ -98,14 +98,14 @@ class PageViewCaptureTest extends TestCase
         $this->visit('/missing');
         $this->visit('/boom');
 
-        $this->assertSame([404, 500], Event::query()->orderBy('id')->pluck('status')->all());
+        $this->assertSame([404, 500], AnalyticsEvent::query()->orderBy('id')->pluck('status')->all());
     }
 
     public function test_a_web_group_fallback_route_records_unmatched_urls(): void
     {
         $this->visit('/no/such/page')->assertNotFound();
 
-        $event = Event::query()->sole();
+        $event = AnalyticsEvent::query()->sole();
 
         $this->assertSame('/no/such/page', $event->path);
         $this->assertSame(404, $event->status);
@@ -117,14 +117,14 @@ class PageViewCaptureTest extends TestCase
         $this->visit('/missing.png', ['Sec-Fetch-Dest' => 'image'])->assertNotFound();
         $this->visit('/app.js.map', ['Accept' => '*/*'])->assertNotFound();
 
-        $this->assertSame(0, Event::query()->count());
+        $this->assertSame(0, AnalyticsEvent::query()->count());
     }
 
     public function test_document_navigation_with_fetch_metadata_is_recorded(): void
     {
         $this->visit('/page', ['Sec-Fetch-Dest' => 'document']);
 
-        $this->assertSame(1, Event::query()->count());
+        $this->assertSame(1, AnalyticsEvent::query()->count());
     }
 
     public function test_referrer_is_classified(): void
@@ -133,7 +133,7 @@ class PageViewCaptureTest extends TestCase
         $this->visit('/page', ['Referer' => 'http://localhost/other']);
         $this->visit('/page', ['Referer' => 'https://blog.example.org/post']);
 
-        $events = Event::query()->orderBy('id')->get();
+        $events = AnalyticsEvent::query()->orderBy('id')->get();
 
         $this->assertSame(ReferrerType::Search, $events[0]->referrer_type);
         $this->assertSame('google.com', $events[0]->referrer_host);
@@ -147,21 +147,21 @@ class PageViewCaptureTest extends TestCase
     {
         $this->visit('/json', ['X-Inertia' => 'true']);
 
-        $this->assertSame('/json', Event::query()->sole()->path);
+        $this->assertSame('/json', AnalyticsEvent::query()->sole()->path);
     }
 
     public function test_inertia_partial_reload_is_skipped(): void
     {
         $this->visit('/json', ['X-Inertia' => 'true', 'X-Inertia-Partial-Component' => 'Home', 'X-Inertia-Partial-Data' => 'users']);
 
-        $this->assertSame(0, Event::query()->count());
+        $this->assertSame(0, AnalyticsEvent::query()->count());
     }
 
     public function test_inertia_version_conflict_is_skipped(): void
     {
         $this->visit('/conflict', ['X-Inertia' => 'true']);
 
-        $this->assertSame(0, Event::query()->count());
+        $this->assertSame(0, AnalyticsEvent::query()->count());
     }
 
     public function test_prefetch_is_skipped(): void
@@ -169,7 +169,7 @@ class PageViewCaptureTest extends TestCase
         $this->visit('/page', ['Purpose' => 'prefetch']);
         $this->visit('/page', ['Sec-Purpose' => 'prefetch;prerender']);
 
-        $this->assertSame(0, Event::query()->count());
+        $this->assertSame(0, AnalyticsEvent::query()->count());
     }
 
     public function test_non_page_requests_are_skipped(): void
@@ -179,7 +179,7 @@ class PageViewCaptureTest extends TestCase
         $this->visit('/json');
         $this->visit('/page', ['X-Requested-With' => 'XMLHttpRequest']);
 
-        $this->assertSame(0, Event::query()->count());
+        $this->assertSame(0, AnalyticsEvent::query()->count());
     }
 
     public function test_excluded_paths_are_skipped(): void
@@ -189,21 +189,21 @@ class PageViewCaptureTest extends TestCase
         $this->visit('/reset-password/secret-token');
         $this->visit('/password/reset/secret-token');
 
-        $this->assertSame(0, Event::query()->count());
+        $this->assertSame(0, AnalyticsEvent::query()->count());
     }
 
     public function test_bots_are_recorded_and_flagged(): void
     {
         $this->visit('/page', ['User-Agent' => 'Mozilla/5.0 (compatible; Googlebot/2.1)']);
 
-        $this->assertTrue(Event::query()->sole()->is_bot);
+        $this->assertTrue(AnalyticsEvent::query()->sole()->is_bot);
     }
 
     public function test_user_agent_is_truncated(): void
     {
         $this->visit('/page', ['User-Agent' => 'Mozilla/'.str_repeat('a', 1000)]);
 
-        $this->assertSame(512, strlen(Event::query()->sole()->user_agent));
+        $this->assertSame(512, strlen(AnalyticsEvent::query()->sole()->user_agent));
     }
 
     public function test_disabled_config_records_nothing(): void
@@ -212,14 +212,14 @@ class PageViewCaptureTest extends TestCase
 
         $this->visit('/page');
 
-        $this->assertSame(0, Event::query()->count());
+        $this->assertSame(0, AnalyticsEvent::query()->count());
     }
 
     public function test_requests_without_an_identity_are_skipped(): void
     {
         $this->visit('/no-identity')->assertOk();
 
-        $this->assertSame(0, Event::query()->count());
+        $this->assertSame(0, AnalyticsEvent::query()->count());
     }
 
     public function test_middleware_is_registered_after_identity_on_the_web_group(): void

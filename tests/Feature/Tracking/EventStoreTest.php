@@ -8,8 +8,8 @@ use Carbon\CarbonImmutable;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Event;
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Session;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\VisitorLink;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\EventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\SessionTracker;
@@ -43,7 +43,7 @@ class EventStoreTest extends TestCase
     {
         app(EventStore::class)->store($this->pageView());
 
-        $this->assertSame(Session::query()->sole()->id, Event::query()->sole()->session_id);
+        $this->assertSame(AnalyticsSession::query()->sole()->id, AnalyticsEvent::query()->sole()->session_id);
     }
 
     public function test_views_within_the_timeout_share_a_session(): void
@@ -51,9 +51,9 @@ class EventStoreTest extends TestCase
         app(EventStore::class)->store($this->pageView());
         app(EventStore::class)->store($this->pageView('visitor-1', '2026-09-29 10:10:00'));
 
-        $this->assertSame(1, Session::query()->count());
-        $this->assertSame(2, Event::query()->count());
-        $this->assertSame(2, Session::query()->sole()->page_views);
+        $this->assertSame(1, AnalyticsSession::query()->count());
+        $this->assertSame(2, AnalyticsEvent::query()->count());
+        $this->assertSame(2, AnalyticsSession::query()->sole()->page_views);
     }
 
     public function test_a_link_routes_the_write_to_the_adopted_visitor(): void
@@ -62,8 +62,8 @@ class EventStoreTest extends TestCase
 
         app(EventStore::class)->store($this->pageView('new'));
 
-        $this->assertSame('old', Event::query()->sole()->visitor_id);
-        $this->assertSame('old', Session::query()->sole()->visitor_id);
+        $this->assertSame('old', AnalyticsEvent::query()->sole()->visitor_id);
+        $this->assertSame('old', AnalyticsSession::query()->sole()->visitor_id);
     }
 
     public function test_a_failed_insert_rolls_the_session_back(): void
@@ -74,7 +74,7 @@ class EventStoreTest extends TestCase
             app(EventStore::class)->store($this->pageView());
             $this->fail('Expected the insert to fail.');
         } catch (\Throwable) {
-            $this->assertSame(0, Session::query()->count());
+            $this->assertSame(0, AnalyticsSession::query()->count());
         }
     }
 
@@ -82,7 +82,7 @@ class EventStoreTest extends TestCase
     {
         $lockAvailableAtInsert = null;
 
-        Event::creating(function () use (&$lockAvailableAtInsert): void {
+        AnalyticsEvent::creating(function () use (&$lockAvailableAtInsert): void {
             $lock = Cache::lock('session:visitor-1', 1);
             $lockAvailableAtInsert = $lock->get();
 

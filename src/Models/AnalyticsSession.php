@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Models;
 
 use Carbon\CarbonInterface;
-use FojleRabbiRabib\LaravelSpaAnalytics\Database\Factories\SessionFactory;
+use FojleRabbiRabib\LaravelSpaAnalytics\Database\Factories\AnalyticsSessionFactory;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
@@ -32,8 +32,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property bool $is_new_visitor
  * @property bool $is_bot
  */
-#[UseFactory(SessionFactory::class)]
-class Session extends Model
+#[UseFactory(AnalyticsSessionFactory::class)]
+class AnalyticsSession extends Model
 {
     use HasFactory;
 
@@ -59,11 +59,11 @@ class Session extends Model
     }
 
     /**
-     * @return HasMany<Event, $this>
+     * @return HasMany<AnalyticsEvent, $this>
      */
     public function events(): HasMany
     {
-        return $this->hasMany(Event::class, 'session_id');
+        return $this->hasMany(AnalyticsEvent::class, 'session_id');
     }
 
     /**

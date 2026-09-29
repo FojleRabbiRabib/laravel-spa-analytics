@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Models;
 
 use Carbon\CarbonInterface;
-use FojleRabbiRabib\LaravelSpaAnalytics\Database\Factories\EventFactory;
+use FojleRabbiRabib\LaravelSpaAnalytics\Database\Factories\AnalyticsEventFactory;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -15,8 +15,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[UseFactory(EventFactory::class)]
-class Event extends Model
+#[UseFactory(AnalyticsEventFactory::class)]
+class AnalyticsEvent extends Model
 {
     use HasFactory;
 
@@ -42,11 +42,11 @@ class Event extends Model
     }
 
     /**
-     * @return BelongsTo<Session, $this>
+     * @return BelongsTo<AnalyticsSession, $this>
      */
     public function session(): BelongsTo
     {
-        return $this->belongsTo(Session::class, 'session_id');
+        return $this->belongsTo(AnalyticsSession::class, 'session_id');
     }
 
     /**

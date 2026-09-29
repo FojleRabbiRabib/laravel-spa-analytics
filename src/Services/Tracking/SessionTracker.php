@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking;
 
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Session as AnalyticsSession;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 
 class SessionTracker
 {

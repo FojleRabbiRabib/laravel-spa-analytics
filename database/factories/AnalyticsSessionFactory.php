@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Database\Factories;
 
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Session;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Session>
+ * @extends Factory<AnalyticsSession>
  */
-class SessionFactory extends Factory
+class AnalyticsSessionFactory extends Factory
 {
-    protected $model = Session::class;
+    protected $model = AnalyticsSession::class;
 
     /**
      * @return array<string, mixed>

@@ -9,7 +9,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Jobs\WriteEvent;
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Event;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\EventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\EventWriter;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\SessionTracker;
@@ -47,9 +47,9 @@ class EventWriterTest extends TestCase
 
         app(EventWriter::class)->write($this->pageView());
 
-        $this->assertSame(1, Event::query()->count());
-        $this->assertSame('news', Event::query()->first()->utm_source);
-        $this->assertNotNull(Event::query()->first()->session_id);
+        $this->assertSame(1, AnalyticsEvent::query()->count());
+        $this->assertSame('news', AnalyticsEvent::query()->first()->utm_source);
+        $this->assertNotNull(AnalyticsEvent::query()->first()->session_id);
     }
 
     public function test_queue_mode_pushes_a_job_on_the_configured_connection_and_queue(): void
@@ -62,7 +62,7 @@ class EventWriterTest extends TestCase
         app(EventWriter::class)->write($this->pageView());
 
         Queue::assertPushed(WriteEvent::class, fn (WriteEvent $job): bool => $job->connection === 'redis' && $job->queue === 'analytics');
-        $this->assertSame(0, Event::query()->count());
+        $this->assertSame(0, AnalyticsEvent::query()->count());
     }
 
     public function test_queue_mode_survives_real_job_serialization(): void
@@ -72,7 +72,7 @@ class EventWriterTest extends TestCase
 
         app(EventWriter::class)->write($this->pageView());
 
-        $event = Event::query()->sole();
+        $event = AnalyticsEvent::query()->sole();
 
         $this->assertSame(EventType::PageView, $event->type);
         $this->assertSame(ReferrerType::Direct, $event->referrer_type);
@@ -83,8 +83,8 @@ class EventWriterTest extends TestCase
     {
         (new WriteEvent($this->pageView()->toArray()))->handle(app(EventStore::class));
 
-        $this->assertSame(1, Event::query()->count());
-        $this->assertSame('/pricing', Event::query()->first()->path);
+        $this->assertSame(1, AnalyticsEvent::query()->count());
+        $this->assertSame('/pricing', AnalyticsEvent::query()->first()->path);
     }
 
     public function test_defer_mode_writes_after_the_deferred_callbacks_run(): void
@@ -93,11 +93,11 @@ class EventWriterTest extends TestCase
 
         app(EventWriter::class)->write($this->pageView());
 
-        $this->assertSame(0, Event::query()->count());
+        $this->assertSame(0, AnalyticsEvent::query()->count());
 
         app(DeferredCallbackCollection::class)->invoke();
 
-        $this->assertSame(1, Event::query()->count());
+        $this->assertSame(1, AnalyticsEvent::query()->count());
     }
 
     public function test_defer_mode_callbacks_are_marked_always_so_error_responses_are_written(): void
@@ -116,11 +116,11 @@ class EventWriterTest extends TestCase
 
         app(EventWriter::class)->write($this->pageView());
 
-        $this->assertSame(0, Event::query()->count());
+        $this->assertSame(0, AnalyticsEvent::query()->count());
 
         app(DeferredCallbackCollection::class)->invoke();
 
-        $this->assertSame(1, Event::query()->count());
+        $this->assertSame(1, AnalyticsEvent::query()->count());
     }
 
     public function test_a_failing_insert_is_swallowed_and_logged_without_the_message(): void
@@ -150,7 +150,7 @@ class EventWriterTest extends TestCase
 
         app(EventWriter::class)->write($this->pageView());
 
-        $this->assertSame(0, Event::query()->count());
+        $this->assertSame(0, AnalyticsEvent::query()->count());
         Log::shouldHaveReceived('warning')->once()->withArgs(
             fn (string $message, array $context): bool => array_keys($context) === ['exception', 'code'],
         );

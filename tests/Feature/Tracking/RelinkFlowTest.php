@@ -8,8 +8,8 @@ use Carbon\CarbonImmutable;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Event;
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Session;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\EventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\Support\IdentifiesVisitors;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
@@ -43,13 +43,13 @@ class RelinkFlowTest extends TestCase
         $newId = $fresh->getCookie('spa_analytics_vid')->getValue();
 
         $this->assertNotSame(self::RETURNING, $newId);
-        $this->assertSame(2, Session::query()->count());
+        $this->assertSame(2, AnalyticsSession::query()->count());
 
         $this->identifyAs($newId)->assertOk()->assertJsonPath('id', self::RETURNING);
 
-        $this->assertSame([self::RETURNING], Event::query()->pluck('visitor_id')->unique()->values()->all());
-        $this->assertSame([self::RETURNING], Session::query()->pluck('visitor_id')->unique()->values()->all());
-        $this->assertSame(1, Session::query()->where('is_new_visitor', true)->count());
+        $this->assertSame([self::RETURNING], AnalyticsEvent::query()->pluck('visitor_id')->unique()->values()->all());
+        $this->assertSame([self::RETURNING], AnalyticsSession::query()->pluck('visitor_id')->unique()->values()->all());
+        $this->assertSame(1, AnalyticsSession::query()->where('is_new_visitor', true)->count());
 
         app(EventStore::class)->store(new PageViewData(
             type: EventType::PageView,
@@ -66,8 +66,8 @@ class RelinkFlowTest extends TestCase
             occurredAt: CarbonImmutable::now(),
         ));
 
-        $this->assertSame(0, Event::query()->where('visitor_id', $newId)->count());
-        $this->assertSame(0, Session::query()->where('visitor_id', $newId)->count());
-        $this->assertSame(1, Event::query()->where('path', '/late')->where('visitor_id', self::RETURNING)->count());
+        $this->assertSame(0, AnalyticsEvent::query()->where('visitor_id', $newId)->count());
+        $this->assertSame(0, AnalyticsSession::query()->where('visitor_id', $newId)->count());
+        $this->assertSame(1, AnalyticsEvent::query()->where('path', '/late')->where('visitor_id', self::RETURNING)->count());
     }
 }

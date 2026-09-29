@@ -6,14 +6,14 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Feature\Tracking;
 
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Event;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
 
-class EventModelTest extends TestCase
+class AnalyticsEventModelTest extends TestCase
 {
     public function test_factory_persists_an_event_with_enum_casts(): void
     {
-        $event = Event::factory()->create()->fresh();
+        $event = AnalyticsEvent::factory()->create()->fresh();
 
         $this->assertSame(EventType::PageView, $event->type);
         $this->assertSame(ReferrerType::Direct, $event->referrer_type);
@@ -23,17 +23,17 @@ class EventModelTest extends TestCase
 
     public function test_properties_are_cast_to_array(): void
     {
-        $event = Event::factory()->create(['properties' => ['plan' => 'pro']])->fresh();
+        $event = AnalyticsEvent::factory()->create(['properties' => ['plan' => 'pro']])->fresh();
 
         $this->assertSame(['plan' => 'pro'], $event->properties);
     }
 
     public function test_not_bots_scope_excludes_bot_rows(): void
     {
-        Event::factory()->create();
-        Event::factory()->bot()->create();
+        AnalyticsEvent::factory()->create();
+        AnalyticsEvent::factory()->bot()->create();
 
-        $this->assertSame(1, Event::query()->notBots()->count());
+        $this->assertSame(1, AnalyticsEvent::query()->notBots()->count());
     }
 
     public function test_between_scope_is_inclusive(): void
@@ -41,11 +41,11 @@ class EventModelTest extends TestCase
         $from = now()->subDay()->startOfSecond();
         $to = now()->startOfSecond();
 
-        Event::factory()->create(['occurred_at' => $from]);
-        Event::factory()->create(['occurred_at' => $to]);
-        Event::factory()->create(['occurred_at' => $from->copy()->subSecond()]);
-        Event::factory()->create(['occurred_at' => $to->copy()->addSecond()]);
+        AnalyticsEvent::factory()->create(['occurred_at' => $from]);
+        AnalyticsEvent::factory()->create(['occurred_at' => $to]);
+        AnalyticsEvent::factory()->create(['occurred_at' => $from->copy()->subSecond()]);
+        AnalyticsEvent::factory()->create(['occurred_at' => $to->copy()->addSecond()]);
 
-        $this->assertSame(2, Event::query()->between($from, $to)->count());
+        $this->assertSame(2, AnalyticsEvent::query()->between($from, $to)->count());
     }
 }

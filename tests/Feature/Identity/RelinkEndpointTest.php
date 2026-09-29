@@ -7,8 +7,8 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Feature\Identity;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\IdentitySource;
 use FojleRabbiRabib\LaravelSpaAnalytics\Events\VisitorIdentified;
 use FojleRabbiRabib\LaravelSpaAnalytics\Events\VisitorRelinked;
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Event;
-use FojleRabbiRabib\LaravelSpaAnalytics\Models\Session;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\VisitorFingerprint;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\VisitorLink;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\Support\IdentifiesVisitors;
@@ -33,8 +33,8 @@ class RelinkEndpointTest extends TestCase
     public function test_a_first_time_fingerprint_matching_one_known_visitor_is_relinked(): void
     {
         $this->identifyAs(self::OLD)->assertOk();
-        Event::factory()->count(2)->create(['visitor_id' => self::NEW]);
-        Session::factory()->create(['visitor_id' => self::NEW]);
+        AnalyticsEvent::factory()->count(2)->create(['visitor_id' => self::NEW]);
+        AnalyticsSession::factory()->create(['visitor_id' => self::NEW]);
 
         EventFacade::fake([VisitorRelinked::class, VisitorIdentified::class]);
 
@@ -46,8 +46,8 @@ class RelinkEndpointTest extends TestCase
         ]);
         $this->assertSame(self::OLD, $response->getCookie('spa_analytics_vid')->getValue());
 
-        $this->assertSame(2, Event::query()->where('visitor_id', self::OLD)->count());
-        $this->assertSame(self::OLD, Session::query()->sole()->visitor_id);
+        $this->assertSame(2, AnalyticsEvent::query()->where('visitor_id', self::OLD)->count());
+        $this->assertSame(self::OLD, AnalyticsSession::query()->sole()->visitor_id);
         $this->assertSame(self::OLD, VisitorLink::query()->where('visitor_id', self::NEW)->value('linked_to'));
 
         EventFacade::assertDispatched(VisitorRelinked::class, fn (VisitorRelinked $event): bool => $event->previousId === self::NEW && $event->visitorId === self::OLD);
