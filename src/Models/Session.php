@@ -14,6 +14,24 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property string $visitor_id
+ * @property CarbonInterface $started_at
+ * @property CarbonInterface $last_seen_at
+ * @property string $entry_path
+ * @property string $exit_path
+ * @property int $page_views
+ * @property ?string $referrer_host
+ * @property ReferrerType $referrer_type
+ * @property ?string $utm_source
+ * @property ?string $utm_medium
+ * @property ?string $utm_campaign
+ * @property ?string $utm_term
+ * @property ?string $utm_content
+ * @property bool $is_new_visitor
+ * @property bool $is_bot
+ */
 #[UseFactory(SessionFactory::class)]
 class Session extends Model
 {

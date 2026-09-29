@@ -61,6 +61,27 @@ final readonly class PageViewData
     }
 
     /**
+     * Return a copy of this page view attributed to a different visitor id.
+     */
+    public function withVisitorId(string $visitorId): self
+    {
+        return new self(
+            $this->type,
+            $visitorId,
+            $this->path,
+            $this->status,
+            $this->referrerHost,
+            $this->referrerType,
+            $this->utm,
+            $this->language,
+            $this->ip,
+            $this->userAgent,
+            $this->isBot,
+            $this->occurredAt,
+        );
+    }
+
+    /**
      * Column-keyed attributes ready for the events table.
      *
      * @return array<string, mixed>

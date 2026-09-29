@@ -63,6 +63,16 @@ class PageViewDataTest extends TestCase
         $this->assertArrayNotHasKey('utm', $array);
     }
 
+    public function test_with_visitor_id_returns_a_copy_with_only_the_id_changed(): void
+    {
+        $original = PageViewData::fromArray($this->attributes());
+        $copy = $original->withVisitorId('other');
+
+        $this->assertSame('abc', $original->visitorId);
+        $this->assertSame('other', $copy->visitorId);
+        $this->assertEquals($original->toArray(), [...$copy->toArray(), 'visitor_id' => 'abc']);
+    }
+
     public function test_round_trip_is_stable(): void
     {
         $first = PageViewData::fromArray($this->attributes());
