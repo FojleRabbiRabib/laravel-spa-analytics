@@ -1,0 +1,49 @@
+<?php
+
+declare(strict_types=1);
+
+namespace FojleRabbiRabib\LaravelSpaAnalytics\Database\Factories;
+
+use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
+use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\Event;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+/**
+ * @extends Factory<Event>
+ */
+class EventFactory extends Factory
+{
+    protected $model = Event::class;
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function definition(): array
+    {
+        return [
+            'type' => EventType::PageView,
+            'visitor_id' => fake()->uuid(),
+            'path' => '/'.fake()->slug(2),
+            'status' => 200,
+            'referrer_host' => null,
+            'referrer_type' => ReferrerType::Direct,
+            'language' => 'en',
+            'ip' => fake()->ipv4(),
+            'user_agent' => 'Mozilla/5.0 (X11; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0',
+            'is_bot' => false,
+            'occurred_at' => now(),
+        ];
+    }
+
+    /**
+     * Mark the event as bot traffic.
+     */
+    public function bot(): static
+    {
+        return $this->state(fn (): array => [
+            'is_bot' => true,
+            'user_agent' => 'Mozilla/5.0 (compatible; Googlebot/2.1)',
+        ]);
+    }
+}

@@ -31,7 +31,8 @@
     },
     "autoload": {
         "psr-4": {
-            "FojleRabbiRabib\\LaravelSpaAnalytics\\": "src/"
+            "FojleRabbiRabib\\LaravelSpaAnalytics\\": "src/",
+            "FojleRabbiRabib\\LaravelSpaAnalytics\\Database\\Factories\\": "database/factories/"
         }
     },
     "autoload-dev": {

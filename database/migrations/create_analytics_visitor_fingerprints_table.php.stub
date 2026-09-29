@@ -1,0 +1,34 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('analytics_visitor_fingerprints', function (Blueprint $table) {
+            $table->id();
+            $table->string('visitor_id', 36)->unique();
+            $table->string('stable_hash', 64)->index();
+            $table->string('canvas_hash', 64)->nullable();
+            $table->string('audio_hash', 64)->nullable();
+            $table->string('webgl_hash', 64)->nullable();
+            $table->string('tls_hash', 64)->nullable();
+            $table->timestamp('first_seen_at');
+            $table->timestamp('last_seen_at');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('analytics_visitor_fingerprints');
+    }
+};
