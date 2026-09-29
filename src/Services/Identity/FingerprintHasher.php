@@ -9,6 +9,9 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Data\Identity\FingerprintSignals;
 
 class FingerprintHasher
 {
+    /**
+     * Hash device signals into one stable tier plus separate volatile tiers.
+     */
     public function hash(FingerprintSignals $signals, ?string $tlsFingerprint = null): Fingerprint
     {
         $stable = hash('sha256', implode('|', [

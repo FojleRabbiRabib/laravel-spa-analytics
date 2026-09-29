@@ -16,6 +16,9 @@ use Spatie\LaravelPackageTools\PackageServiceProvider;
 
 class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
 {
+    /**
+     * Register the config file, views and routes under the full package name.
+     */
     public function configurePackage(Package $package): void
     {
         $package
@@ -25,6 +28,9 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
             ->hasRoute('web');
     }
 
+    /**
+     * Publish assets, alias the middleware, define the rate limiter and directive, and join the web group.
+     */
     public function packageBooted(): void
     {
         $this->publishes([

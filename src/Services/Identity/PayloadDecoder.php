@@ -23,6 +23,8 @@ class PayloadDecoder
     public function __construct(private readonly HandshakeTokenIssuer $issuer) {}
 
     /**
+     * Verify the nonce, decrypt and validate an encrypted identify body into signals.
+     *
      * @throws InvalidPayload
      */
     public function decode(string $body, string $visitorId): FingerprintSignals
@@ -77,6 +79,8 @@ class PayloadDecoder
     }
 
     /**
+     * Unpack and validate the decrypted binary layout into signals.
+     *
      * @throws InvalidPayload
      */
     public function decodePlaintext(string $bytes): FingerprintSignals

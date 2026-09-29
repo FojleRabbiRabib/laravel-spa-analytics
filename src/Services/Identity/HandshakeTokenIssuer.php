@@ -8,6 +8,9 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Data\Identity\Handshake;
 
 class HandshakeTokenIssuer
 {
+    /**
+     * Issue a signed, time-limited nonce bound to the visitor, with its per-session encryption key.
+     */
     public function issue(string $visitorId): Handshake
     {
         $id = random_bytes(16);
@@ -50,6 +53,9 @@ class HandshakeTokenIssuer
         return substr($body, 0, 16);
     }
 
+    /**
+     * Derive the 32-byte AES key for a nonce id from the application key.
+     */
     public function encryptionKey(string $nonceId): string
     {
         return hash_hmac('sha256', 'enc'.$nonceId, $this->appKey(), true);

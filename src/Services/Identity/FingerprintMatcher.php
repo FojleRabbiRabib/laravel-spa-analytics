@@ -8,6 +8,9 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Data\Identity\Fingerprint;
 
 class FingerprintMatcher
 {
+    /**
+     * Two fingerprints match when the stable hashes are equal and at least one volatile tier is equal.
+     */
     public function matches(Fingerprint $a, Fingerprint $b): bool
     {
         if (! hash_equals($a->stableHash, $b->stableHash)) {

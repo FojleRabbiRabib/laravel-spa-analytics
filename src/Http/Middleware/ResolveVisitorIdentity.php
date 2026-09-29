@@ -16,6 +16,8 @@ class ResolveVisitorIdentity
     public function __construct(private readonly VisitorIdentityResolver $resolver) {}
 
     /**
+     * Resolve the visitor identity, bind it into the container and queue the visitor cookie.
+     *
      * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response

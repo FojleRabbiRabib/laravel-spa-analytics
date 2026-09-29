@@ -11,6 +11,9 @@ use Illuminate\Support\Str;
 
 class VisitorIdentityResolver
 {
+    /**
+     * Read the visitor cookie, or mint a new id when it is missing or invalid.
+     */
     public function resolve(Request $request): VisitorIdentity
     {
         $cookie = $request->cookie((string) config('laravel-spa-analytics.identity.cookie_name'));

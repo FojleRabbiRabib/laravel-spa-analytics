@@ -30,6 +30,9 @@ final readonly class VisitorIdentity
         );
     }
 
+    /**
+     * Return a copy of this identity carrying the given fingerprint.
+     */
     public function withFingerprint(Fingerprint $fingerprint): self
     {
         return new self($this->id, $this->source, $fingerprint);

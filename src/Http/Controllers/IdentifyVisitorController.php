@@ -14,6 +14,9 @@ use Illuminate\Http\Request;
 
 class IdentifyVisitorController
 {
+    /**
+     * Decode the encrypted signals, attach the fingerprint to the identity and announce it.
+     */
     public function __invoke(
         Request $request,
         VisitorIdentity $identity,

@@ -9,11 +9,17 @@ enum IdentitySource: string
     case Cookie = 'cookie';
     case Generated = 'generated';
 
+    /**
+     * Whether this case equals the given case.
+     */
     public function is(self $source): bool
     {
         return $this === $source;
     }
 
+    /**
+     * Human-readable name of the case.
+     */
     public function label(): string
     {
         return match ($this) {
@@ -22,6 +28,9 @@ enum IdentitySource: string
         };
     }
 
+    /**
+     * Display color token for the case.
+     */
     public function color(): string
     {
         return match ($this) {
@@ -31,6 +40,8 @@ enum IdentitySource: string
     }
 
     /**
+     * Backing values of every case.
+     *
      * @return array<int, string>
      */
     public static function values(): array
@@ -39,6 +50,8 @@ enum IdentitySource: string
     }
 
     /**
+     * Value and label pairs for every case.
+     *
      * @return array<int, array{value: string, label: string}>
      */
     public static function options(): array
@@ -49,6 +62,9 @@ enum IdentitySource: string
         );
     }
 
+    /**
+     * The case used when none is specified.
+     */
     public static function default(): self
     {
         return self::Generated;
