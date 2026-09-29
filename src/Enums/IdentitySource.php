@@ -8,6 +8,7 @@ enum IdentitySource: string
 {
     case Cookie = 'cookie';
     case Generated = 'generated';
+    case Relinked = 'relinked';
 
     /**
      * Whether this case equals the given case.
@@ -25,6 +26,7 @@ enum IdentitySource: string
         return match ($this) {
             self::Cookie => 'Cookie',
             self::Generated => 'Generated',
+            self::Relinked => 'Relinked',
         };
     }
 
@@ -36,6 +38,7 @@ enum IdentitySource: string
         return match ($this) {
             self::Cookie => 'green',
             self::Generated => 'amber',
+            self::Relinked => 'blue',
         };
     }
 

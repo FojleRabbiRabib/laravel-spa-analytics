@@ -15,10 +15,17 @@ class IdentitySourceTest extends TestCase
         $this->assertFalse(IdentitySource::Cookie->is(IdentitySource::Generated));
         $this->assertSame('Cookie', IdentitySource::Cookie->label());
         $this->assertSame('green', IdentitySource::Cookie->color());
-        $this->assertSame(['cookie', 'generated'], IdentitySource::values());
+        $this->assertSame('Relinked', IdentitySource::Relinked->label());
+        $this->assertSame('blue', IdentitySource::Relinked->color());
+        $this->assertTrue(IdentitySource::Relinked->is(IdentitySource::Relinked));
+        $this->assertSame(['cookie', 'generated', 'relinked'], IdentitySource::values());
         $this->assertSame(IdentitySource::Generated, IdentitySource::default());
         $this->assertSame(
-            [['value' => 'cookie', 'label' => 'Cookie'], ['value' => 'generated', 'label' => 'Generated']],
+            [
+                ['value' => 'cookie', 'label' => 'Cookie'],
+                ['value' => 'generated', 'label' => 'Generated'],
+                ['value' => 'relinked', 'label' => 'Relinked'],
+            ],
             IdentitySource::options(),
         );
     }

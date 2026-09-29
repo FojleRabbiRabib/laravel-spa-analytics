@@ -35,6 +35,9 @@ return [
     | Visitor identity: first-party cookie plus the client-side device
     | fingerprint collector. tls_fingerprint_header is the request header your
     | proxy or CDN forwards the JA4 hash in; null disables the TLS signal.
+    | relink adopts a previous visitor id when a first-time fingerprint matches
+    | exactly one known visitor. It is off by default because devices with
+    | identical signals (two of the same phone model) can be merged.
     |
     */
 
@@ -46,6 +49,7 @@ return [
         'nonce_ttl_seconds' => 60,
         'route_prefix' => 'spa-analytics',
         'rate_limit_per_minute' => 30,
+        'relink' => false,
     ],
 
     /*
@@ -70,6 +74,21 @@ return [
         'bot_patterns' => ['bot', 'crawl', 'spider', 'slurp', 'headless', 'curl', 'wget', 'python-requests', 'lighthouse', 'preview'],
         'search_hosts' => ['google.', 'bing.', 'duckduckgo.', 'yahoo.', 'baidu.', 'yandex.', 'ecosia.', 'brave.'],
         'social_hosts' => ['facebook.', 'fb.', 't.co', 'twitter.', 'x.com', 'linkedin.', 'instagram.', 'reddit.', 'youtube.', 'pinterest.', 'tiktok.', 'lnkd.in'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Sessions
+    |--------------------------------------------------------------------------
+    |
+    | A session continues while the visitor's next page view arrives within
+    | timeout_minutes of their previous one; otherwise a new session starts.
+    | Session writes use cache locks, so the cache store must support them.
+    |
+    */
+
+    'sessions' => [
+        'timeout_minutes' => 30,
     ],
 
 ];
