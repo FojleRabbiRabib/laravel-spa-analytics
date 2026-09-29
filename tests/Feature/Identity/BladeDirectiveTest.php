@@ -28,6 +28,6 @@ class BladeDirectiveTest extends TestCase
 
     public function test_assets_publish_tag_is_registered(): void
     {
-        $this->assertArrayHasKey('laravel-spa-analytics-assets', ServiceProvider::$publishGroups);
+        $this->assertArrayHasKey('spa-analytics-assets', ServiceProvider::$publishGroups);
     }
 }

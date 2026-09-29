@@ -42,7 +42,7 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
     {
         $this->publishes([
             __DIR__.'/../resources/dist' => public_path('vendor/laravel-spa-analytics'),
-        ], 'laravel-spa-analytics-assets');
+        ], 'spa-analytics-assets');
 
         $this->app->make(Router::class)->aliasMiddleware('spa-analytics.identity', ResolveVisitorIdentity::class);
         $this->app->make(Router::class)->aliasMiddleware('spa-analytics.capture', CapturePageView::class);

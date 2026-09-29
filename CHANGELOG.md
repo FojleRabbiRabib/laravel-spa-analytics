@@ -19,4 +19,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `defer`, `queue` and `sync` write modes with failure isolation.
 - Visitor fingerprints persisted in `analytics_visitor_fingerprints` on identification.
 - `EventType`, `ReferrerType` and `WriteMode` enums, `Event` and `VisitorFingerprint` models with factories, and publishable migrations.
-- Publish tags `spa-analytics-config`, `spa-analytics-migrations` and `laravel-spa-analytics-assets`.
+- Publish tags `spa-analytics-config`, `spa-analytics-migrations` and `spa-analytics-assets`.

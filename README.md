@@ -33,12 +33,12 @@ Publish the config file, the migrations and the browser collector, then migrate:
 ```bash
 php artisan vendor:publish --tag="spa-analytics-config"
 php artisan vendor:publish --tag="spa-analytics-migrations"
-php artisan vendor:publish --tag="laravel-spa-analytics-assets"
+php artisan vendor:publish --tag="spa-analytics-assets"
 php artisan migrate
 ```
 
 After updating the package, re-publish the collector with
-`php artisan vendor:publish --tag="laravel-spa-analytics-assets" --force`. An
+`php artisan vendor:publish --tag="spa-analytics-assets" --force`. An
 old published `client.js` talking to a newer server fails silently.
 
 Add the collector to your root Blade layout, for example just before `</body>`:
