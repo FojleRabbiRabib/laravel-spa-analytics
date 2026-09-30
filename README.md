@@ -140,11 +140,13 @@ Things to know before enabling it:
 - **The visitor id is not a credential.** Device signals come from the client
   and the transport is not a secret, so anyone who reproduces a device's
   signals can be handed that visitor's id. Never tie anything private to it.
-- **Sessions are not merged.** Moved sessions keep their own rows and can
-  overlap the adopted visitor's existing sessions.
-- **Listeners must be idempotent.** A second tab that identifies with the
-  abandoned id before it receives the new cookie re-runs the re-link, so
-  `VisitorRelinked` can fire more than once for the same pair.
+- **Sessions are merged by the timeout rule.** A moved session that sits within
+  `sessions.timeout_minutes` of the adopted visitor's sessions is folded into
+  the earliest one (page views summed, earliest entry and attribution kept,
+  latest exit used, events repointed). Sessions further apart stay separate.
+- **`VisitorRelinked` fires once per pair.** A second tab or a retry that
+  identifies with the abandoned id gets the adopted id back and the cookie
+  re-issued, but nothing is moved or dispatched again.
 
 ## Page view tracking
 

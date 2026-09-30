@@ -7,15 +7,19 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Feature\Identity;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Identity\Fingerprint;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Identity\VisitorIdentity;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\IdentitySource;
+use FojleRabbiRabib\LaravelSpaAnalytics\Events\VisitorRelinked;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\VisitorFingerprint;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\VisitorLink;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Identity\FingerprintMatcher;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Identity\VisitorRelinker;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\SessionMerger;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
 use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Event;
 
 class VisitorRelinkerTest extends TestCase
 {
@@ -147,10 +151,67 @@ class VisitorRelinkerTest extends TestCase
         $this->known('old');
         Cache::lock('session:new', 10)->get();
 
-        $relinker = new VisitorRelinker(app(FingerprintMatcher::class), 0);
+        $relinker = new VisitorRelinker(app(FingerprintMatcher::class), app(SessionMerger::class), 0);
 
         $this->expectException(LockTimeoutException::class);
 
         $relinker->relink($this->identity());
+    }
+
+    public function test_the_relink_waits_on_the_adopted_visitor_lock(): void
+    {
+        $this->known('old');
+        Cache::lock('session:old', 10)->get();
+
+        $relinker = new VisitorRelinker(app(FingerprintMatcher::class), app(SessionMerger::class), 0);
+
+        $this->expectException(LockTimeoutException::class);
+
+        $relinker->relink($this->identity());
+    }
+
+    public function test_relinking_the_same_visitor_again_returns_the_link_without_moving_or_announcing_again(): void
+    {
+        Event::fake([VisitorRelinked::class]);
+        $this->known('old');
+        AnalyticsEvent::factory()->create(['visitor_id' => 'new']);
+
+        $this->assertSame('old', $this->relink());
+        AnalyticsEvent::factory()->create(['visitor_id' => 'new']);
+
+        $this->assertSame('old', $this->relink());
+
+        Event::assertDispatchedTimes(VisitorRelinked::class, 1);
+        $this->assertSame(1, AnalyticsEvent::query()->where('visitor_id', 'new')->count());
+        $this->assertSame(1, VisitorLink::query()->count());
+    }
+
+    public function test_a_relink_announces_the_previous_and_adopted_ids(): void
+    {
+        Event::fake([VisitorRelinked::class]);
+        $this->known('old');
+
+        $this->relink();
+
+        Event::assertDispatched(
+            VisitorRelinked::class,
+            fn (VisitorRelinked $event): bool => $event->previousId === 'new' && $event->visitorId === 'old',
+        );
+    }
+
+    public function test_a_moved_session_inside_the_timeout_gap_merges_into_the_adopted_visitors_session(): void
+    {
+        $this->known('old');
+        $start = Carbon::parse('2026-03-02 09:00:00');
+        AnalyticsSession::factory()->create(['visitor_id' => 'old', 'started_at' => $start, 'last_seen_at' => $start->copy()->addMinutes(10)]);
+        $moved = AnalyticsSession::factory()->create(['visitor_id' => 'new', 'started_at' => $start->copy()->addMinutes(20), 'last_seen_at' => $start->copy()->addMinutes(25)]);
+        $event = AnalyticsEvent::factory()->create(['visitor_id' => 'new', 'session_id' => $moved->id]);
+
+        $this->relink();
+
+        $session = AnalyticsSession::query()->sole();
+        $this->assertSame('old', $session->visitor_id);
+        $this->assertSame(2, $session->page_views);
+        $this->assertSame($session->id, $event->fresh()->session_id);
     }
 }

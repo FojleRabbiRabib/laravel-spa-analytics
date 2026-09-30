@@ -97,4 +97,21 @@ class RelinkEndpointTest extends TestCase
             ->assertOk()
             ->assertJsonPath('id', self::NEW);
     }
+
+    public function test_a_second_identify_with_the_abandoned_id_gets_the_adopted_id_without_a_second_event(): void
+    {
+        $this->identifyAs(self::OLD)->assertOk();
+        $this->identifyAs(self::NEW)->assertOk();
+
+        EventFacade::fake([VisitorRelinked::class]);
+
+        $response = $this->identifyAs(self::NEW)->assertOk()->assertExactJson([
+            'id' => self::OLD,
+            'source' => IdentitySource::Relinked->value,
+        ]);
+        $this->assertSame(self::OLD, $response->getCookie('spa_analytics_vid')->getValue());
+
+        EventFacade::assertNotDispatched(VisitorRelinked::class);
+        $this->assertSame(1, VisitorLink::query()->count());
+    }
 }

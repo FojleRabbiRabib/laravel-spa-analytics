@@ -6,10 +6,12 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Identity;
 
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Identity\Fingerprint;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Identity\VisitorIdentity;
+use FojleRabbiRabib\LaravelSpaAnalytics\Events\VisitorRelinked;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\VisitorFingerprint;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\VisitorLink;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\SessionMerger;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -19,6 +21,7 @@ class VisitorRelinker
 
     public function __construct(
         private readonly FingerprintMatcher $matcher,
+        private readonly SessionMerger $merger,
         private readonly int $lockWaitSeconds = 3,
     ) {}
 
@@ -26,7 +29,9 @@ class VisitorRelinker
      * Adopt the id of the single known visitor matching a first-time fingerprint.
      *
      * Returns the adopted id, or null when re-linking is off, the visitor was already identified, or the
-     * match is missing or ambiguous (zero, several, or more candidates than the cap).
+     * match is missing or ambiguous (zero, several, or more candidates than the cap). A visitor that was
+     * already re-linked gets the same id back without moving rows or dispatching VisitorRelinked again.
+     * Sessions that now fall within the timeout of each other are merged.
      */
     public function relink(VisitorIdentity $identity): ?string
     {
@@ -40,29 +45,55 @@ class VisitorRelinker
             return null;
         }
 
-        $adopted = $this->singleMatch($identity->id, $fingerprint);
+        $adopted = $this->linkedTo($identity->id) ?? $this->singleMatch($identity->id, $fingerprint);
 
         if ($adopted === null) {
             return null;
         }
 
-        Cache::lock('session:'.$identity->id, 10)->block($this->lockWaitSeconds, function () use ($identity, $adopted): void {
-            DB::transaction(function () use ($identity, $adopted): void {
-                AnalyticsEvent::query()->where('visitor_id', $identity->id)->update(['visitor_id' => $adopted]);
-                AnalyticsSession::query()->where('visitor_id', $identity->id)->update([
-                    'visitor_id' => $adopted,
-                    'is_new_visitor' => false,
-                ]);
+        $fresh = false;
 
-                VisitorLink::query()->updateOrCreate(
-                    ['visitor_id' => $identity->id],
-                    ['linked_to' => $adopted, 'created_at' => now()],
-                );
-                VisitorLink::query()->where('linked_to', $identity->id)->update(['linked_to' => $adopted]);
+        $adopted = Cache::lock('session:'.$identity->id, 10)->block($this->lockWaitSeconds, function () use ($identity, $adopted, &$fresh): string {
+            return Cache::lock('session:'.$adopted, 10)->block($this->lockWaitSeconds, function () use ($identity, $adopted, &$fresh): string {
+                $existing = $this->linkedTo($identity->id);
+
+                if ($existing !== null) {
+                    return $existing;
+                }
+
+                DB::transaction(function () use ($identity, $adopted): void {
+                    $moved = AnalyticsSession::query()->where('visitor_id', $identity->id)->pluck('id')->all();
+
+                    AnalyticsEvent::query()->where('visitor_id', $identity->id)->update(['visitor_id' => $adopted]);
+                    AnalyticsSession::query()->where('visitor_id', $identity->id)->update([
+                        'visitor_id' => $adopted,
+                        'is_new_visitor' => false,
+                    ]);
+
+                    $this->merger->merge($adopted, $moved);
+
+                    VisitorLink::query()->create(['visitor_id' => $identity->id, 'linked_to' => $adopted, 'created_at' => now()]);
+                    VisitorLink::query()->where('linked_to', $identity->id)->update(['linked_to' => $adopted]);
+                });
+
+                $fresh = true;
+
+                return $adopted;
             });
         });
 
+        if ($fresh) {
+            VisitorRelinked::dispatch($identity->id, $adopted);
+        }
+
         return $adopted;
+    }
+
+    private function linkedTo(string $visitorId): ?string
+    {
+        $linkedTo = VisitorLink::query()->where('visitor_id', $visitorId)->value('linked_to');
+
+        return is_string($linkedTo) ? $linkedTo : null;
     }
 
     private function singleMatch(string $currentId, Fingerprint $fingerprint): ?string

@@ -7,7 +7,6 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Http\Controllers;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Identity\VisitorIdentity;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\IdentitySource;
 use FojleRabbiRabib\LaravelSpaAnalytics\Events\VisitorIdentified;
-use FojleRabbiRabib\LaravelSpaAnalytics\Events\VisitorRelinked;
 use FojleRabbiRabib\LaravelSpaAnalytics\Exceptions\InvalidPayload;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Identity\FingerprintHasher;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Identity\PayloadDecoder;
@@ -20,7 +19,7 @@ use Illuminate\Support\Facades\Cookie;
 class IdentifyVisitorController
 {
     /**
-     * Decode the encrypted signals, attach the fingerprint, re-link a returning visitor and announce it.
+     * Decode the encrypted signals, attach the fingerprint, re-link a returning visitor and announce the identity.
      */
     public function __invoke(
         Request $request,
@@ -47,8 +46,6 @@ class IdentifyVisitorController
             $identified = new VisitorIdentity($adopted, IdentitySource::Relinked, $identified->fingerprint);
 
             Cookie::queue($cookies->make($adopted, $request->isSecure()));
-
-            VisitorRelinked::dispatch($identity->id, $adopted);
         }
 
         app()->instance(VisitorIdentity::class, $identified);
