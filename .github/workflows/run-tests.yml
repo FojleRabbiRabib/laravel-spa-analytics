@@ -31,3 +31,79 @@ jobs:
 
       - name: Run tests
         run: vendor/bin/phpunit
+
+  database:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        db: [mysql, pgsql]
+        cache: [database, redis]
+
+    name: ${{ matrix.db }} with ${{ matrix.cache }} cache
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: secret
+          MYSQL_DATABASE: spa_analytics_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -psecret"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: spa_analytics_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      SPA_ANALYTICS_TEST_CI: 1
+      SPA_ANALYTICS_TEST_DB: ${{ matrix.db }}
+      SPA_ANALYTICS_TEST_CACHE: ${{ matrix.cache }}
+      SPA_ANALYTICS_TEST_DB_HOST: 127.0.0.1
+      SPA_ANALYTICS_TEST_DB_PORT: ${{ matrix.db == 'mysql' && 3306 || 5432 }}
+      SPA_ANALYTICS_TEST_DB_USERNAME: ${{ matrix.db == 'mysql' && 'root' || 'postgres' }}
+      SPA_ANALYTICS_TEST_DB_PASSWORD: secret
+      SPA_ANALYTICS_TEST_REDIS_HOST: 127.0.0.1
+      SPA_ANALYTICS_TEST_REDIS_PORT: 6379
+      SPA_ANALYTICS_TEST_REDIS_DB: 1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.3
+          extensions: pdo_mysql, pdo_pgsql, redis, pcntl, posix
+          coverage: none
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction
+
+      - name: Run tests on the real engine
+        run: vendor/bin/phpunit --fail-on-skipped

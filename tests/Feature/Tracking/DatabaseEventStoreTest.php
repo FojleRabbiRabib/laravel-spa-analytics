@@ -17,6 +17,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\VisitorLinkResolver;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class DatabaseEventStoreTest extends TestCase
@@ -80,20 +81,29 @@ class DatabaseEventStoreTest extends TestCase
 
     public function test_the_lock_is_held_until_the_event_is_inserted(): void
     {
-        $lockAvailableAtInsert = null;
+        $lockHeldAtInsert = null;
 
-        AnalyticsEvent::creating(function () use (&$lockAvailableAtInsert): void {
+        AnalyticsEvent::creating(function () use (&$lockHeldAtInsert): void {
+            if (config('cache.default') === 'database') {
+                // The database lock acquires by inserting and catching the duplicate-key error; inside this
+                // open transaction a failed insert would abort it on PostgreSQL, so only read the lock row.
+                $lockHeldAtInsert = DB::table('cache_locks')->where('key', 'like', '%session:visitor-1')->exists();
+
+                return;
+            }
+
             $lock = Cache::lock('session:visitor-1', 1);
-            $lockAvailableAtInsert = $lock->get();
+            $acquired = $lock->get();
+            $lockHeldAtInsert = ! $acquired;
 
-            if ($lockAvailableAtInsert) {
+            if ($acquired) {
                 $lock->release();
             }
         });
 
         app(DatabaseEventStore::class)->store($this->pageView());
 
-        $this->assertFalse($lockAvailableAtInsert);
+        $this->assertTrue($lockHeldAtInsert);
         $this->assertTrue(Cache::lock('session:visitor-1', 1)->get(), 'The lock must be released after the write.');
     }
 

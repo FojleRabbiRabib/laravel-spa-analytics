@@ -270,6 +270,15 @@ composer test
 npm test
 ```
 
+By default the suite runs on in-memory sqlite and the array cache. The
+GitHub Actions workflow also runs it on MySQL 8 and PostgreSQL 16, each with the
+`database` and `redis` cache stores, and adds a concurrency test that forks
+several processes writing page views for one visitor and asserts a single
+session with an exact page view count. That mode is switched on only by
+`SPA_ANALYTICS_TEST_*` variables set in CI; it refuses non-local hosts, only
+connects to a database named `spa_analytics_test`, and never runs locally
+unless you set those variables yourself.
+
 ## Code style & static analysis
 
 ```bash
