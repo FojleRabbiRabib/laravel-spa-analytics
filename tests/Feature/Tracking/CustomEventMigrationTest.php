@@ -6,7 +6,6 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Feature\Tracking;
 
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -90,20 +89,6 @@ class CustomEventMigrationTest extends TestCase
 
         $this->assertSame(2, DB::table('analytics_events')->count());
         $this->assertSame('page_view', DB::table('analytics_events')->where('path', '/pricing')->value('type'));
-    }
-
-    public function test_the_upgrade_rejects_unknown_event_types_on_engines_that_enforce_enums(): void
-    {
-        $this->installVersionOneSchema();
-        $this->migration()->up();
-
-        if (DB::getDriverName() === 'sqlite') {
-            $this->markTestSkipped('SQLite does not enforce enum values.');
-        }
-
-        $this->expectException(QueryException::class);
-
-        DB::table('analytics_events')->insert($this->row(['type' => 'nonsense']));
     }
 
     public function test_down_removes_only_the_new_columns_and_keeps_rows(): void

@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -18,8 +19,12 @@ return new class extends Migration
             $table->index(['name', 'occurred_at']);
         });
 
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('alter table "analytics_events" drop constraint if exists "analytics_events_type_check"');
+        }
+
         Schema::table('analytics_events', function (Blueprint $table) {
-            $table->enum('type', ['page_view', 'custom', 'goal'])->default('page_view')->change();
+            $table->string('type', 32)->default('page_view')->change();
             $table->string('path', 512)->nullable()->change();
             $table->unsignedSmallInteger('status')->nullable()->change();
         });
@@ -29,6 +34,7 @@ return new class extends Migration
      * Reverse the migrations.
      *
      * The type, path and status columns stay widened: narrowing them would fail as soon as a custom event exists.
+     * The type enum became a plain string because PostgreSQL cannot alter an enum column with a check constraint.
      */
     public function down(): void
     {
