@@ -21,6 +21,7 @@ use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Spatie\LaravelPackageTools\Commands\InstallCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -87,9 +88,22 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
             'Re-linking' => config('spa-analytics.identity.relink') ? 'ON' : 'OFF',
         ]);
 
-        RateLimiter::for('spa-analytics-identity', fn (Request $request): Limit => Limit::perMinute(
-            (int) config('spa-analytics.identity.rate_limit_per_minute'),
-        )->by(hash_hmac('sha256', (string) $request->ip(), (string) config('app.key'))));
+        RateLimiter::for('spa-analytics-identity', function (Request $request): array {
+            $secret = (string) config('app.key');
+            $visitorId = $request->cookie((string) config('spa-analytics.identity.cookie_name'));
+
+            $limits = [
+                Limit::perMinute((int) config('spa-analytics.identity.rate_limit_per_ip_per_minute'))
+                    ->by('ip:'.hash_hmac('sha256', (string) $request->ip(), $secret)),
+            ];
+
+            if (is_string($visitorId) && Str::isUuid($visitorId)) {
+                array_unshift($limits, Limit::perMinute((int) config('spa-analytics.identity.rate_limit_per_minute'))
+                    ->by('visitor:'.hash_hmac('sha256', $visitorId, $secret)));
+            }
+
+            return $limits;
+        });
 
         Blade::directive('spaAnalytics', fn (): string => "<?php echo view('laravel-spa-analytics::client-script')->render(); ?>");
 

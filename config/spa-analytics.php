@@ -38,6 +38,10 @@ return [
     | relink adopts a previous visitor id when a first-time fingerprint matches
     | exactly one known visitor. It is off by default because devices with
     | identical signals (two of the same phone model) can be merged.
+    | rate_limit_per_minute limits each visitor cookie on the handshake and
+    | identify endpoints; rate_limit_per_ip_per_minute is a higher ceiling per
+    | address that stops clients rotating cookies while leaving room for many
+    | visitors behind one shared address (mobile carriers, offices).
     |
     */
 
@@ -49,6 +53,7 @@ return [
         'nonce_ttl_seconds' => 60,
         'route_prefix' => 'spa-analytics',
         'rate_limit_per_minute' => 30,
+        'rate_limit_per_ip_per_minute' => 600,
         'relink' => false,
     ],
 

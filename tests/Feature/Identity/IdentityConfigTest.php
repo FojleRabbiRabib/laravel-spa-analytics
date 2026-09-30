@@ -17,5 +17,6 @@ class IdentityConfigTest extends TestCase
         $this->assertSame(60, config('spa-analytics.identity.nonce_ttl_seconds'));
         $this->assertSame('spa-analytics', config('spa-analytics.identity.route_prefix'));
         $this->assertSame(30, config('spa-analytics.identity.rate_limit_per_minute'));
+        $this->assertSame(600, config('spa-analytics.identity.rate_limit_per_ip_per_minute'));
     }
 }

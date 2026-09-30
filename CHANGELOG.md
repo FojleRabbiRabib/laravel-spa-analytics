@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial package scaffold: service provider, config file, test harness.
 - Visitor cookie middleware that resolves an identity per request and binds it into the container.
 - Tiered device fingerprint (stable hash plus canvas, audio, WebGL and TLS JA4 hashes) and a matcher for re-linking visitors.
-- Handshake and identify endpoints: signed single-use nonce, per-session key, AES-GCM encrypted binary payload, rate limiting and CSRF protection.
+- Handshake and identify endpoints: signed single-use nonce, per-session key, AES-GCM encrypted binary payload, a per-visitor rate limit plus a per-address ceiling (so visitors behind one shared address do not block each other), and CSRF protection.
 - `VisitorIdentified` event dispatched after a successful identify.
 - Browser collector (TypeScript, prebuilt to `resources/dist/client.js`) and the `@spaAnalytics` Blade directive.
 - Page view tracking: capture middleware for GET HTML documents and Inertia visits, stored in `analytics_events` with referrer classification, UTM values, bot flag and response status.

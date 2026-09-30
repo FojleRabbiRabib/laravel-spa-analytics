@@ -75,7 +75,8 @@ All keys live in `config/spa-analytics.php`.
 | `identity.tls_fingerprint_header` | `null` | Request header your proxy or CDN forwards the JA4 hash in; `null` disables the TLS signal |
 | `identity.nonce_ttl_seconds` | `60` | How long a handshake nonce stays valid |
 | `identity.route_prefix` | `spa-analytics` | URL prefix of the handshake and identify endpoints |
-| `identity.rate_limit_per_minute` | `30` | Per-client limit on both endpoints |
+| `identity.rate_limit_per_minute` | `30` | Per-visitor (cookie) limit on both endpoints |
+| `identity.rate_limit_per_ip_per_minute` | `600` | Per-address ceiling on both endpoints; high so visitors behind one shared address (carrier NAT, offices) do not block each other, and it stops clients that rotate cookies |
 | `identity.relink` | `false` | Adopt a previous visitor id when a first-time fingerprint matches exactly one known visitor (see [Re-linking](#re-linking-returning-visitors)) |
 | `sessions.timeout_minutes` | `30` | Inactivity gap after which the next page view starts a new session |
 | `tracking.register_middleware` | `true` | Append the page view capture middleware to the `web` group |

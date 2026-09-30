@@ -149,7 +149,7 @@ class IdentifyEndpointTest extends TestCase
 
     public function test_rate_limit_applies(): void
     {
-        config()->set('spa-analytics.identity.rate_limit_per_minute', 2);
+        config()->set('spa-analytics.identity.rate_limit_per_ip_per_minute', 2);
 
         $this->postJson(route('spa-analytics.identity.handshake'))->assertOk();
         $this->postJson(route('spa-analytics.identity.handshake'))->assertOk();
