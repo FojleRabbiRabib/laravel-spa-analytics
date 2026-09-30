@@ -1,0 +1,43 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('analytics_events', function (Blueprint $table) {
+            $table->string('name', 128)->nullable()->after('type');
+            $table->decimal('value', 12, 2)->nullable()->after('properties');
+
+            $table->index(['name', 'occurred_at']);
+        });
+
+        Schema::table('analytics_events', function (Blueprint $table) {
+            $table->enum('type', ['page_view', 'custom', 'goal'])->default('page_view')->change();
+            $table->string('path', 512)->nullable()->change();
+            $table->unsignedSmallInteger('status')->nullable()->change();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * The type, path and status columns stay widened: narrowing them would fail as soon as a custom event exists.
+     */
+    public function down(): void
+    {
+        Schema::table('analytics_events', function (Blueprint $table) {
+            $table->dropIndex(['name', 'occurred_at']);
+        });
+
+        Schema::table('analytics_events', function (Blueprint $table) {
+            $table->dropColumn(['name', 'value']);
+        });
+    }
+};

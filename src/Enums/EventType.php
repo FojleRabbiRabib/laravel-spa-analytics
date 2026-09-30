@@ -7,13 +7,15 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Enums;
 enum EventType: string
 {
     case PageView = 'page_view';
+    case Custom = 'custom';
+    case Goal = 'goal';
 
     /**
-     * Whether this case equals any of the given cases.
+     * Whether this case equals the given case.
      */
-    public function is(self ...$types): bool
+    public function is(self $type): bool
     {
-        return in_array($this, $types, true);
+        return $this === $type;
     }
 
     /**
@@ -23,6 +25,8 @@ enum EventType: string
     {
         return match ($this) {
             self::PageView => 'Page view',
+            self::Custom => 'Custom event',
+            self::Goal => 'Goal',
         };
     }
 
@@ -33,6 +37,8 @@ enum EventType: string
     {
         return match ($this) {
             self::PageView => 'blue',
+            self::Custom => 'purple',
+            self::Goal => 'green',
         };
     }
 

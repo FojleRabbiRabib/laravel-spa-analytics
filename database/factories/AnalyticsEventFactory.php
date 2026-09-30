@@ -37,6 +37,32 @@ class AnalyticsEventFactory extends Factory
     }
 
     /**
+     * A custom event: named, without a path or status.
+     */
+    public function custom(): static
+    {
+        return $this->state(fn (): array => [
+            'type' => EventType::Custom,
+            'name' => fake()->slug(2),
+            'path' => null,
+            'status' => null,
+        ]);
+    }
+
+    /**
+     * A goal event: named, without a path or status.
+     */
+    public function goal(): static
+    {
+        return $this->state(fn (): array => [
+            'type' => EventType::Goal,
+            'name' => fake()->slug(2),
+            'path' => null,
+            'status' => null,
+        ]);
+    }
+
+    /**
      * Mark the event as bot traffic.
      */
     public function bot(): static

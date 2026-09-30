@@ -43,6 +43,7 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
                 'create_analytics_visitor_fingerprints_table',
                 'create_analytics_sessions_table',
                 'create_analytics_visitor_links_table',
+                'update_analytics_events_table_for_custom_events',
             ])
             ->hasInstallCommand(function (InstallCommand $command): void {
                 $command

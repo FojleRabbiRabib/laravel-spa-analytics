@@ -35,6 +35,7 @@ class AnalyticsEvent extends Model
             'type' => EventType::class,
             'referrer_type' => ReferrerType::class,
             'status' => 'integer',
+            'value' => 'decimal:2',
             'is_bot' => 'boolean',
             'occurred_at' => 'datetime',
             'properties' => 'array',

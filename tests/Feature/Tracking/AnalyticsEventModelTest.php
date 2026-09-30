@@ -28,6 +28,30 @@ class AnalyticsEventModelTest extends TestCase
         $this->assertSame(['plan' => 'pro'], $event->properties);
     }
 
+    public function test_a_custom_event_keeps_its_name_value_and_properties_without_a_path(): void
+    {
+        $event = AnalyticsEvent::factory()->goal()->create([
+            'name' => 'purchase',
+            'value' => 49.5,
+            'properties' => ['plan' => 'pro'],
+        ])->fresh();
+
+        $this->assertSame(EventType::Goal, $event->type);
+        $this->assertSame('purchase', $event->name);
+        $this->assertSame('49.50', $event->value);
+        $this->assertSame(['plan' => 'pro'], $event->properties);
+        $this->assertNull($event->path);
+        $this->assertNull($event->status);
+    }
+
+    public function test_the_custom_factory_state_builds_a_custom_event(): void
+    {
+        $event = AnalyticsEvent::factory()->custom()->create()->fresh();
+
+        $this->assertSame(EventType::Custom, $event->type);
+        $this->assertNotNull($event->name);
+    }
+
     public function test_not_bots_scope_excludes_bot_rows(): void
     {
         AnalyticsEvent::factory()->create();
