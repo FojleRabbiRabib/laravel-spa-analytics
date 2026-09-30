@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking;
 
 use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore;
+use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\CustomEventData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\WriteMode;
 use FojleRabbiRabib\LaravelSpaAnalytics\Jobs\WriteEvent;
@@ -15,9 +16,9 @@ class EventWriter
     public function __construct(private readonly EventStore $store) {}
 
     /**
-     * Store the page view using the configured write mode.
+     * Store the page view or custom event using the configured write mode.
      */
-    public function write(PageViewData $data): void
+    public function write(PageViewData|CustomEventData $data): void
     {
         $mode = WriteMode::tryFrom((string) config('spa-analytics.tracking.write_mode')) ?? WriteMode::default();
 
@@ -33,9 +34,9 @@ class EventWriter
     }
 
     /**
-     * Store the page view, logging only the exception class and code so bound values never reach the log.
+     * Store the event, logging only the exception class and code so bound values never reach the log.
      */
-    private function safely(PageViewData $data): void
+    private function safely(PageViewData|CustomEventData $data): void
     {
         try {
             $this->store->store($data);

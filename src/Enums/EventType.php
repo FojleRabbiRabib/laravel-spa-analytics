@@ -66,6 +66,14 @@ enum EventType: string
     }
 
     /**
+     * The case for a case or its backing string.
+     */
+    public static function coerce(self|string $type): self
+    {
+        return $type instanceof self ? $type : self::from($type);
+    }
+
+    /**
      * The case used when none is specified.
      */
     public static function default(): self

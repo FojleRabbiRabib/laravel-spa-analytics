@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Feature\Tracking;
 
 use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore;
+use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\CustomEventData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
@@ -238,7 +239,7 @@ class PageViewCaptureTest extends TestCase
         Log::spy();
         $this->app->bind(EventWriter::class, fn ($app) => new class($app->make(EventStore::class)) extends EventWriter
         {
-            public function write(PageViewData $data): void
+            public function write(PageViewData|CustomEventData $data): void
             {
                 throw new \RuntimeException('failed for 127.0.0.1');
             }

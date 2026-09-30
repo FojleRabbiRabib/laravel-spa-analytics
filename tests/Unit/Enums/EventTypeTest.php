@@ -27,4 +27,10 @@ class EventTypeTest extends TestCase
             ['value' => 'goal', 'label' => 'Goal'],
         ], EventType::options());
     }
+
+    public function test_coerce_accepts_a_case_or_its_backing_string(): void
+    {
+        $this->assertSame(EventType::Goal, EventType::coerce(EventType::Goal));
+        $this->assertSame(EventType::Custom, EventType::coerce('custom'));
+    }
 }

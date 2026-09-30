@@ -6,6 +6,7 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Feature\Tracking;
 
 use Carbon\CarbonImmutable;
 use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore;
+use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\CustomEventData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
@@ -40,6 +41,60 @@ class EventWriterTest extends TestCase
             isBot: false,
             occurredAt: CarbonImmutable::parse('2026-09-29 10:00:00'),
         );
+    }
+
+    private function goal(): CustomEventData
+    {
+        return new CustomEventData(
+            type: EventType::Goal,
+            visitorId: 'visitor-1',
+            name: 'purchase',
+            value: 49.5,
+            properties: ['plan' => 'pro'],
+            path: null,
+            language: null,
+            ip: null,
+            userAgent: null,
+            isBot: false,
+            occurredAt: CarbonImmutable::parse('2026-09-29 10:00:00'),
+        );
+    }
+
+    public function test_sync_mode_stores_a_custom_event(): void
+    {
+        config()->set('spa-analytics.tracking.write_mode', 'sync');
+
+        app(EventWriter::class)->write($this->goal());
+
+        $event = AnalyticsEvent::query()->sole();
+        $this->assertSame(EventType::Goal, $event->type);
+        $this->assertSame('purchase', $event->name);
+    }
+
+    public function test_queue_mode_rebuilds_a_custom_event_from_the_job(): void
+    {
+        config()->set('spa-analytics.tracking.write_mode', 'queue');
+        config()->set('queue.default', 'sync');
+
+        app(EventWriter::class)->write($this->goal());
+
+        $event = AnalyticsEvent::query()->sole();
+        $this->assertSame(EventType::Goal, $event->type);
+        $this->assertSame('49.50', $event->value);
+        $this->assertSame(['plan' => 'pro'], $event->properties);
+    }
+
+    public function test_defer_mode_stores_a_custom_event_after_the_deferred_callbacks_run(): void
+    {
+        config()->set('spa-analytics.tracking.write_mode', 'defer');
+
+        app(EventWriter::class)->write($this->goal());
+
+        $this->assertSame(0, AnalyticsEvent::query()->count());
+
+        app(DeferredCallbackCollection::class)->invoke();
+
+        $this->assertSame(1, AnalyticsEvent::query()->count());
     }
 
     public function test_sync_mode_inserts_immediately(): void

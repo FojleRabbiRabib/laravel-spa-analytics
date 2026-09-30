@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking;
 
 use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore;
+use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\CustomEventData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use Illuminate\Support\Facades\Cache;
@@ -19,12 +20,12 @@ class DatabaseEventStore implements EventStore
     ) {}
 
     /**
-     * Attach the page view to a session and insert the event.
+     * Insert the event; a page view joins or opens a session, a custom event only attaches to one that is still active.
      *
      * The per-visitor lock is the outermost scope so the commit lands before it is released; the visitor id
      * is resolved again inside the lock so a write racing a re-link never lands under an abandoned id.
      */
-    public function store(PageViewData $data): void
+    public function store(PageViewData|CustomEventData $data): void
     {
         $visitorId = $this->links->resolve($data->visitorId);
 
@@ -42,9 +43,11 @@ class DatabaseEventStore implements EventStore
 
                     DB::transaction(function () use ($data, $visitorId): void {
                         $data = $data->withVisitorId($visitorId);
-                        $session = $this->sessions->attach($data);
+                        $sessionId = $data instanceof CustomEventData
+                            ? $this->sessions->findActive($data->visitorId, $data->occurredAt)?->id
+                            : $this->sessions->attach($data)->id;
 
-                        AnalyticsEvent::query()->create([...$data->toArray(), 'session_id' => $session->id]);
+                        AnalyticsEvent::query()->create([...$data->toArray(), 'session_id' => $sessionId]);
                     });
 
                     return true;

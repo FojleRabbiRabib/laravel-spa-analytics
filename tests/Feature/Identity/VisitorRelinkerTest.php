@@ -214,4 +214,17 @@ class VisitorRelinkerTest extends TestCase
         $this->assertSame(2, $session->page_views);
         $this->assertSame($session->id, $event->fresh()->session_id);
     }
+
+    public function test_custom_events_move_with_the_visitor_and_keep_their_details(): void
+    {
+        $this->known('old');
+        AnalyticsEvent::factory()->goal()->create(['visitor_id' => 'new', 'name' => 'purchase', 'value' => 10, 'properties' => ['plan' => 'pro']]);
+
+        $this->relink();
+
+        $event = AnalyticsEvent::query()->sole();
+        $this->assertSame('old', $event->visitor_id);
+        $this->assertSame('purchase', $event->name);
+        $this->assertSame(['plan' => 'pro'], $event->properties);
+    }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking;
 
+use Carbon\CarbonImmutable;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 
@@ -23,11 +24,7 @@ class SessionTracker
             ->orderByDesc('last_seen_at')
             ->first();
 
-        $inWindow = $latest !== null
-            && $data->occurredAt->lessThanOrEqualTo($latest->last_seen_at->copy()->addMinutes($timeout))
-            && $data->occurredAt->greaterThanOrEqualTo($latest->started_at->copy()->subMinutes($timeout));
-
-        if ($latest !== null && $inWindow) {
+        if ($latest !== null && $this->inWindow($latest, $data->occurredAt, $timeout)) {
             $latest->page_views++;
 
             if ($data->occurredAt->greaterThan($latest->last_seen_at)) {
@@ -58,5 +55,26 @@ class SessionTracker
             'is_new_visitor' => $latest === null,
             'is_bot' => $data->isBot,
         ]);
+    }
+
+    /**
+     * The visitor's latest session when the moment falls inside its timeout window; nothing is created or changed.
+     */
+    public function findActive(string $visitorId, CarbonImmutable $at): ?AnalyticsSession
+    {
+        $latest = AnalyticsSession::query()
+            ->where('visitor_id', $visitorId)
+            ->orderByDesc('last_seen_at')
+            ->first();
+
+        return $latest !== null && $this->inWindow($latest, $at, (int) config('spa-analytics.sessions.timeout_minutes'))
+            ? $latest
+            : null;
+    }
+
+    private function inWindow(AnalyticsSession $session, CarbonImmutable $at, int $timeout): bool
+    {
+        return $at->lessThanOrEqualTo($session->last_seen_at->copy()->addMinutes($timeout))
+            && $at->greaterThanOrEqualTo($session->started_at->copy()->subMinutes($timeout));
     }
 }
