@@ -13,9 +13,11 @@ new-vs-returning visitor detection — with one constraint: **data never
 leaves your own infrastructure.** No third-party SaaS, no external API
 calls, no data sharing.
 
-> **Status: pre-release.** This package is under active development. The
-> capabilities below describe the target feature set; see the
-> [Changelog](CHANGELOG.md) for what has actually shipped so far.
+> **Status: pre-release (0.x).** 0.1.0 ships first-party visitor identity,
+> page view and session tracking, and opt-in visitor re-linking. Custom
+> events, goals, device and geo enrichment, rollups and the query API are
+> planned. Config keys and table layouts may change before 1.0; see the
+> [Changelog](CHANGELOG.md).
 
 ## Requirements
 
