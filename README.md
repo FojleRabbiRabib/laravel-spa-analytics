@@ -270,6 +270,11 @@ composer test
 npm test
 ```
 
+The identify request format is pinned by a frozen envelope,
+`tests/Fixtures/identify-envelope.json`: the TypeScript test must reproduce its
+bytes and the PHP test must decode it, so a change on either side fails a
+suite. Regenerate it only together with a new envelope version.
+
 By default the suite runs on in-memory sqlite and the array cache. The
 GitHub Actions workflow also runs it on MySQL 8 and PostgreSQL 16, each with the
 `database` and `redis` cache stores, and adds a concurrency test that forks

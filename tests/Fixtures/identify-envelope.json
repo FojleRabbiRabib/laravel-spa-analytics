@@ -1,0 +1,26 @@
+{
+    "notes": "Frozen sample of the identify request body. The TypeScript test must reproduce bodyBase64 byte for byte from compressedHex, key, nonce and ivHex; the PHP test must decode it at frozenAt into the expected signals. Change it only together with a new envelope version, never to make a test pass.",
+    "visitorId": "11111111-1111-4111-8111-111111111111",
+    "frozenAt": "2026-01-01T00:00:30Z",
+    "appKeyBytes": "32 bytes of the letter k (the app key used by the test base class)",
+    "nonce": "AAECAwQFBgcICQoLDA0OD2lVuTw.aI6xI66ZIRaAnlOhn-WB1nJCYpYamFgruoEzEcvb55k",
+    "key": "jfUq0d2z6PG/c8Ms5baw8GfcJYOk1IRz1flB57j7ugA=",
+    "ivHex": "101112131415161718191a1b",
+    "compressedHex": "1f8b08000000000000036364606460629060600e0d71666061566060f5c9cc2bad60604acd636060600c63600c6200020065e55b7627000000",
+    "bodyBase64": "AQBHQUFFQ0F3UUZCZ2NJQ1FvTERBME9EMmxWdVR3LmFJNnhJNjZaSVJhQW5sT2huLVdCMW5KQ1lwWWFtRmdydW9FekVjdmI1NWsQERITFBUWFxgZGhswZVvDeeALiAY5Qnyv3Hqg3BqqBBOldwrrlyE4Th6qZDEKfAfo89xd12GStxwx4d5LcXPHmR1NJF36QKBFBfzsmt4rXxXJpo29",
+    "signals": {
+        "screenWidth": 1,
+        "screenHeight": 2,
+        "colorDepth": 24,
+        "timezone": "UTC",
+        "hardwareConcurrency": 4,
+        "deviceMemory": 800,
+        "platform": "Linux",
+        "languages": "en",
+        "maxTouchPoints": 0,
+        "webglVendor": "V",
+        "webglRenderer": "R",
+        "canvasHash": "",
+        "audioHash": ""
+    }
+}
