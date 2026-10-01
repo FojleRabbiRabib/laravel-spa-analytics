@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Facade;
 /**
  * @method static void track(string $name, array<array-key, mixed> $properties = [])
  * @method static void goal(string $name, ?float $value = null, array<array-key, mixed> $properties = [])
- * @method static AnalyticsTracker for(string $visitorId)
+ * @method static AnalyticsTracker for(?string $visitorId)
  *
  * @see AnalyticsTracker
  */

@@ -61,13 +61,13 @@ class AnalyticsTracker
      * A tracker for an explicit visitor, for jobs, webhooks and commands.
      *
      * It never reads the current request, so the caller's IP, user agent and path are not attributed to the
-     * visitor. A visitor id that is not a UUID makes the tracker record nothing.
+     * visitor. A visitor id that is null or not a UUID makes the tracker record nothing.
      */
-    public function for(string $visitorId): static
+    public function for(?string $visitorId): static
     {
         $scoped = clone $this;
         $scoped->scoped = true;
-        $scoped->visitorId = Str::isUuid($visitorId) ? $visitorId : null;
+        $scoped->visitorId = $visitorId !== null && Str::isUuid($visitorId) ? $visitorId : null;
 
         return $scoped;
     }

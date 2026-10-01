@@ -247,6 +247,13 @@ class AnalyticsFacadeTest extends TestCase
         $this->assertSame(0, AnalyticsEvent::query()->count());
     }
 
+    public function test_for_with_a_null_visitor_id_records_nothing(): void
+    {
+        Analytics::for(null)->track('signup_clicked');
+
+        $this->assertSame(0, AnalyticsEvent::query()->count());
+    }
+
     public function test_for_returns_a_separate_tracker(): void
     {
         $scoped = Analytics::for(self::VISITOR);
