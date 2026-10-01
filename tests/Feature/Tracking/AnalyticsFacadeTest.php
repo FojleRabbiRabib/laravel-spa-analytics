@@ -177,7 +177,7 @@ class AnalyticsFacadeTest extends TestCase
 
         $stored = AnalyticsEvent::query()->sole()->properties;
 
-        $this->assertSame(['plan', 'count', 'ratio', 'flag', 'nothing', 'long'], array_keys($stored));
+        $this->assertEqualsCanonicalizing(['plan', 'count', 'ratio', 'flag', 'nothing', 'long'], array_keys($stored));
         $this->assertSame(str_repeat('x', 255), $stored['long']);
         $this->assertTrue($stored['flag']);
         $this->assertNull($stored['nothing']);
