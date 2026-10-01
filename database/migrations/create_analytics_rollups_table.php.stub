@@ -1,0 +1,42 @@
+<?php
+
+use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupDimension;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('analytics_rollups', function (Blueprint $table) {
+            $table->id();
+            $table->string('period', 8);
+            $table->timestamp('bucket_start');
+            $table->string('dimension', 32)->default(RollupDimension::default());
+            $table->string('value', 512)->default('');
+            $table->char('value_hash', 40);
+            $table->unsignedInteger('page_views')->default(0);
+            $table->unsignedInteger('visitors')->default(0);
+            $table->unsignedInteger('sessions')->default(0);
+            $table->unsignedInteger('bounces')->default(0);
+            $table->unsignedBigInteger('duration_seconds')->default(0);
+            $table->unsignedInteger('events')->default(0);
+            $table->decimal('revenue', 14, 2)->default(0);
+
+            $table->unique(['period', 'bucket_start', 'dimension', 'value_hash'], 'analytics_rollups_bucket_unique');
+            $table->index(['dimension', 'period', 'bucket_start']);
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('analytics_rollups');
+    }
+};

@@ -30,6 +30,9 @@ class ServiceProviderTest extends TestCase
         $this->assertContains('create_analytics_visitor_fingerprints_table.php.stub', $sources);
         $this->assertContains('create_analytics_sessions_table.php.stub', $sources);
         $this->assertContains('create_analytics_visitor_links_table.php.stub', $sources);
+        $this->assertContains('create_analytics_rollups_table.php.stub', $sources);
+        $this->assertContains('update_analytics_events_table_for_custom_events.php.stub', $sources);
+        $this->assertContains('update_analytics_sessions_table_for_audience.php.stub', $sources);
     }
 
     public function test_contracts_resolve_to_the_package_defaults(): void

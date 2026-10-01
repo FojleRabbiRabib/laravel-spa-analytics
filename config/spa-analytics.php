@@ -101,6 +101,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Rollups
+    |--------------------------------------------------------------------------
+    |
+    | spa-analytics:rollup summarises raw events and sessions into hourly and
+    | daily rows in analytics_rollups; spa-analytics:prune deletes raw rows
+    | older than retention_days once their day has been rolled up. With
+    | schedule on, the package registers the rollup hourly and the prune daily
+    | in the Laravel scheduler; turn it off to schedule them yourself.
+    | lookback_hours is how many recent hours each run recomputes, so late
+    | queued writes and still-open sessions are picked up.
+    |
+    */
+
+    'rollups' => [
+        'schedule' => true,
+        'lookback_hours' => 3,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Sessions
     |--------------------------------------------------------------------------
     |

@@ -21,6 +21,7 @@ abstract class TestCase extends Orchestra
      */
     private const OWN_TABLES = [
         'analytics_events',
+        'analytics_rollups',
         'analytics_sessions',
         'analytics_visitor_fingerprints',
         'analytics_visitor_links',

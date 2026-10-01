@@ -31,7 +31,7 @@ class InstallCommandTest extends TestCase
     {
         @unlink(config_path('spa-analytics.php'));
 
-        foreach (glob(database_path('migrations/*_create_analytics_*.php')) ?: [] as $migration) {
+        foreach (glob(database_path('migrations/*_analytics_*.php')) ?: [] as $migration) {
             @unlink($migration);
         }
 
@@ -55,6 +55,7 @@ class InstallCommandTest extends TestCase
 
         $this->assertFileExists(config_path('spa-analytics.php'));
         $this->assertFileExists(public_path('vendor/laravel-spa-analytics/client.js'));
-        $this->assertCount(4, glob(database_path('migrations/*_create_analytics_*.php')));
+        $this->assertCount(5, glob(database_path('migrations/*_create_analytics_*.php')));
+        $this->assertCount(2, glob(database_path('migrations/*_update_analytics_*.php')));
     }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace FojleRabbiRabib\LaravelSpaAnalytics;
 
+use FojleRabbiRabib\LaravelSpaAnalytics\Console\PruneCommand;
+use FojleRabbiRabib\LaravelSpaAnalytics\Console\RollupCommand;
 use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\BotDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\DeviceDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore;
@@ -19,6 +21,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\PatternBotDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\PatternDeviceDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\ReferrerClassifier;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Http\Request;
@@ -43,6 +46,7 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
             ->hasConfigFile('spa-analytics')
             ->hasViews('laravel-spa-analytics')
             ->hasRoute('web')
+            ->hasCommands([RollupCommand::class, PruneCommand::class])
             ->hasMigrations([
                 'create_analytics_events_table',
                 'create_analytics_visitor_fingerprints_table',
@@ -50,6 +54,7 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
                 'create_analytics_visitor_links_table',
                 'update_analytics_events_table_for_custom_events',
                 'update_analytics_sessions_table_for_audience',
+                'create_analytics_rollups_table',
             ])
             ->hasInstallCommand(function (InstallCommand $command): void {
                 $command
@@ -115,6 +120,15 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
             }
 
             return $limits;
+        });
+
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
+            if (! config('spa-analytics.enabled') || ! config('spa-analytics.rollups.schedule')) {
+                return;
+            }
+
+            $schedule->command('spa-analytics:rollup')->hourly()->withoutOverlapping();
+            $schedule->command('spa-analytics:prune')->daily()->withoutOverlapping();
         });
 
         Blade::directive('spaAnalytics', fn (): string => "<?php echo view('laravel-spa-analytics::client-script')->render(); ?>");
