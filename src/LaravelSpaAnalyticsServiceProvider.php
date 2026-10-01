@@ -10,6 +10,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Events\VisitorIdentified;
 use FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware\CapturePageView;
 use FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware\ResolveVisitorIdentity;
 use FojleRabbiRabib\LaravelSpaAnalytics\Listeners\StoreVisitorFingerprint;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\AnalyticsTracker;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\DatabaseEventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\PatternBotDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\ReferrerClassifier;
@@ -64,6 +65,7 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
             (array) config('spa-analytics.tracking.bot_patterns'),
         ));
         $this->app->bind(EventStore::class, DatabaseEventStore::class);
+        $this->app->singleton(AnalyticsTracker::class);
         $this->app->bind(ReferrerClassifier::class, fn (): ReferrerClassifier => new ReferrerClassifier(
             (array) config('spa-analytics.tracking.search_hosts'),
             (array) config('spa-analytics.tracking.social_hosts'),

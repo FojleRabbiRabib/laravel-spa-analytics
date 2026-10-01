@@ -19,6 +19,7 @@ class PageViewRecorder
         private readonly BotDetector $bots,
         private readonly ReferrerClassifier $referrers,
         private readonly EventWriter $writer,
+        private readonly LanguageParser $languages,
     ) {}
 
     /**
@@ -42,7 +43,7 @@ class PageViewRecorder
             referrerHost: $referrer->host,
             referrerType: $referrer->type,
             utm: $this->utm->parse($request->query()),
-            language: $this->language($request),
+            language: $this->languages->parse($request),
             ip: $request->ip(),
             userAgent: $userAgent === null ? null : mb_substr($userAgent, 0, 512),
             isBot: $this->bots->isBot($userAgent),
@@ -96,13 +97,5 @@ class PageViewRecorder
     {
         return strtolower((string) $request->headers->get('Purpose')) === 'prefetch'
             || str_contains(strtolower((string) $request->headers->get('Sec-Purpose')), 'prefetch');
-    }
-
-    private function language(Request $request): ?string
-    {
-        $header = (string) $request->headers->get('Accept-Language');
-        $tag = trim(explode(';', explode(',', $header)[0])[0]);
-
-        return $tag === '' ? null : mb_substr($tag, 0, 16);
     }
 }
