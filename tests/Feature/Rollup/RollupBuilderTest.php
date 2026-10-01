@@ -34,7 +34,7 @@ class RollupBuilderTest extends TestCase
             ->where('period', $period)
             ->where('bucket_start', $this->hour($start))
             ->where('dimension', $dimension)
-            ->where('value', $value)
+            ->where('value_hash', sha1($value))
             ->first();
     }
 
