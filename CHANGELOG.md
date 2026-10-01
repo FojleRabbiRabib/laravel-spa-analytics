@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `Analytics` facade with `track()`, `goal()` and `for($visitorId)` to record custom events and goals from server code, with validated names, goal values and properties.
+- `custom` and `goal` event types, `name` and `value` columns on `analytics_events`, and the `CustomEventData` data object. Custom events attach to a still-active session without changing it.
+- Migration `update_analytics_events_table_for_custom_events`. Publish with `spa-analytics-migrations` (existing files are skipped) and run `php artisan migrate`; it may rewrite the events table on some engines, so run it off-peak.
+
+### Changed
+
+- `EventStore::store()` and `EventWriter::write()` accept `PageViewData|CustomEventData`. Custom `EventStore` implementations must update the signature.
+- `analytics_events.type` is now a plain string column, and `path` and `status` are nullable.
+
 ## [0.1.0] - 2026-09-30
 
 ### Added

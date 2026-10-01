@@ -63,6 +63,22 @@ Add the collector to your root Blade layout, for example just before `</body>`:
 The directive renders one `<script>` tag (with your CSP nonce when the app
 uses one). It renders nothing when `SPA_ANALYTICS_ENABLED=false`.
 
+### Upgrading from 0.1.0
+
+Version 0.2.0 adds a migration for custom events. Publish again; the four
+migration files you already have are left alone and only the new one is added,
+then migrate:
+
+```bash
+php artisan vendor:publish --tag="spa-analytics-migrations"
+php artisan migrate
+```
+
+The migration adds `name` and `value` columns and makes `type`, `path` and
+`status` more permissive, which rewrites the `analytics_events` table on some
+engines, so run it off-peak on a large table. If you replaced the `EventStore`
+contract, its `store()` method now accepts `PageViewData|CustomEventData`.
+
 ## Configuration
 
 All keys live in `config/spa-analytics.php`.
@@ -219,6 +235,50 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 AnalyticsSession::query()->notBots()->between($from, $to)->get(); // between() uses started_at
 ```
 
+## Custom events and goals
+
+Record your own events from server code with the `Analytics` facade. They are
+stored in `analytics_events` next to page views (`type` is `custom` or `goal`).
+
+```php
+use FojleRabbiRabib\LaravelSpaAnalytics\Facades\Analytics;
+
+Analytics::track('signup_clicked', ['plan' => 'pro']);
+Analytics::goal('purchase', 49.50, ['coupon' => 'SPRING']);
+```
+
+Inside a web request the event belongs to the current visitor and takes its
+path, language, IP and user agent (and bot flag) from the request. In a queued
+job, webhook or command there is no current visitor, so name one with `for()`:
+
+```php
+Analytics::for($order->visitor_id)->goal('purchase', (float) $order->total);
+```
+
+`for()` never reads the current request, so a payment provider's IP and user
+agent are not attributed to the visitor; those fields stay empty and the
+event is not flagged as a bot. Store the visitor id with the order when you
+create it (from `app(FojleRabbiRabib\LaravelSpaAnalytics\Data\Identity\VisitorIdentity::class)->id`);
+a null id records nothing.
+
+`track()` and `goal()` only find the visitor on routes that run the identity
+middleware (the `web` group, or the `spa-analytics.identity` alias). On routes
+in `routes/api.php` they record nothing unless you add that alias or use `for()`.
+
+| Rule | Behavior |
+|---|---|
+| Name | 1 to 128 characters from `A-Z a-z 0-9 _ . : -`; anything else is ignored |
+| Goal value | Optional, 0 to 9999999999.99, stored with two decimals; an invalid value is dropped and the goal is still recorded |
+| Properties | At most 20 entries; string keys of 1 to 64 characters; values must be strings (cut at 255 characters), numbers, booleans or null; anything else is dropped |
+| Visitor | `for()` needs a UUID; with no known visitor, tracking disabled, or a null or invalid id, nothing is recorded |
+| Failures | Recording failures are never thrown to the caller; only the exception class and code are logged |
+
+Custom events use the same write modes as page views. They attach to the
+visitor's latest session when it is still inside `sessions.timeout_minutes`
+(`session_id` is empty otherwise) and never start a session, change its page
+view count or extend it. Re-linking moves them with the rest of the visitor's
+events. `path` and `status` are empty for events recorded through `for()`.
+
 ## Extending
 
 Two seams are contracts you can replace. Bind your own implementation in your
@@ -228,7 +288,7 @@ are bound in the register phase and yours wins.
 | Contract | Default | Purpose |
 |---|---|---|
 | `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\BotDetector` | `PatternBotDetector` (user agent substrings from config) | Decide whether a request is a bot |
-| `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore` | `DatabaseEventStore` (session plus event rows, under a lock) | Persist a page view |
+| `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore` | `DatabaseEventStore` (session plus event rows, under a lock) | Persist a page view or custom event |
 
 ```php
 use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\BotDetector;
@@ -239,7 +299,7 @@ public function register(): void
 }
 ```
 
-A custom `EventStore` may throw; the writer logs the exception class and code
+A custom `EventStore` receives `PageViewData` or `CustomEventData`. It may throw; the writer logs the exception class and code
 and never lets the failure reach the visitor.
 
 Only these two seams are swappable. Re-linking, the session model scopes and the
@@ -255,7 +315,8 @@ nothing to move.
 - **Sources:** referrer classification, full UTM campaign tracking.
 - **Audience:** device, OS, browser, viewport, language, country/region.
 - **Behavior:** outbound link clicks, file downloads, 404s, scroll/
-  engagement depth, custom events, conversion goals, multi-step funnels.
+  engagement depth, multi-step funnels and goal conversion rates (server-side
+  custom events and goals are recorded, see above; reporting is planned).
 - **Client-side tracker:** a first-class JS client for SPA page-view
   transitions, outbound clicks, scroll depth, and custom
   `analytics.track()` events — runs alongside server-side middleware
