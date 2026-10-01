@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `custom` and `goal` event types, `name` and `value` columns on `analytics_events`, and the `CustomEventData` data object. Custom events attach to a still-active session without changing it.
 - Migration `update_analytics_events_table_for_custom_events`. Publish with `spa-analytics-migrations` (existing files are skipped) and run `php artisan migrate`; it may rewrite the events table on some engines, so run it off-peak.
 
+- Session audience: `device_type`, `os`, `browser`, `browser_version` and `country` on `analytics_sessions`, set from a session's first page view, with the `DeviceType` enum and the `AudienceData` and `DeviceInfo` data objects.
+- `DeviceDetector` and `GeoLocator` contracts with a dependency-free `PatternDeviceDetector` and a `HeaderGeoLocator` that reads the country from the header named in `audience.country_header`.
+- Migration `update_analytics_sessions_table_for_audience` (nullable columns and two indexes; existing sessions stay empty).
+
 ### Changed
 
 - `EventStore::store()` and `EventWriter::write()` accept `PageViewData|CustomEventData`. Custom `EventStore` implementations must update the signature.

@@ -65,9 +65,9 @@ uses one). It renders nothing when `SPA_ANALYTICS_ENABLED=false`.
 
 ### Upgrading from 0.1.0
 
-Version 0.2.0 adds a migration for custom events. Publish again; the four
-migration files you already have are left alone and only the new one is added,
-then migrate:
+Version 0.2.0 adds two migrations (custom events and session audience).
+Publish again; the four migration files you already have are left alone and
+only the new ones are added, then migrate:
 
 ```bash
 php artisan vendor:publish --tag="spa-analytics-migrations"
@@ -78,6 +78,8 @@ The migration adds `name` and `value` columns and makes `type`, `path` and
 `status` more permissive, which rewrites the `analytics_events` table on some
 engines, so run it off-peak on a large table. If you replaced the `EventStore`
 contract, its `store()` method now accepts `PageViewData|CustomEventData`.
+The audience migration adds nullable columns and two indexes to
+`analytics_sessions`; existing sessions keep empty values.
 
 ## Configuration
 
@@ -103,6 +105,7 @@ All keys live in `config/spa-analytics.php`.
 | `tracking.excluded_paths` | `up`, `spa-analytics/*`, `reset-password/*`, `password/reset/*` | `request()->is()` patterns that are never recorded; add any other URL that carries a secret |
 | `tracking.bot_patterns` | see file | Case-insensitive user agent substrings that flag a request as a bot |
 | `tracking.search_hosts` / `tracking.social_hosts` | see file | Case-insensitive host substrings used to classify referrers |
+| `audience.country_header` | `null` | Request header your CDN fills with the visitor's country code (see [Audience](#audience)); `null` leaves the country empty |
 
 If you set `identity.register_middleware` to `false`, attach the
 `spa-analytics.identity` middleware alias to the routes that need a visitor
@@ -221,6 +224,7 @@ one starts.
 | `referrer_host`, `referrer_type`, `utm_*` | Taken from the session's first page view only |
 | `is_new_visitor` | The visitor had no earlier session |
 | `is_bot` | From the first page view |
+| `device_type`, `os`, `browser`, `browser_version`, `country` | From the first page view (see [Audience](#audience)) |
 
 Session writes take a per-visitor cache lock (`Cache::lock`). In production use
 a cache store shared by all app servers, such as `redis`, `database` or
@@ -234,6 +238,39 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 
 AnalyticsSession::query()->notBots()->between($from, $to)->get(); // between() uses started_at
 ```
+
+## Audience
+
+Each session stores device type, OS, browser and country, taken from its first
+page view like the referrer and UTM values. Sessions created before the audience
+migration keep empty values, and merged sessions keep the earliest session's
+values.
+
+| Column | Values |
+|---|---|
+| `device_type` | `desktop`, `mobile`, `tablet` or `unknown` (the `DeviceType` enum); `unknown` when the user agent is missing or unrecognised |
+| `os` | `Windows`, `macOS`, `Linux`, `ChromeOS`, `Android` or `iOS` |
+| `browser`, `browser_version` | Family (`Chrome`, `Edge`, `Firefox`, `Safari`, `Opera`, `Samsung Internet`) and major version only |
+| `country` | Two-letter ISO 3166-1 code in uppercase, or empty |
+
+The built-in parser has no dependencies and covers the common browsers; bind
+your own `DeviceDetector` for full accuracy (see [Extending](#extending)). iPads
+on iPadOS 13 or later send a macOS desktop user agent and are counted as
+desktop. Crawlers that imitate a browser (Googlebot's smartphone agent, for
+example) are classified as that browser, so filter them with `is_bot` or
+`notBots()`.
+
+Country needs no lookup service and no IP leaves your infrastructure. If a CDN
+or proxy sets a country header, name it:
+
+```php
+'audience' => ['country_header' => 'CF-IPCountry'],
+```
+
+Set it only when that header is always overwritten at your edge; otherwise any
+client can send its own value. Placeholder codes (`XX`, `ZZ`, `T1`, `A1`, `A2`)
+count as unknown. For a local MaxMind database or another source, bind a
+`GeoLocator`.
 
 ## Custom events and goals
 
@@ -281,13 +318,15 @@ events. `path` and `status` are empty for events recorded through `for()`.
 
 ## Extending
 
-Two seams are contracts you can replace. Bind your own implementation in your
+Four seams are contracts you can replace. Bind your own implementation in your
 app's `AppServiceProvider::register()` (not `boot()`); the package's defaults
 are bound in the register phase and yours wins.
 
 | Contract | Default | Purpose |
 |---|---|---|
 | `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\BotDetector` | `PatternBotDetector` (user agent substrings from config) | Decide whether a request is a bot |
+| `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\DeviceDetector` | `PatternDeviceDetector` (built-in user agent patterns) | Classify device type, OS and browser |
+| `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\GeoLocator` | `HeaderGeoLocator` (reads `audience.country_header`) | Find the visitor's country code |
 | `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore` | `DatabaseEventStore` (session plus event rows, under a lock) | Persist a page view or custom event |
 
 ```php
@@ -299,10 +338,13 @@ public function register(): void
 }
 ```
 
+A throwing `DeviceDetector` or `GeoLocator` only loses its own audience values;
+the page view is still recorded and the exception class and code are logged.
+
 A custom `EventStore` receives `PageViewData` or `CustomEventData`. It may throw; the writer logs the exception class and code
 and never lets the failure reach the visitor.
 
-Only these two seams are swappable. Re-linking, the session model scopes and the
+Only these seams are swappable. Re-linking, the session model scopes and the
 visitor link lookup read and write the package's own tables directly, so a store
 that writes elsewhere gets no rows in `analytics_sessions` and re-linking finds
 nothing to move.
@@ -313,7 +355,8 @@ nothing to move.
   visitors, bounce rate, average session duration, entry/exit pages.
 - **Real-time:** current active visitor count and their current page.
 - **Sources:** referrer classification, full UTM campaign tracking.
-- **Audience:** device, OS, browser, viewport, language, country/region.
+- **Audience:** viewport size (device, OS, browser and country are recorded on
+  sessions, see above; reporting is planned).
 - **Behavior:** outbound link clicks, file downloads, 404s, scroll/
   engagement depth, multi-step funnels and goal conversion rates (server-side
   custom events and goals are recorded, see above; reporting is planned).
