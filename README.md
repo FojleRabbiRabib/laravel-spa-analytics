@@ -25,6 +25,17 @@ calls, no data sharing.
 - PHP 8.3+
 - Laravel 13.x
 
+### Supported engines
+
+| | Verified in CI | Expected to work |
+|---|---|---|
+| Database | SQLite (every run), MySQL 8, MariaDB 11, PostgreSQL 16 | SQL Server is not verified; its default collation is case-insensitive and the rollup grouping has no SQL Server variant yet |
+| Cache (locks) | `database` (the Laravel default), `redis` | `memcached` and DynamoDB support locks but are not tested |
+
+Sessions and rollups take cache locks, so use a store that is shared by every
+app server. `file` is only safe on a single server, and `array` and `null` give
+no real locking, so keep them for tests.
+
 ## Installation
 
 ```bash

@@ -40,14 +40,14 @@ abstract class TestCase extends Orchestra
     }
 
     /**
-     * Real-engine mode runs the suite on MySQL or PostgreSQL. It is opt-in through environment variables that only
+     * Real-engine mode runs the suite on MySQL, MariaDB or PostgreSQL. It is opt-in through environment variables that only
      * the CI workflow (or a developer using dedicated empty test databases) sets; otherwise the suite runs on
      * in-memory sqlite and the array cache.
      */
     protected function usesRealEngine(): bool
     {
         return getenv('SPA_ANALYTICS_TEST_CI') === '1'
-            && in_array(getenv('SPA_ANALYTICS_TEST_DB'), ['mysql', 'pgsql'], true);
+            && in_array(getenv('SPA_ANALYTICS_TEST_DB'), ['mysql', 'mariadb', 'pgsql'], true);
     }
 
     protected function usesSharedCache(): bool
@@ -95,7 +95,7 @@ abstract class TestCase extends Orchestra
             'prefix' => '',
         ];
 
-        $connection += $driver === 'mysql'
+        $connection += in_array($driver, ['mysql', 'mariadb'], true)
             ? ['charset' => 'utf8mb4', 'collation' => 'utf8mb4_unicode_ci', 'strict' => true]
             : ['charset' => 'utf8', 'search_path' => 'public', 'sslmode' => 'prefer'];
 
