@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.3.0] - 2026-10-01
+## [0.3.0] - 2026-10-02
 
 ### Added
 
@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `php artisan spa-analytics:rollup` (with `--since` and `--period`) to recompute rollups idempotently under a cache lock, and `php artisan spa-analytics:prune` to delete raw events and sessions older than `retention_days` once their days are rolled up.
 - The hourly rollup and daily prune are registered in the Laravel scheduler; set `rollups.schedule` to `false` to schedule them yourself. New config keys `rollups.schedule` and `rollups.lookback_hours`.
 - Migration `create_analytics_rollups_table`. After upgrading, run `spa-analytics:rollup --since=YYYY-MM-DD` once to build history.
+- A supported engines table in the README (SQLite, MySQL 8, MariaDB 11 and PostgreSQL 16 verified; `database` and `redis` cache locks verified), and a MariaDB 11 job in the real-engine test matrix.
 
 ## [0.2.0] - 2026-10-01
 
