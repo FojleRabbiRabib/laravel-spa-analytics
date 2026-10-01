@@ -15,9 +15,10 @@ calls, no data sharing.
 
 > **Status: pre-release (0.x).** Shipped: first-party visitor identity, page
 > view and session tracking, opt-in visitor re-linking, custom events and goals
-> from server code, and device, OS, browser and country on sessions. Planned:
-> rollups, the query API and the browser tracker. Config keys and table layouts
-> may change before 1.0; see the [Changelog](CHANGELOG.md).
+> from server code, device, OS, browser and country on sessions, and hourly and
+> daily rollups with a retention prune. Planned: the query API and the browser
+> tracker. Config keys and table layouts may change before 1.0; see the
+> [Changelog](CHANGELOG.md).
 
 ## Requirements
 
