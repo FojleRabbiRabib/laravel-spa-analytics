@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Hourly and daily rollups in `analytics_rollups` (total, path, referrer, UTM campaign, device, OS, browser, country, new vs returning, custom event and goal dimensions), the `AnalyticsRollup` model and the `RollupPeriod` and `RollupDimension` enums.
+- `php artisan spa-analytics:rollup` (with `--since` and `--period`) to recompute rollups idempotently under a cache lock, and `php artisan spa-analytics:prune` to delete raw events and sessions older than `retention_days` once their days are rolled up.
+- The hourly rollup and daily prune are registered in the Laravel scheduler; set `rollups.schedule` to `false` to schedule them yourself. New config keys `rollups.schedule` and `rollups.lookback_hours`.
+- Migration `create_analytics_rollups_table`. After upgrading, run `spa-analytics:rollup --since=YYYY-MM-DD` once to build history.
+
 ## [0.2.0] - 2026-10-01
 
 ### Added

@@ -63,23 +63,28 @@ Add the collector to your root Blade layout, for example just before `</body>`:
 The directive renders one `<script>` tag (with your CSP nonce when the app
 uses one). It renders nothing when `SPA_ANALYTICS_ENABLED=false`.
 
-### Upgrading from 0.1.0
+### Upgrading
 
-Version 0.2.0 adds two migrations (custom events and session audience).
-Publish again; the four migration files you already have are left alone and
-only the new ones are added, then migrate:
+Every release that adds migrations works the same way: publish again, then
+migrate. Migration files you already have are left alone and only the new ones
+are added.
 
 ```bash
 php artisan vendor:publish --tag="spa-analytics-migrations"
 php artisan migrate
 ```
 
-The migration adds `name` and `value` columns and makes `type`, `path` and
+**From 0.1.0** (custom events and session audience): the first migration adds `name` and `value` columns and makes `type`, `path` and
 `status` more permissive, which rewrites the `analytics_events` table on some
 engines, so run it off-peak on a large table. If you replaced the `EventStore`
 contract, its `store()` method now accepts `PageViewData|CustomEventData`.
 The audience migration adds nullable columns and two indexes to
 `analytics_sessions`; existing sessions keep empty values.
+
+**From 0.2.0** (rollups): one new migration creates `analytics_rollups`. After
+migrating, run `php artisan spa-analytics:rollup --since=YYYY-MM-DD` once to
+build the rollups for your existing history (see [Rollups and
+retention](#rollups-and-retention)).
 
 ## Configuration
 
@@ -88,7 +93,9 @@ All keys live in `config/spa-analytics.php`.
 | Key | Default | Purpose |
 |---|---|---|
 | `enabled` | `true` | Master switch (`SPA_ANALYTICS_ENABLED`) |
-| `retention_days` | `null` | Raw event retention; `null` keeps everything |
+| `retention_days` | `null` | Days of raw events and sessions to keep; `null`, empty, `0` or a non-number keeps everything (`SPA_ANALYTICS_RETENTION_DAYS`) |
+| `rollups.schedule` | `true` | Register the hourly rollup and the daily prune in the Laravel scheduler |
+| `rollups.lookback_hours` | `3` | Recent hours each scheduled rollup recomputes |
 | `identity.register_middleware` | `true` | Append the identity middleware to the `web` group |
 | `identity.cookie_name` | `spa_analytics_vid` | Visitor cookie name |
 | `identity.cookie_lifetime_days` | `365` | Cookie lifetime, refreshed on every response |
@@ -365,12 +372,59 @@ nothing to move.
   `analytics.track()` events — runs alongside server-side middleware
   capture, not instead of it.
 
-## Data retention
+## Rollups and retention
 
-Raw events are kept in full by default — no forced pruning. Daily/hourly
-rollup tables exist for fast dashboard queries, but they supplement raw
-data rather than replacing it. A retention window is configurable via
-`config/spa-analytics.php` if disk usage ever becomes a concern.
+Raw events and sessions are the source of truth and are kept in full by
+default. Hourly and daily rollups in `analytics_rollups` summarise them for fast
+dashboard queries; they never replace the raw rows unless you turn retention on.
+
+`php artisan spa-analytics:rollup` recomputes the last `rollups.lookback_hours`
+hours and the days they touch from the raw rows, so late queued writes and
+sessions that are still open are picked up. It replaces each bucket's rows in
+one transaction, so it is safe to re-run, and it takes a cache lock so two runs
+never overlap (use a shared cache store, as for sessions). With
+`rollups.schedule` on (the default) the package registers it hourly and the
+prune daily in the Laravel scheduler; you only need `schedule:run` (or
+`schedule:work`) in cron. Turn the switch off to schedule them yourself.
+
+Options: `--since=DATE` recomputes from a date (use it once after upgrading to
+build history, and to repair writes that arrived more than the lookback late),
+and `--period=hour|day|both`. Hourly rows for a long range take a while, so
+backfill history with `--period=day` and let the schedule keep the hours fresh.
+
+| Column | Meaning |
+|---|---|
+| `period`, `bucket_start` | `hour` or `day` and the bucket's start in `app.timezone` (use UTC; in a daylight-saving zone the repeated autumn hour collapses into one bucket) |
+| `dimension`, `value` | What the row describes; the `total` dimension has an empty value |
+| `page_views`, `visitors` | Page views and distinct visitors in the bucket; a day counts a visitor once, not once per hour |
+| `sessions`, `bounces`, `duration_seconds` | Sessions that started in the bucket, those with a single page view, and their summed length |
+| `events`, `revenue` | Custom and goal events and the summed goal value |
+
+Dimensions: `total`, `path`, `referrer_type`, `referrer_host`, `utm_campaign`,
+`device_type`, `os`, `browser`, `country`, `visitor_type` (`new` or `returning`),
+`event` (custom event names) and `goal`. Bots are never counted. Audience
+dimensions come from the session, and for `path` the session columns count
+sessions by their entry path. A value that is empty (no UTM campaign, no
+country) gets no row. Every bucket gets a `total` row, even with no traffic.
+
+### Retention
+
+Set `retention_days` and `php artisan spa-analytics:prune` deletes events and
+sessions older than that many days (counted from the start of the day) in
+chunks. It only deletes days that already have a daily rollup and stops at the
+first day without one, telling you the `rollup --since` command to run, so
+nothing is deleted before it was counted. Sessions go by their last activity,
+so a session still running at the cutoff is kept. Rollups, fingerprints and
+visitor links are never pruned. Before the cutoff, the rollup command only
+fills days that have no daily rollup yet (their raw rows are still all there, so
+this is how you unblock the prune), and leaves days that already have one alone,
+so a backfill cannot overwrite them with zeros.
+
+Things to know: lengthening `retention_days` later does not bring pruned days
+back; after pruning, a returning visitor whose old sessions are gone is
+recorded as new, which shifts the `visitor_type` numbers; a custom event kept
+past the cutoff may point at a session that was pruned; and the day rollup is
+recomputed from raw rows every hour, so its cost grows with daily traffic.
 
 ## Testing
 
