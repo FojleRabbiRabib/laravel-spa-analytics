@@ -13,11 +13,11 @@ new-vs-returning visitor detection — with one constraint: **data never
 leaves your own infrastructure.** No third-party SaaS, no external API
 calls, no data sharing.
 
-> **Status: pre-release (0.x).** 0.1.0 ships first-party visitor identity,
-> page view and session tracking, and opt-in visitor re-linking. Custom
-> events, goals, device and geo enrichment, rollups and the query API are
-> planned. Config keys and table layouts may change before 1.0; see the
-> [Changelog](CHANGELOG.md).
+> **Status: pre-release (0.x).** Shipped: first-party visitor identity, page
+> view and session tracking, opt-in visitor re-linking, custom events and goals
+> from server code, and device, OS, browser and country on sessions. Planned:
+> rollups, the query API and the browser tracker. Config keys and table layouts
+> may change before 1.0; see the [Changelog](CHANGELOG.md).
 
 ## Requirements
 

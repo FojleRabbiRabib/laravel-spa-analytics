@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-01
+
 ### Added
 
 - `Analytics` facade with `track()`, `goal()` and `for($visitorId)` to record custom events and goals from server code, with validated names, goal values and properties.
@@ -43,5 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `BotDetector` and `EventStore` contracts, bound in the register phase so an app can replace them.
 - Publish tags `spa-analytics-config`, `spa-analytics-migrations` and `spa-analytics-assets`.
 
-[Unreleased]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/releases/tag/v0.1.0
