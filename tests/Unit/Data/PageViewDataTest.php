@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Unit\Data;
 
 use Carbon\CarbonImmutable;
+use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\AudienceData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
+use FojleRabbiRabib\LaravelSpaAnalytics\Enums\DeviceType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
 use PHPUnit\Framework\TestCase;
@@ -79,5 +81,33 @@ class PageViewDataTest extends TestCase
         $second = PageViewData::fromArray($first->toArray());
 
         $this->assertEquals($first, $second);
+    }
+
+    public function test_audience_defaults_to_nothing_known_and_is_not_part_of_the_event_columns(): void
+    {
+        $data = PageViewData::fromArray($this->attributes());
+
+        $this->assertEquals(new AudienceData, $data->audience);
+        $this->assertArrayNotHasKey('device_type', $data->toArray());
+        $this->assertArrayNotHasKey('country', $data->toArray());
+    }
+
+    public function test_the_queue_payload_carries_the_audience_and_rebuilds_it(): void
+    {
+        $audience = new AudienceData(DeviceType::Mobile, 'Android', 'Chrome', '121', 'BD');
+        $data = PageViewData::fromArray([...$this->attributes(), ...$audience->toArray()]);
+
+        $payload = $data->toPayload();
+
+        $this->assertSame('BD', $payload['country']);
+        $this->assertEquals($audience, PageViewData::fromArray($payload)->audience);
+    }
+
+    public function test_with_visitor_id_keeps_the_audience(): void
+    {
+        $audience = new AudienceData(DeviceType::Desktop, 'Linux', 'Firefox', '121', 'DE');
+        $data = PageViewData::fromArray([...$this->attributes(), ...$audience->toArray()]);
+
+        $this->assertEquals($audience, $data->withVisitorId('adopted')->audience);
     }
 }

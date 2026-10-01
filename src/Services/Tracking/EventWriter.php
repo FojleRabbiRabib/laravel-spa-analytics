@@ -25,7 +25,7 @@ class EventWriter
         match ($mode) {
             WriteMode::Sync => $this->safely($data),
             WriteMode::Queue => dispatch(
-                (new WriteEvent($data->toArray()))
+                (new WriteEvent($data instanceof PageViewData ? $data->toPayload() : $data->toArray()))
                     ->onConnection(config('spa-analytics.tracking.connection'))
                     ->onQueue(config('spa-analytics.tracking.queue')),
             ),

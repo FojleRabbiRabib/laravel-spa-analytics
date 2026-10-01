@@ -26,10 +26,11 @@ final readonly class PageViewData
         public ?string $userAgent,
         public bool $isBot,
         public CarbonImmutable $occurredAt,
+        public AudienceData $audience = new AudienceData,
     ) {}
 
     /**
-     * @param  array<string, mixed>  $data  Column-keyed values, as produced by toArray().
+     * @param  array<string, mixed>  $data  Column-keyed values, as produced by toArray() or toPayload().
      */
     public static function fromArray(array $data): self
     {
@@ -57,6 +58,7 @@ final readonly class PageViewData
             userAgent: isset($data['user_agent']) ? (string) $data['user_agent'] : null,
             isBot: (bool) $data['is_bot'],
             occurredAt: CarbonImmutable::parse($data['occurred_at']),
+            audience: AudienceData::fromArray($data),
         );
     }
 
@@ -78,7 +80,18 @@ final readonly class PageViewData
             $this->userAgent,
             $this->isBot,
             $this->occurredAt,
+            $this->audience,
         );
+    }
+
+    /**
+     * Event columns plus the audience columns, for carrying the whole page view through a queued job.
+     *
+     * @return array<string, mixed>
+     */
+    public function toPayload(): array
+    {
+        return [...$this->toArray(), ...$this->audience->toArray()];
     }
 
     /**

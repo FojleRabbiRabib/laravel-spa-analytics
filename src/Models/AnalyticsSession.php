@@ -6,6 +6,7 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Models;
 
 use Carbon\CarbonInterface;
 use FojleRabbiRabib\LaravelSpaAnalytics\Database\Factories\AnalyticsSessionFactory;
+use FojleRabbiRabib\LaravelSpaAnalytics\Enums\DeviceType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
@@ -31,6 +32,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property ?string $utm_content
  * @property bool $is_new_visitor
  * @property bool $is_bot
+ * @property ?DeviceType $device_type
+ * @property ?string $os
+ * @property ?string $browser
+ * @property ?string $browser_version
+ * @property ?string $country
  */
 #[UseFactory(AnalyticsSessionFactory::class)]
 class AnalyticsSession extends Model
@@ -55,6 +61,7 @@ class AnalyticsSession extends Model
             'referrer_type' => ReferrerType::class,
             'is_new_visitor' => 'boolean',
             'is_bot' => 'boolean',
+            'device_type' => DeviceType::class,
         ];
     }
 

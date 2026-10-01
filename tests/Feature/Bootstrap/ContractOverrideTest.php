@@ -5,11 +5,16 @@ declare(strict_types=1);
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Feature\Bootstrap;
 
 use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\BotDetector;
+use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\DeviceDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore;
+use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\GeoLocator;
+use FojleRabbiRabib\LaravelSpaAnalytics\Enums\DeviceType;
 use FojleRabbiRabib\LaravelSpaAnalytics\LaravelSpaAnalyticsServiceProvider;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\Support\FakeBotDetector;
+use FojleRabbiRabib\LaravelSpaAnalytics\Tests\Support\FakeDeviceDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\Support\FakeEventStore;
+use FojleRabbiRabib\LaravelSpaAnalytics\Tests\Support\FakeGeoLocator;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\Support\OverridingServiceProvider;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
 
@@ -49,6 +54,8 @@ class ContractOverrideTest extends TestCase
     {
         $this->assertInstanceOf(FakeBotDetector::class, app(BotDetector::class));
         $this->assertInstanceOf(FakeEventStore::class, app(EventStore::class));
+        $this->assertInstanceOf(FakeDeviceDetector::class, app(DeviceDetector::class));
+        $this->assertInstanceOf(FakeGeoLocator::class, app(GeoLocator::class));
     }
 
     public function test_the_capture_path_uses_the_swapped_implementations(): void
@@ -60,5 +67,16 @@ class ContractOverrideTest extends TestCase
         $this->assertCount(1, FakeEventStore::$stored);
         $this->assertTrue(FakeEventStore::$stored[0]->isBot);
         $this->assertSame(0, AnalyticsEvent::query()->count());
+    }
+
+    public function test_the_capture_path_uses_the_swapped_audience_contracts(): void
+    {
+        $this->get('/page')->assertOk();
+
+        $audience = FakeEventStore::$stored[0]->audience;
+
+        $this->assertSame(DeviceType::Tablet, $audience->deviceType);
+        $this->assertSame('FakeBrowser', $audience->browser);
+        $this->assertSame('NZ', $audience->country);
     }
 }

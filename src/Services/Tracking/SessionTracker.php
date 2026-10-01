@@ -52,6 +52,7 @@ class SessionTracker
             'referrer_host' => $data->referrerHost,
             'referrer_type' => $data->referrerType,
             ...$data->utm,
+            ...$data->audience->toArray(),
             'is_new_visitor' => $latest === null,
             'is_bot' => $data->isBot,
         ]);
