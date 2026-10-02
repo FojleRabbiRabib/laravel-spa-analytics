@@ -172,6 +172,45 @@ class CollectEndpointTest extends TestCase
         $this->assertSame(2, $session->page_views);
     }
 
+    public function test_one_bad_field_drops_that_event_and_never_the_rest_of_the_batch(): void
+    {
+        $this->collect([
+            ['kind' => 'event', 'path' => '/pricing', 'name' => str_repeat('n', 200)],
+            ['kind' => 'event', 'path' => '/pricing', 'name' => 'with_bad_properties', 'properties' => 'oops'],
+            ['kind' => 'pageview', 'path' => '/'.str_repeat('p', 600), 'referrer' => ['not', 'a', 'string']],
+            ['kind' => 'outbound', 'path' => '/pricing', 'url' => ['x']],
+            ['kind' => 'scroll', 'path' => '/pricing', 'percent' => 'fifty'],
+            ['kind' => 'goal', 'path' => '/pricing', 'name' => 'signup', 'value' => 'lots', 'age' => 'soon'],
+        ])->assertNoContent();
+
+        $events = AnalyticsEvent::query()->orderBy('id')->get();
+
+        $this->assertSame(['with_bad_properties', null, 'signup'], $events->pluck('name')->all());
+        $this->assertNull($events[0]->properties);
+        $this->assertSame(512, mb_strlen((string) $events[1]->path));
+        $this->assertNull($events[2]->value);
+    }
+
+    public function test_the_shared_fixture_batch_stores_one_event_of_each_kind(): void
+    {
+        $batch = json_decode((string) file_get_contents(__DIR__.'/../../Fixtures/collect-batch.json'), true, flags: JSON_THROW_ON_ERROR);
+
+        $this->collect($batch['events'])->assertNoContent();
+
+        $events = AnalyticsEvent::query()->orderBy('id')->get();
+
+        $this->assertSame(
+            [EventType::PageView, EventType::OutboundClick, EventType::ScrollDepth, EventType::Custom, EventType::Goal],
+            $events->pluck('type')->all(),
+        );
+        $this->assertSame('example.org', $events[1]->target_host);
+        $this->assertSame('/a', $events[1]->target_path);
+        $this->assertSame(50, $events[2]->scroll_percent);
+        $this->assertSame(['plan' => 'pro'], $events[3]->properties);
+        $this->assertSame('49.50', $events[4]->value);
+        $this->assertSame(['order' => 'A1'], $events[4]->properties);
+    }
+
     public function test_invalid_batches_are_rejected(): void
     {
         $this->collect([])->assertUnprocessable();

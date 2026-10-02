@@ -3,7 +3,7 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "esbuild resources/js/identity/index.ts --bundle --minify --format=iife --target=es2020 --outfile=resources/dist/client.js",
+        "build": "esbuild resources/js/index.ts --bundle --minify --format=iife --target=es2020 --outfile=resources/dist/client.js",
         "test": "vitest run",
         "lint": "eslint resources/js",
         "types": "tsc --noEmit"

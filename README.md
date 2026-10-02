@@ -93,9 +93,14 @@ contract, its `store()` method now accepts `PageViewData|CustomEventData`.
 The audience migration adds nullable columns and two indexes to
 `analytics_sessions`; existing sessions keep empty values.
 
-**From 0.3.0**: no migration. The rollups gain an `exit_path` dimension; run
+**From 0.3.0**: the rollups gain an `exit_path` dimension; run
 `php artisan spa-analytics:rollup --since=YYYY-MM-DD` again to fill it for
-history.
+history. The browser client gains SPA transitions, outbound clicks, scroll depth
+and `window.spaAnalytics`: publish the migrations again (one new migration adds
+`target_host`, `target_path` and `scroll_percent` to `analytics_events`, all
+nullable) and re-publish the script with
+`php artisan vendor:publish --tag="spa-analytics-assets" --force`. An old cached
+`client.js` keeps working but sends none of the new events.
 
 **From 0.2.0** (rollups): one new migration creates `analytics_rollups`. After
 migrating, run `php artisan spa-analytics:rollup --since=YYYY-MM-DD` once to
@@ -110,6 +115,8 @@ All keys live in `config/spa-analytics.php`.
 |---|---|---|
 | `enabled` | `true` | Master switch (`SPA_ANALYTICS_ENABLED`) |
 | `retention_days` | `null` | Days of raw events and sessions to keep; `null`, empty, `0` or a non-number keeps everything (`SPA_ANALYTICS_RETENTION_DAYS`) |
+| `collect.rate_limit_per_minute` | `120` | Per-visitor (cookie) limit on the collect endpoint |
+| `collect.rate_limit_per_ip_per_minute` | `1200` | Per-address ceiling on the collect endpoint |
 | `rollups.schedule` | `true` | Register the hourly rollup and the daily prune in the Laravel scheduler |
 | `rollups.lookback_hours` | `3` | Recent hours each scheduled rollup recomputes |
 | `stats.realtime_minutes` | `5` | Window of `Stats::realtime()` |
@@ -340,6 +347,53 @@ visitor's latest session when it is still inside `sessions.timeout_minutes`
 view count or extend it. Re-linking moves them with the rest of the visitor's
 events. `path` and `status` are empty for events recorded through `for()`.
 
+## Browser events
+
+The collector script also reports what the server cannot see, to
+`POST {identity.route_prefix}/collect` (same web group, CSRF and visitor
+cookie as the identity endpoints, with its own throttle, see
+`collect.*`). Events are batched (up to 20 per request, sent after two seconds,
+on route changes and clicks at once, and when the page is hidden) with
+`fetch` and `keepalive`.
+
+| Event | What is sent | Stored as |
+|---|---|---|
+| SPA page view | A change of pathname through `pushState` or the back and forward buttons. Not the first load (the server records it), `replaceState`, or a change of only the query or hash. Skipped on [Inertia](https://inertiajs.com) pages (`data-page`), which the server records; the server also ignores a client page view of the same path within five seconds of one it recorded | A `page_view` with no `status`, joining the session like any other |
+| Outbound click | A click or middle click on an `http(s)` link to another host: the host and path, never the query or fragment | `outbound_click` with `target_host` and `target_path` |
+| Scroll depth | The 25, 50, 75 and 100 per cent milestones, once each per page, only after the visitor scrolls (a page that fits the window reports nothing) | `scroll_depth` with `scroll_percent` |
+| `window.spaAnalytics.track(name, properties?)` | A custom event | `custom`, like `Analytics::track()` |
+| `window.spaAnalytics.goal(name, value?, properties?)` | A goal, sent at once | `goal`, like `Analytics::goal()` |
+
+```js
+window.spaAnalytics.track('clicked_cta', { plan: 'pro' });
+window.spaAnalytics.goal('purchase', 49.5);
+```
+
+The script loads with `defer`, so calls made before it is ready are lost unless
+the page starts a queue that the script replays in order:
+
+```js
+window.spaAnalytics = window.spaAnalytics || [];
+window.spaAnalytics.push(['track', 'early_event', { a: 1 }]);
+window.spaAnalytics.push(['goal', 'early_goal', 5]);
+```
+
+Names, values and properties are checked exactly as for
+[`Analytics::track()`](#custom-events-and-goals). Every path sent by the browser
+is normalised, never stores a query string, and is dropped when it matches
+`tracking.excluded_paths`, so a single-page route such as `/reset-password/{token}`
+never reaches the database. The server takes the IP address, user agent,
+language and audience from the collect request itself, and an event's time is
+the request time minus the age the browser reports (at most five minutes), so a
+batch keeps its order.
+
+**Privacy:** `target_path` is the path of the external page a visitor clicked
+to, without the query; it can still identify a specific document or profile on
+the other site. If that is more than you want to keep, clear the column after
+recording (for example in a model observer) or leave outbound clicks out of
+your retention plan. `target_host` and the host ranking in `Stats` do not
+depend on it.
+
 ## Extending
 
 Four seams are contracts you can replace. Bind your own implementation in your
@@ -383,10 +437,9 @@ nothing to move.
 - **Behavior:** outbound link clicks, file downloads, 404s, scroll/
   engagement depth (custom events, goals, their conversion and multi-step
   funnels are reported by `Stats`, see below).
-- **Client-side tracker:** a first-class JS client for SPA page-view
-  transitions, outbound clicks, scroll depth, and custom
-  `analytics.track()` events — runs alongside server-side middleware
-  capture, not instead of it.
+- **Client-side tracker:** file downloads and engagement beyond scroll depth
+  (SPA transitions, outbound clicks, scroll depth and `window.spaAnalytics`
+  are available, see [Browser events](#browser-events)).
 
 ## Rollups and retention
 

@@ -76,7 +76,7 @@ class ClientEventRecorder
             return;
         }
 
-        $age = min(max((int) ($event['age'] ?? 0), 0), self::MAX_AGE_MS);
+        $age = min(max(is_numeric($event['age'] ?? null) ? (int) $event['age'] : 0, 0), self::MAX_AGE_MS);
         $occurredAt = $now->subMilliseconds($age);
 
         $data = match ($kind) {
@@ -102,7 +102,7 @@ class ClientEventRecorder
             return null;
         }
 
-        $referrer = $this->referrers->classify(isset($event['referrer']) ? (string) $event['referrer'] : null, $request->getHost());
+        $referrer = $this->referrers->classify($this->text($event['referrer'] ?? null), $request->getHost());
 
         return new PageViewData(
             type: EventType::PageView,
@@ -127,7 +127,7 @@ class ClientEventRecorder
      */
     private function outbound(Request $request, array $context, array $event, string $path, CarbonImmutable $occurredAt): ?CustomEventData
     {
-        $parts = parse_url((string) ($event['url'] ?? ''));
+        $parts = parse_url($this->text($event['url'] ?? null) ?? '');
         $scheme = is_array($parts) ? strtolower((string) ($parts['scheme'] ?? '')) : '';
         $host = is_array($parts) ? strtolower((string) ($parts['host'] ?? '')) : '';
 
@@ -146,7 +146,7 @@ class ClientEventRecorder
      */
     private function scroll(array $context, array $event, string $path, CarbonImmutable $occurredAt): ?CustomEventData
     {
-        $percent = (int) ($event['percent'] ?? 0);
+        $percent = is_numeric($event['percent'] ?? null) ? (int) $event['percent'] : 0;
 
         return in_array($percent, self::SCROLL_MILESTONES, true)
             ? $this->clientEvent(EventType::ScrollDepth, $context, $path, $occurredAt, scrollPercent: $percent)
@@ -159,9 +159,9 @@ class ClientEventRecorder
      */
     private function custom(EventType $type, array $context, array $event, string $path, CarbonImmutable $occurredAt): ?CustomEventData
     {
-        $name = (string) ($event['name'] ?? '');
+        $name = $event['name'] ?? null;
 
-        if (! $this->sanitizer->isValidName($name)) {
+        if (! is_string($name) || ! $this->sanitizer->isValidName($name)) {
             return null;
         }
 
@@ -171,7 +171,7 @@ class ClientEventRecorder
             $path,
             $occurredAt,
             name: $name,
-            value: $type->is(EventType::Goal) && isset($event['value']) ? $this->sanitizer->value((float) $event['value']) : null,
+            value: $type->is(EventType::Goal) && is_numeric($event['value'] ?? null) ? $this->sanitizer->value((float) $event['value']) : null,
             properties: is_array($event['properties'] ?? null) ? $this->sanitizer->properties($event['properties']) : [],
         );
     }
@@ -198,6 +198,14 @@ class ClientEventRecorder
             targetPath: $targetPath,
             scrollPercent: $scrollPercent,
         );
+    }
+
+    /**
+     * A string field cut to 2048 characters, or null when it is missing or not a string.
+     */
+    private function text(mixed $value): ?string
+    {
+        return is_string($value) ? mb_substr($value, 0, 2048) : null;
     }
 
     /**

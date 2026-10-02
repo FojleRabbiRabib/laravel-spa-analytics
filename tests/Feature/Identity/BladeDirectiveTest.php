@@ -17,6 +17,7 @@ class BladeDirectiveTest extends TestCase
         $this->assertStringContainsString('vendor/laravel-spa-analytics/client.js', $html);
         $this->assertStringContainsString('data-handshake="'.route('spa-analytics.identity.handshake').'"', $html);
         $this->assertStringContainsString('data-identify="'.route('spa-analytics.identity.identify').'"', $html);
+        $this->assertStringContainsString('data-collect="'.route('spa-analytics.collect').'"', $html);
     }
 
     public function test_directive_renders_nothing_when_disabled(): void

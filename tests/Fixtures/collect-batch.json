@@ -1,0 +1,9 @@
+{
+    "events": [
+        { "kind": "pageview", "path": "/docs", "referrer": "https://example.org/start", "age": 0 },
+        { "kind": "outbound", "path": "/docs", "url": "https://example.org/a", "age": 10 },
+        { "kind": "scroll", "path": "/docs", "percent": 50, "age": 20 },
+        { "kind": "event", "path": "/docs", "name": "clicked_cta", "properties": { "plan": "pro" }, "age": 30 },
+        { "kind": "goal", "path": "/docs", "name": "purchase", "value": 49.5, "properties": { "order": "A1" }, "age": 40 }
+    ]
+}

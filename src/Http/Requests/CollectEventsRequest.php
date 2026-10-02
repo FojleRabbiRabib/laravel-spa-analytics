@@ -22,6 +22,9 @@ class CollectEventsRequest extends FormRequest
     }
 
     /**
+     * Only the shape of the batch is checked here. The fields of an event are cleaned by the recorder exactly like
+     * Analytics::track() cleans its arguments, so one bad value drops that value or event, never the whole batch.
+     *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
@@ -30,14 +33,14 @@ class CollectEventsRequest extends FormRequest
             'events' => ['required', 'array', 'min:1', 'max:'.self::MAX_EVENTS],
             'events.*' => ['array'],
             'events.*.kind' => ['required', Rule::enum(ClientEventKind::class)],
-            'events.*.path' => ['required', 'string', 'starts_with:/', 'max:512'],
-            'events.*.age' => ['nullable', 'integer', 'min:0'],
-            'events.*.referrer' => ['nullable', 'string', 'max:2048'],
-            'events.*.url' => ['nullable', 'string', 'max:2048'],
-            'events.*.percent' => ['nullable', 'integer', 'min:0', 'max:100'],
-            'events.*.name' => ['nullable', 'string', 'max:128'],
-            'events.*.value' => ['nullable', 'numeric'],
-            'events.*.properties' => ['nullable', 'array'],
+            'events.*.path' => ['required', 'string', 'starts_with:/'],
+            'events.*.age' => ['sometimes'],
+            'events.*.referrer' => ['sometimes'],
+            'events.*.url' => ['sometimes'],
+            'events.*.percent' => ['sometimes'],
+            'events.*.name' => ['sometimes'],
+            'events.*.value' => ['sometimes'],
+            'events.*.properties' => ['sometimes'],
         ];
     }
 
