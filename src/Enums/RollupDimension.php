@@ -19,6 +19,8 @@ enum RollupDimension: string
     case VisitorType = 'visitor_type';
     case Event = 'event';
     case Goal = 'goal';
+    case OutboundHost = 'outbound_host';
+    case ScrollDepth = 'scroll_depth';
 
     /**
      * The analytics_sessions column behind each dimension that describes a session, keyed by column.
@@ -82,6 +84,8 @@ enum RollupDimension: string
             self::VisitorType => 'Visitor type',
             self::Event => 'Event',
             self::Goal => 'Goal',
+            self::OutboundHost => 'Outbound host',
+            self::ScrollDepth => 'Scroll depth',
         };
     }
 
@@ -95,7 +99,7 @@ enum RollupDimension: string
             self::Path, self::ExitPath => 'blue',
             self::ReferrerType, self::ReferrerHost, self::UtmCampaign => 'purple',
             self::DeviceType, self::Os, self::Browser, self::Country, self::VisitorType => 'green',
-            self::Event, self::Goal => 'orange',
+            self::Event, self::Goal, self::OutboundHost, self::ScrollDepth => 'orange',
         };
     }
 

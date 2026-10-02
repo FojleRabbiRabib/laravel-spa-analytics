@@ -227,5 +227,36 @@ class RollupBuilder
 
         $this->set($rows, RollupDimension::Total, '', 'events', $totalEvents);
         $this->set($rows, RollupDimension::Total, '', 'revenue', round($totalRevenue, 2));
+
+        $this->addClientEvents($rows, $from, $to, EventType::OutboundClick, RollupDimension::OutboundHost, 'target_host', true);
+        $this->addClientEvents($rows, $from, $to, EventType::ScrollDepth, RollupDimension::ScrollDepth, 'scroll_percent', false);
+    }
+
+    /**
+     * Outbound clicks by target host and scroll depth milestones, counted apart from the named events so the
+     * total events number keeps meaning custom events and goals.
+     *
+     * @param  array<string, array<string, int|float>>  $rows
+     */
+    private function addClientEvents(array &$rows, string $from, string $to, EventType $type, RollupDimension $dimension, string $column, bool $text): void
+    {
+        $expression = $text ? Sql::exact($column) : $column;
+
+        $groups = DB::table('analytics_events')
+            ->where('type', $type)
+            ->where('is_bot', false)
+            ->where('occurred_at', '>=', $from)
+            ->where('occurred_at', '<', $to)
+            ->whereNotNull($column)
+            ->groupBy(DB::raw($expression))
+            ->selectRaw($expression.' as value, count(*) as events, count(distinct '.Sql::exact('visitor_id').') as visitors')
+            ->get();
+
+        foreach ($groups as $group) {
+            $value = (string) $group->value;
+
+            $this->set($rows, $dimension, $value, 'events', (int) $group->events);
+            $this->set($rows, $dimension, $value, 'visitors', (int) $group->visitors);
+        }
     }
 }

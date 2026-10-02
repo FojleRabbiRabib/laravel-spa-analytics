@@ -141,7 +141,7 @@ class StatsReport
 
         $orderBy = match ($dimension) {
             RollupDimension::Path => 'page_views',
-            RollupDimension::Event, RollupDimension::Goal => 'events',
+            RollupDimension::Event, RollupDimension::Goal, RollupDimension::OutboundHost, RollupDimension::ScrollDepth => 'events',
             default => 'sessions',
         };
 

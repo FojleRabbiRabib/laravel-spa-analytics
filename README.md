@@ -418,7 +418,10 @@ backfill history with `--period=day` and let the schedule keep the hours fresh.
 
 Dimensions: `total`, `path`, `exit_path`, `referrer_type`, `referrer_host`, `utm_campaign`,
 `device_type`, `os`, `browser`, `country`, `visitor_type` (`new` or `returning`),
-`event` (custom event names) and `goal`. Bots are never counted. Audience
+`event` (custom event names), `goal`, `outbound_host` (target hosts of outbound
+clicks) and `scroll_depth` (the 25, 50, 75 and 100 milestones). The `events` column
+and the `total` row's events count custom events and goals only; clicks and
+scroll milestones have their own dimensions. Bots are never counted. Audience
 dimensions come from the session. For `path` the session columns count
 sessions by their entry path, and `exit_path` counts sessions by their last
 page (sessions, bounces and duration only, no page views). A value that is empty (no UTM campaign, no
@@ -474,7 +477,7 @@ Stats::realtime();                           // Realtime
 |---|---|
 | `summary()` | `pageViews`, `users`, `usersExact`, `newUsers`, `returningUsers`, `sessions`, `bounces`, `bounceRate`, `avgSessionDuration`, `events`, `goalCompletions`, `revenue`, `conversionRate`, `through`, `incomplete` |
 | `timeseries(Hour or Day)` | One point per bucket of the range, empty buckets as zeros |
-| `top(dimension, limit)` | The best values of a dimension: paths by page views, events and goals by events, everything else by sessions. Use the entry-path sessions of `path` rows and the last page of `exit_path` rows for landing and exit pages |
+| `top(dimension, limit)` | The best values of a dimension: paths by page views, events, goals, outbound hosts and scroll depth by events, everything else by sessions. Use the entry-path sessions of `path` rows and the last page of `exit_path` rows for landing and exit pages |
 | `goals()` | Each goal with completions, revenue, users and conversion rate |
 | `funnel(steps)` | Users per step with the rate from the previous and from the first step, the overall conversion, `coveredFrom`, `complete` and `through` |
 | `realtime()` | Visitors with a page view in the last `stats.realtime_minutes` (default 5) and the page each of them viewed last, read from the raw events |

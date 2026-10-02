@@ -86,14 +86,17 @@ class UsersCounter
 
         if ($exactFrom->lessThan($plan->effectiveTo)) {
             [$query, $column, $visitor] = $this->source($dimension, $exactFrom, $plan->effectiveTo);
-            $expression = $dimension->is(RollupDimension::VisitorType) ? $column : Sql::exact($column);
+            $numeric = $dimension->is(RollupDimension::VisitorType) || $dimension->is(RollupDimension::ScrollDepth);
+            $expression = $numeric ? $column : Sql::exact($column);
 
             if ($viewersOnly) {
                 $query->whereIn('e.visitor_id', $this->pageViews($exactFrom, $plan->effectiveTo)->select('e.visitor_id'));
             }
 
             if (! $dimension->is(RollupDimension::VisitorType)) {
-                $query->whereRaw($expression.' in ('.implode(', ', array_fill(0, count($values), '?')).')', $values);
+                $bindings = $dimension->is(RollupDimension::ScrollDepth) ? array_map(intval(...), $values) : $values;
+
+                $query->whereRaw($expression.' in ('.implode(', ', array_fill(0, count($values), '?')).')', $bindings);
             }
 
             $rows = $query->groupBy(DB::raw($expression))
@@ -143,6 +146,8 @@ class UsersCounter
             RollupDimension::Path => [$this->pageViews($from, $to), 'e.path', 'e.visitor_id'],
             RollupDimension::Event => [$this->events(EventType::Custom, $from, $to), 'e.name', 'e.visitor_id'],
             RollupDimension::Goal => [$this->events(EventType::Goal, $from, $to), 'e.name', 'e.visitor_id'],
+            RollupDimension::OutboundHost => [$this->events(EventType::OutboundClick, $from, $to), 'e.target_host', 'e.visitor_id'],
+            RollupDimension::ScrollDepth => [$this->events(EventType::ScrollDepth, $from, $to), 'e.scroll_percent', 'e.visitor_id'],
             RollupDimension::VisitorType => [$this->sessionPageViews($from, $to), 's.is_new_visitor', 'e.visitor_id'],
             default => [$this->sessionPageViews($from, $to), 's.'.($dimension->sessionColumn() ?? throw new \InvalidArgumentException('The dimension has no per-value users.')), 'e.visitor_id'],
         };

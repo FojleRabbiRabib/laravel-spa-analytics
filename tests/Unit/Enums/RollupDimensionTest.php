@@ -26,9 +26,12 @@ class RollupDimensionTest extends TestCase
     {
         $this->assertSame([
             'total', 'path', 'exit_path', 'referrer_type', 'referrer_host', 'utm_campaign', 'device_type',
-            'os', 'browser', 'country', 'visitor_type', 'event', 'goal',
+            'os', 'browser', 'country', 'visitor_type', 'event', 'goal', 'outbound_host', 'scroll_depth',
         ], RollupDimension::values());
-        $this->assertCount(13, RollupDimension::options());
+        $this->assertCount(15, RollupDimension::options());
+        $this->assertSame('Outbound host', RollupDimension::OutboundHost->label());
+        $this->assertSame('Scroll depth', RollupDimension::ScrollDepth->label());
+        $this->assertSame('orange', RollupDimension::OutboundHost->color());
         $this->assertSame(['value' => 'exit_path', 'label' => 'Exit path'], RollupDimension::options()[2]);
         $this->assertSame(['value' => 'path', 'label' => 'Path'], RollupDimension::options()[1]);
     }
