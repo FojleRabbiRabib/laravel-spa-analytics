@@ -93,6 +93,10 @@ contract, its `store()` method now accepts `PageViewData|CustomEventData`.
 The audience migration adds nullable columns and two indexes to
 `analytics_sessions`; existing sessions keep empty values.
 
+**From 0.3.0**: no migration. The rollups gain an `exit_path` dimension; run
+`php artisan spa-analytics:rollup --since=YYYY-MM-DD` again to fill it for
+history.
+
 **From 0.2.0** (rollups): one new migration creates `analytics_rollups`. After
 migrating, run `php artisan spa-analytics:rollup --since=YYYY-MM-DD` once to
 build the rollups for your existing history (see [Rollups and
@@ -412,11 +416,12 @@ backfill history with `--period=day` and let the schedule keep the hours fresh.
 | `sessions`, `bounces`, `duration_seconds` | Sessions that started in the bucket, those with a single page view, and their summed length |
 | `events`, `revenue` | Custom and goal events and the summed goal value |
 
-Dimensions: `total`, `path`, `referrer_type`, `referrer_host`, `utm_campaign`,
+Dimensions: `total`, `path`, `exit_path`, `referrer_type`, `referrer_host`, `utm_campaign`,
 `device_type`, `os`, `browser`, `country`, `visitor_type` (`new` or `returning`),
 `event` (custom event names) and `goal`. Bots are never counted. Audience
-dimensions come from the session, and for `path` the session columns count
-sessions by their entry path. A value that is empty (no UTM campaign, no
+dimensions come from the session. For `path` the session columns count
+sessions by their entry path, and `exit_path` counts sessions by their last
+page (sessions, bounces and duration only, no page views). A value that is empty (no UTM campaign, no
 country) gets no row. Every bucket gets a `total` row, even with no traffic.
 
 ### Retention

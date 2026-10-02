@@ -172,7 +172,7 @@ class RollupBuilder
     private function addSessions(array &$rows, string $from, string $to): void
     {
         AnalyticsSession::query()
-            ->select(['id', 'started_at', 'last_seen_at', 'page_views', 'entry_path', 'is_new_visitor', 'referrer_type', 'referrer_host', 'utm_campaign', 'device_type', 'os', 'browser', 'country'])
+            ->select(['id', 'started_at', 'last_seen_at', 'page_views', 'entry_path', 'exit_path', 'is_new_visitor', 'referrer_type', 'referrer_host', 'utm_campaign', 'device_type', 'os', 'browser', 'country'])
             ->where('is_bot', false)
             ->where('started_at', '>=', $from)
             ->where('started_at', '<', $to)
@@ -181,7 +181,7 @@ class RollupBuilder
                 $duration = max(0, $session->last_seen_at->getTimestamp() - $session->started_at->getTimestamp());
                 $bounce = $session->page_views === 1 ? 1 : 0;
 
-                $targets = [[RollupDimension::Total, ''], [RollupDimension::Path, $session->entry_path]];
+                $targets = [[RollupDimension::Total, ''], [RollupDimension::Path, $session->entry_path], [RollupDimension::ExitPath, $session->exit_path]];
                 $targets[] = [RollupDimension::ReferrerType, $session->referrer_type];
                 $targets[] = [RollupDimension::VisitorType, $session->is_new_visitor ? 'new' : 'returning'];
 

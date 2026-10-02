@@ -212,6 +212,21 @@ class RollupBuilderTest extends TestCase
         $this->assertSame(600, $row->duration_seconds);
     }
 
+    public function test_the_exit_path_dimension_counts_sessions_by_their_last_page(): void
+    {
+        $this->visit('10:00:00', '10:10:00', ['entry_path' => '/pricing', 'exit_path' => '/signup', 'page_views' => 3]);
+        $this->visit('10:20:00', '10:20:00', ['entry_path' => '/signup', 'exit_path' => '/signup', 'page_views' => 1]);
+        $this->visit('10:30:00', '10:35:00', ['entry_path' => '/pricing', 'exit_path' => '/pricing', 'page_views' => 1, 'is_bot' => true]);
+
+        $this->rollup(RollupPeriod::Hour, $this->hour());
+
+        $exit = $this->row(RollupDimension::ExitPath, '/signup');
+        $this->assertSame(2, $exit->sessions);
+        $this->assertSame(1, $exit->bounces);
+        $this->assertSame(0, $exit->page_views);
+        $this->assertNull($this->row(RollupDimension::ExitPath, '/pricing'));
+    }
+
     public function test_custom_events_and_goals_get_their_own_dimensions(): void
     {
         AnalyticsEvent::factory()->custom()->create(['visitor_id' => 'v1', 'name' => 'signup_clicked', 'occurred_at' => Carbon::parse('2026-03-02 10:05:00')]);

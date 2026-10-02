@@ -18,16 +18,18 @@ class RollupDimensionTest extends TestCase
         $this->assertSame('Visitor type', RollupDimension::VisitorType->label());
         $this->assertSame('gray', RollupDimension::Total->color());
         $this->assertSame('blue', RollupDimension::Path->color());
+        $this->assertSame('blue', RollupDimension::ExitPath->color());
         $this->assertSame(RollupDimension::Total, RollupDimension::default());
     }
 
     public function test_values_are_the_stored_dimension_names(): void
     {
         $this->assertSame([
-            'total', 'path', 'referrer_type', 'referrer_host', 'utm_campaign', 'device_type',
+            'total', 'path', 'exit_path', 'referrer_type', 'referrer_host', 'utm_campaign', 'device_type',
             'os', 'browser', 'country', 'visitor_type', 'event', 'goal',
         ], RollupDimension::values());
-        $this->assertCount(12, RollupDimension::options());
+        $this->assertCount(13, RollupDimension::options());
+        $this->assertSame(['value' => 'exit_path', 'label' => 'Exit path'], RollupDimension::options()[2]);
         $this->assertSame(['value' => 'path', 'label' => 'Path'], RollupDimension::options()[1]);
     }
 }

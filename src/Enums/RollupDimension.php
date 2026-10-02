@@ -8,6 +8,7 @@ enum RollupDimension: string
 {
     case Total = 'total';
     case Path = 'path';
+    case ExitPath = 'exit_path';
     case ReferrerType = 'referrer_type';
     case ReferrerHost = 'referrer_host';
     case UtmCampaign = 'utm_campaign';
@@ -35,6 +36,7 @@ enum RollupDimension: string
         return match ($this) {
             self::Total => 'Total',
             self::Path => 'Path',
+            self::ExitPath => 'Exit path',
             self::ReferrerType => 'Referrer type',
             self::ReferrerHost => 'Referrer host',
             self::UtmCampaign => 'UTM campaign',
@@ -55,7 +57,7 @@ enum RollupDimension: string
     {
         return match ($this) {
             self::Total => 'gray',
-            self::Path => 'blue',
+            self::Path, self::ExitPath => 'blue',
             self::ReferrerType, self::ReferrerHost, self::UtmCampaign => 'purple',
             self::DeviceType, self::Os, self::Browser, self::Country, self::VisitorType => 'green',
             self::Event, self::Goal => 'orange',
