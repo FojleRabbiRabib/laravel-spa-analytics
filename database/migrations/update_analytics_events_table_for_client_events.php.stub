@@ -12,9 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('analytics_events', function (Blueprint $table) {
-            $table->string('target_host', 255)->nullable()->after('name');
-            $table->string('target_path', 512)->nullable()->after('target_host');
-            $table->unsignedTinyInteger('scroll_percent')->nullable()->after('target_path');
+            $table->string('target_host', 255)->nullable();
+            $table->string('target_path', 512)->nullable();
+            $table->unsignedTinyInteger('scroll_percent')->nullable();
         });
     }
 
