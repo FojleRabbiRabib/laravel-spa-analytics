@@ -121,6 +121,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Stats
+    |--------------------------------------------------------------------------
+    |
+    | The Stats facade reads rollups, so its numbers cover completed hours.
+    | Stats::realtime() reads the raw events of the last realtime_minutes
+    | instead, for who is on the site right now.
+    |
+    */
+
+    'stats' => [
+        'realtime_minutes' => 5,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Sessions
     |--------------------------------------------------------------------------
     |

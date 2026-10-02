@@ -65,6 +65,34 @@ class RollupReader
     }
 
     /**
+     * The values of one dimension with their metric sums over the buckets, best first by the ordering metric.
+     *
+     * Rows are grouped by value hash, so values that differ only in case or trailing spaces stay apart on every engine.
+     *
+     * @param  array<int, PlannedBucket>  $buckets
+     * @param  ?array<int, string>  $values  Limits the rows to these values.
+     * @return array<int, array<string, int|string>>
+     */
+    public function grouped(array $buckets, RollupDimension $dimension, string $orderBy, ?int $limit = null, ?array $values = null): array
+    {
+        $query = $this->query($buckets, $dimension, null)
+            ->groupBy('value_hash')
+            ->selectRaw('max(value) as value, '.implode(', ', array_map(fn (string $metric): string => 'coalesce(sum('.$metric.'), 0) as '.$metric, self::METRICS)))
+            ->orderByRaw('sum('.$orderBy.') desc')
+            ->orderByRaw('max(value) asc');
+
+        if ($values !== null) {
+            $query->whereIn('value_hash', array_map(sha1(...), $values));
+        }
+
+        if ($limit !== null) {
+            $query->limit($limit);
+        }
+
+        return array_map(fn (object $row): array => ['value' => (string) $row->value, ...$this->normalise((array) $row)], $query->get()->all());
+    }
+
+    /**
      * Every hour or day total row between the two moments, keyed by its start.
      *
      * @return array<string, array<string, int|string>>

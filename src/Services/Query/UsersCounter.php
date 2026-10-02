@@ -29,8 +29,7 @@ class UsersCounter
      */
     public function count(RangePlan $plan, array $buckets): array
     {
-        $floor = $this->rawFloor();
-        $exactFrom = $floor === null || $floor->greaterThan($plan->effectiveTo) ? $plan->effectiveTo : ($floor->greaterThan($plan->from) ? $floor : $plan->from);
+        $exactFrom = $this->exactFrom($plan);
 
         $pruned = array_values(array_filter($buckets, fn (PlannedBucket $bucket): bool => $bucket->start->lessThan($exactFrom)));
 
@@ -56,6 +55,109 @@ class UsersCounter
         }
 
         return ['users' => $users, 'exact' => $exact, 'new' => min($new, $users), 'goalUsers' => min($goalUsers, $users)];
+    }
+
+    /**
+     * Distinct people for each of the given values of a dimension, with the same exact-or-fallback rule as count().
+     *
+     * Dimensions that describe a session through its page views (and the event and goal names) count visitors who
+     * viewed or triggered the value. Exit paths count visitors whose session ended there; the daily rollups hold no
+     * visitors for those, so any pruned day with such sessions only makes the row inexact.
+     *
+     * @param  array<int, PlannedBucket>  $buckets  The resolved buckets of the plan.
+     *                                              With $viewersOnly, event and goal rows count only visitors who also viewed a page in the range, which is how
+     *                                              count() counts goal users, so a goal's conversion can never exceed the overall one.
+     * @param  array<int, string>  $values
+     * @return array<string, array{users: int, exact: bool}>
+     */
+    public function forValues(RangePlan $plan, array $buckets, RollupDimension $dimension, array $values, bool $viewersOnly = false): array
+    {
+        $found = [];
+
+        if ($values === []) {
+            return $found;
+        }
+
+        foreach ($values as $value) {
+            $found[$value] = ['users' => 0, 'exact' => true];
+        }
+
+        $exactFrom = $this->exactFrom($plan);
+
+        if ($exactFrom->lessThan($plan->effectiveTo)) {
+            [$query, $column, $visitor] = $this->source($dimension, $exactFrom, $plan->effectiveTo);
+            $expression = $dimension->is(RollupDimension::VisitorType) ? $column : Sql::exact($column);
+
+            if ($viewersOnly) {
+                $query->whereIn('e.visitor_id', $this->pageViews($exactFrom, $plan->effectiveTo)->select('e.visitor_id'));
+            }
+
+            if (! $dimension->is(RollupDimension::VisitorType)) {
+                $query->whereRaw($expression.' in ('.implode(', ', array_fill(0, count($values), '?')).')', $values);
+            }
+
+            $rows = $query->groupBy(DB::raw($expression))
+                ->selectRaw($expression.' as value, count(distinct '.Sql::exact($visitor).') as users')
+                ->get();
+
+            foreach ($rows as $row) {
+                $value = $dimension->storedValue($row->value);
+
+                if (isset($found[$value])) {
+                    $found[$value]['users'] += (int) $row->users;
+                }
+            }
+        }
+
+        $pruned = array_values(array_filter($buckets, fn (PlannedBucket $bucket): bool => $bucket->start->lessThan($exactFrom)));
+
+        if ($pruned !== []) {
+            $metric = $dimension->is(RollupDimension::ExitPath) ? 'sessions' : 'visitors';
+
+            foreach ($this->reader->grouped($pruned, $dimension, $metric, null, $values) as $row) {
+                $found[$row['value']]['users'] += $dimension->is(RollupDimension::ExitPath) ? 0 : (int) $row['visitors'];
+                $found[$row['value']]['exact'] = (int) $row[$metric] === 0;
+            }
+        }
+
+        return $found;
+    }
+
+    /**
+     * The raw query behind a dimension, its value column and the visitor column to count.
+     *
+     * @return array{Builder, string, string}
+     */
+    private function source(RollupDimension $dimension, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        if ($dimension->is(RollupDimension::ExitPath)) {
+            $sessions = DB::table('analytics_sessions as s')
+                ->where('s.is_bot', false)
+                ->where('s.started_at', '>=', $from->toDateTimeString())
+                ->where('s.started_at', '<', $to->toDateTimeString());
+
+            return [$sessions, 's.exit_path', 's.visitor_id'];
+        }
+
+        return match ($dimension) {
+            RollupDimension::Path => [$this->pageViews($from, $to), 'e.path', 'e.visitor_id'],
+            RollupDimension::Event => [$this->events(EventType::Custom, $from, $to), 'e.name', 'e.visitor_id'],
+            RollupDimension::Goal => [$this->events(EventType::Goal, $from, $to), 'e.name', 'e.visitor_id'],
+            RollupDimension::VisitorType => [$this->sessionPageViews($from, $to), 's.is_new_visitor', 'e.visitor_id'],
+            default => [$this->sessionPageViews($from, $to), 's.'.($dimension->sessionColumn() ?? throw new \InvalidArgumentException('The dimension has no per-value users.')), 'e.visitor_id'],
+        };
+    }
+
+    private function sessionPageViews(CarbonImmutable $from, CarbonImmutable $to): Builder
+    {
+        return $this->pageViews($from, $to)->join('analytics_sessions as s', 's.id', '=', 'e.session_id');
+    }
+
+    private function exactFrom(RangePlan $plan): CarbonImmutable
+    {
+        $floor = $this->rawFloor();
+
+        return $floor === null || $floor->greaterThan($plan->effectiveTo) ? $plan->effectiveTo : ($floor->greaterThan($plan->from) ? $floor : $plan->from);
     }
 
     /**

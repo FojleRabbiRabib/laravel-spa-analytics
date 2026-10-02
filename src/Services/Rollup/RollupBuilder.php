@@ -18,16 +18,6 @@ class RollupBuilder
 {
     private const INSERT_CHUNK = 50;
 
-    private const SESSION_DIMENSIONS = [
-        'referrer_type' => RollupDimension::ReferrerType,
-        'referrer_host' => RollupDimension::ReferrerHost,
-        'utm_campaign' => RollupDimension::UtmCampaign,
-        'device_type' => RollupDimension::DeviceType,
-        'os' => RollupDimension::Os,
-        'browser' => RollupDimension::Browser,
-        'country' => RollupDimension::Country,
-    ];
-
     /**
      * Recompute every row of one bucket from the raw events and sessions and replace what was stored.
      *
@@ -131,7 +121,7 @@ class RollupBuilder
 
         $this->addGroupedPageViews($rows, RollupDimension::Path, $base()->whereNotNull('e.path')->groupBy(DB::raw(Sql::exact('e.path')))->selectRaw(Sql::exact('e.path').' as value'));
 
-        foreach (self::SESSION_DIMENSIONS as $column => $dimension) {
+        foreach (RollupDimension::SESSION_COLUMNS as $column => $dimension) {
             $this->addGroupedPageViews(
                 $rows,
                 $dimension,
@@ -157,7 +147,7 @@ class RollupBuilder
     private function addGroupedPageViews(array &$rows, RollupDimension $dimension, Builder $query): void
     {
         foreach ($query->selectRaw('count(*) as page_views, count(distinct '.Sql::exact('e.visitor_id').') as visitors')->get() as $group) {
-            $value = $this->label($dimension, $group->value);
+            $value = $dimension->storedValue($group->value);
 
             $this->set($rows, $dimension, $value, 'page_views', (int) $group->page_views);
             $this->set($rows, $dimension, $value, 'visitors', (int) $group->visitors);
@@ -188,7 +178,7 @@ class RollupBuilder
 
                 foreach (['referrer_host', 'utm_campaign', 'os', 'browser', 'country'] as $column) {
                     if ($session->{$column} !== null) {
-                        $targets[] = [self::SESSION_DIMENSIONS[$column], (string) $session->{$column}];
+                        $targets[] = [RollupDimension::SESSION_COLUMNS[$column], (string) $session->{$column}];
                     }
                 }
 
@@ -237,17 +227,5 @@ class RollupBuilder
 
         $this->set($rows, RollupDimension::Total, '', 'events', $totalEvents);
         $this->set($rows, RollupDimension::Total, '', 'revenue', round($totalRevenue, 2));
-    }
-
-    /**
-     * The stored value for a grouped dimension value; the new-versus-returning flag arrives as a boolean or integer.
-     */
-    private function label(RollupDimension $dimension, mixed $value): string
-    {
-        if ($dimension->is(RollupDimension::VisitorType)) {
-            return in_array($value, [true, 1, '1', 't', 'true'], true) ? 'new' : 'returning';
-        }
-
-        return (string) $value;
     }
 }

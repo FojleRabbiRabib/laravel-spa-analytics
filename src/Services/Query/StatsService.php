@@ -6,6 +6,7 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Query;
 
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\Realtime;
 
 class StatsService
 {
@@ -14,6 +15,7 @@ class StatsService
         private readonly RollupCoverage $coverage,
         private readonly RollupReader $reader,
         private readonly UsersCounter $users,
+        private readonly RealtimeReader $realtime,
     ) {}
 
     /**
@@ -41,5 +43,13 @@ class StatsService
         $today = CarbonImmutable::now((string) config('app.timezone'))->startOfDay();
 
         return $this->between($today->subDays(max(1, $days)), $today);
+    }
+
+    /**
+     * Who is on the site now, from the raw events of the last few minutes.
+     */
+    public function realtime(): Realtime
+    {
+        return $this->realtime->read();
     }
 }

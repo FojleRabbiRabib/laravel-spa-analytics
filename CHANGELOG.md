@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The `Stats` facade for reading analytics: `between()` or `lastDays()` then `summary()`, `timeseries()`, `top()` and `goals()`, plus `realtime()`. Results are readonly objects with `toArray()`. Users are distinct people over the range counted from raw events, falling back to summed daily users (`usersExact` false) for pruned days; counts cover completed hours only. New config key `stats.realtime_minutes` (default 5).
 - `exit_path` rollup dimension (sessions by their last page). Run `spa-analytics:rollup --since=YYYY-MM-DD` again to fill it for history.
 
 ## [0.3.0] - 2026-10-02

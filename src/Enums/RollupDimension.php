@@ -21,6 +21,41 @@ enum RollupDimension: string
     case Goal = 'goal';
 
     /**
+     * The analytics_sessions column behind each dimension that describes a session, keyed by column.
+     */
+    public const SESSION_COLUMNS = [
+        'referrer_type' => self::ReferrerType,
+        'referrer_host' => self::ReferrerHost,
+        'utm_campaign' => self::UtmCampaign,
+        'device_type' => self::DeviceType,
+        'os' => self::Os,
+        'browser' => self::Browser,
+        'country' => self::Country,
+    ];
+
+    /**
+     * The analytics_sessions column behind this dimension, when it describes a session.
+     */
+    public function sessionColumn(): ?string
+    {
+        $column = array_search($this, self::SESSION_COLUMNS, true);
+
+        return $column === false ? null : $column;
+    }
+
+    /**
+     * The stored value for a grouped value of this dimension; the new-versus-returning flag arrives as a boolean or integer.
+     */
+    public function storedValue(mixed $value): string
+    {
+        if ($this->is(self::VisitorType)) {
+            return in_array($value, [true, 1, '1', 't', 'true'], true) ? 'new' : 'returning';
+        }
+
+        return $value instanceof \BackedEnum ? (string) $value->value : (string) $value;
+    }
+
+    /**
      * Whether this case equals the given case.
      */
     public function is(self $dimension): bool

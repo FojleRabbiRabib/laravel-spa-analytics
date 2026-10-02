@@ -112,6 +112,7 @@ All keys live in `config/spa-analytics.php`.
 | `retention_days` | `null` | Days of raw events and sessions to keep; `null`, empty, `0` or a non-number keeps everything (`SPA_ANALYTICS_RETENTION_DAYS`) |
 | `rollups.schedule` | `true` | Register the hourly rollup and the daily prune in the Laravel scheduler |
 | `rollups.lookback_hours` | `3` | Recent hours each scheduled rollup recomputes |
+| `stats.realtime_minutes` | `5` | Window of `Stats::realtime()` |
 | `identity.register_middleware` | `true` | Append the identity middleware to the `web` group |
 | `identity.cookie_name` | `spa_analytics_vid` | Visitor cookie name |
 | `identity.cookie_lifetime_days` | `365` | Cookie lifetime, refreshed on every response |
@@ -374,15 +375,14 @@ nothing to move.
 
 ## Planned capabilities
 
-- **Traffic:** page views, unique visitors, sessions, new vs. returning
-  visitors, bounce rate, average session duration, entry/exit pages.
-- **Real-time:** current active visitor count and their current page.
-- **Sources:** referrer classification, full UTM campaign tracking.
+- **Sources:** reporting on `utm_source`, `utm_medium`, `utm_term` and
+  `utm_content` (they are stored on sessions; only `utm_campaign` has a
+  rollup dimension today).
 - **Audience:** viewport size (device, OS, browser and country are recorded on
-  sessions, see above; reporting is planned).
+  sessions and reported by `Stats`, see below).
 - **Behavior:** outbound link clicks, file downloads, 404s, scroll/
-  engagement depth, multi-step funnels and goal conversion rates (server-side
-  custom events and goals are recorded, see above; reporting is planned).
+  engagement depth and multi-step funnels (custom events and goals are
+  recorded and their conversion is reported by `Stats`, see below).
 - **Client-side tracker:** a first-class JS client for SPA page-view
   transitions, outbound clicks, scroll depth, and custom
   `analytics.track()` events — runs alongside server-side middleware
@@ -442,6 +442,63 @@ back; after pruning, a returning visitor whose old sessions are gone is
 recorded as new, which shifts the `visitor_type` numbers; a custom event kept
 past the cutoff may point at a session that was pruned; and the day rollup is
 recomputed from raw rows every hour, so its cost grows with daily traffic.
+
+## Reading the numbers
+
+The `Stats` facade (no global alias, import it) reads the rollups and returns
+plain readonly objects with a `toArray()` for JSON. The package ships no routes
+or UI: call it from your own controllers.
+
+```php
+use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupDimension;
+use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupPeriod;
+use FojleRabbiRabib\LaravelSpaAnalytics\Facades\Stats;
+
+$report = Stats::between($from, $to);   // or Stats::lastDays(7)
+
+$report->summary();                          // Summary
+$report->timeseries(RollupPeriod::Day);      // SeriesPoint[]
+$report->top(RollupDimension::Path, 10);     // TopRow[]
+$report->goals();                            // GoalRow[]
+
+Stats::realtime();                           // Realtime
+```
+
+| Call | Returns |
+|---|---|
+| `summary()` | `pageViews`, `users`, `usersExact`, `newUsers`, `returningUsers`, `sessions`, `bounces`, `bounceRate`, `avgSessionDuration`, `events`, `goalCompletions`, `revenue`, `conversionRate`, `through`, `incomplete` |
+| `timeseries(Hour or Day)` | One point per bucket of the range, empty buckets as zeros |
+| `top(dimension, limit)` | The best values of a dimension: paths by page views, events and goals by events, everything else by sessions. Use the entry-path sessions of `path` rows and the last page of `exit_path` rows for landing and exit pages |
+| `goals()` | Each goal with completions, revenue, users and conversion rate |
+| `realtime()` | Visitors with a page view in the last `stats.realtime_minutes` (default 5) and the page each of them viewed last, read from the raw events |
+
+How the numbers are built:
+
+- **Range:** read in `app.timezone` and snapped outward to whole hours, using
+  day rollups where a whole day fits and hour rollups at the edges. Rates with
+  nothing to divide by are `0.0`. `lastDays(n)` is the `n` complete days before
+  today.
+- **Completed hours only:** counts and users stop at `through`, the end of the
+  last completed rolled-up hour, so today's chart lags by up to an hour. Use
+  `realtime()` for the live window. `incomplete` is true when an hour inside the
+  range has no rollup row yet (run `spa-analytics:rollup --since=...`).
+- **Users** are distinct people over the whole range (like GA4 "Users"), never a
+  sum of daily counts. They are counted from the raw events with
+  `count(distinct ...)`, which gets slower as the range and traffic grow, and
+  for `top()` and `goals()` only for the rows returned. Days whose raw rows were
+  pruned fall back to the sum of daily uniques, which counts someone who came on
+  two days twice; then `usersExact` is `false`.
+- **Conversion rate** is the visitors who completed any goal and also viewed a
+  page in the range, divided by users, at most 1. A goal's own rate counts the
+  visitors who completed that goal and also viewed a page, so it never exceeds
+  the overall rate; a goal row's `users` is every distinct completer, webhook
+  completions included.
+- **Returning users:** in `summary()` they are `users - newUsers`, where a new
+  user is anyone with a first-ever session in the range. In `top(VisitorType)`
+  the `returning` row counts everyone with a returning session, so a visitor
+  who was new and came back inside the range appears in both rows there.
+- Bots are never counted, and path, event and campaign values that differ only
+  in case stay separate rows on every engine.
 
 ## Testing
 

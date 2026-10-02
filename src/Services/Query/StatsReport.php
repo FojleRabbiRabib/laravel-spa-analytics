@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Query;
 
 use Carbon\CarbonImmutable;
+use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\GoalRow;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\RangePlan;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\SeriesPoint;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\Summary;
+use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\TopRow;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupDimension;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupPeriod;
 
@@ -106,6 +108,89 @@ class StatsReport
         }
 
         return $points;
+    }
+
+    /**
+     * The best values of a dimension, with users counted for those rows only.
+     *
+     * Paths are ordered by page views, events and goals by events, and everything else by sessions.
+     *
+     * @return array<int, TopRow>
+     *
+     * @throws \InvalidArgumentException For the total dimension, which has no values to rank.
+     */
+    public function top(RollupDimension $dimension, int $limit = 10): array
+    {
+        if ($dimension->is(RollupDimension::Total)) {
+            throw new \InvalidArgumentException('The total dimension has no values to rank.');
+        }
+
+        $through = $this->coverage->through();
+
+        if ($through === null) {
+            return [];
+        }
+
+        $plan = $this->plan($through);
+        ['buckets' => $buckets] = $this->reader->resolve($plan);
+
+        $orderBy = match ($dimension) {
+            RollupDimension::Path => 'page_views',
+            RollupDimension::Event, RollupDimension::Goal => 'events',
+            default => 'sessions',
+        };
+
+        $rows = $this->reader->grouped($buckets, $dimension, $orderBy, max(1, min($limit, 1000)));
+        $users = $this->users->forValues($plan, $buckets, $dimension, array_column($rows, 'value'));
+
+        return array_map(function (array $row) use ($users): TopRow {
+            $sessions = (int) $row['sessions'];
+
+            return new TopRow(
+                value: (string) $row['value'],
+                pageViews: (int) $row['page_views'],
+                users: $users[$row['value']]['users'],
+                usersExact: $users[$row['value']]['exact'],
+                sessions: $sessions,
+                bounces: (int) $row['bounces'],
+                bounceRate: $sessions > 0 ? (int) $row['bounces'] / $sessions : 0.0,
+                avgSessionDuration: $sessions > 0 ? (int) $row['duration_seconds'] / $sessions : 0.0,
+                events: (int) $row['events'],
+                revenue: (string) $row['revenue'],
+            );
+        }, $rows);
+    }
+
+    /**
+     * Each goal with its completions, revenue, distinct completers and conversion rate, most completed first.
+     *
+     * @return array<int, GoalRow>
+     */
+    public function goals(int $limit = 50): array
+    {
+        $through = $this->coverage->through();
+
+        if ($through === null) {
+            return [];
+        }
+
+        $plan = $this->plan($through);
+        ['buckets' => $buckets] = $this->reader->resolve($plan);
+
+        $rows = $this->reader->grouped($buckets, RollupDimension::Goal, 'events', max(1, min($limit, 1000)));
+        $names = array_column($rows, 'value');
+        $completers = $this->users->forValues($plan, $buckets, RollupDimension::Goal, $names);
+        $converters = $this->users->forValues($plan, $buckets, RollupDimension::Goal, $names, viewersOnly: true);
+        $people = $this->users->count($plan, $buckets);
+
+        return array_map(fn (array $row): GoalRow => new GoalRow(
+            name: (string) $row['value'],
+            completions: (int) $row['events'],
+            users: $completers[$row['value']]['users'],
+            usersExact: $completers[$row['value']]['exact'],
+            revenue: (string) $row['revenue'],
+            conversionRate: $people['users'] > 0 ? min($converters[$row['value']]['users'], $people['goalUsers']) / $people['users'] : 0.0,
+        ), $rows);
     }
 
     private function plan(CarbonImmutable $through): RangePlan
