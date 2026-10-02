@@ -10,6 +10,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupDimension;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupPeriod;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsRollup;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
+use FojleRabbiRabib\LaravelSpaAnalytics\Support\Sql;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -124,11 +125,11 @@ class RollupBuilder
             ->where('e.occurred_at', '>=', $from)
             ->where('e.occurred_at', '<', $to);
 
-        $total = $base()->selectRaw('count(*) as page_views, count(distinct '.$this->exact('e.visitor_id').') as visitors')->first();
+        $total = $base()->selectRaw('count(*) as page_views, count(distinct '.Sql::exact('e.visitor_id').') as visitors')->first();
         $this->set($rows, RollupDimension::Total, '', 'page_views', (int) $total->page_views);
         $this->set($rows, RollupDimension::Total, '', 'visitors', (int) $total->visitors);
 
-        $this->addGroupedPageViews($rows, RollupDimension::Path, $base()->whereNotNull('e.path')->groupBy(DB::raw($this->exact('e.path')))->selectRaw($this->exact('e.path').' as value'));
+        $this->addGroupedPageViews($rows, RollupDimension::Path, $base()->whereNotNull('e.path')->groupBy(DB::raw(Sql::exact('e.path')))->selectRaw(Sql::exact('e.path').' as value'));
 
         foreach (self::SESSION_DIMENSIONS as $column => $dimension) {
             $this->addGroupedPageViews(
@@ -136,8 +137,8 @@ class RollupBuilder
                 $dimension,
                 $base()->join('analytics_sessions as s', 's.id', '=', 'e.session_id')
                     ->whereNotNull('s.'.$column)
-                    ->groupBy(DB::raw($this->exact('s.'.$column)))
-                    ->selectRaw($this->exact('s.'.$column).' as value'),
+                    ->groupBy(DB::raw(Sql::exact('s.'.$column)))
+                    ->selectRaw(Sql::exact('s.'.$column).' as value'),
             );
         }
 
@@ -155,7 +156,7 @@ class RollupBuilder
      */
     private function addGroupedPageViews(array &$rows, RollupDimension $dimension, Builder $query): void
     {
-        foreach ($query->selectRaw('count(*) as page_views, count(distinct '.$this->exact('e.visitor_id').') as visitors')->get() as $group) {
+        foreach ($query->selectRaw('count(*) as page_views, count(distinct '.Sql::exact('e.visitor_id').') as visitors')->get() as $group) {
             $value = $this->label($dimension, $group->value);
 
             $this->set($rows, $dimension, $value, 'page_views', (int) $group->page_views);
@@ -216,8 +217,8 @@ class RollupBuilder
             ->where('occurred_at', '>=', $from)
             ->where('occurred_at', '<', $to)
             ->whereNotNull('name')
-            ->groupBy('type', DB::raw($this->exact('name')))
-            ->selectRaw('type, '.$this->exact('name').' as name, count(*) as events, count(distinct '.$this->exact('visitor_id').') as visitors, coalesce(sum(value), 0) as revenue')
+            ->groupBy('type', DB::raw(Sql::exact('name')))
+            ->selectRaw('type, '.Sql::exact('name').' as name, count(*) as events, count(distinct '.Sql::exact('visitor_id').') as visitors, coalesce(sum(value), 0) as revenue')
             ->get();
 
         $totalEvents = 0;
@@ -236,15 +237,6 @@ class RollupBuilder
 
         $this->set($rows, RollupDimension::Total, '', 'events', $totalEvents);
         $this->set($rows, RollupDimension::Total, '', 'revenue', round($totalRevenue, 2));
-    }
-
-    /**
-     * The column as an exact, case and trailing-space sensitive expression: MySQL compares strings case-insensitively
-     * by default, which would merge /About and /about in a GROUP BY, so it gets a binary comparison.
-     */
-    private function exact(string $column): string
-    {
-        return in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true) ? 'binary '.$column : $column;
     }
 
     /**
