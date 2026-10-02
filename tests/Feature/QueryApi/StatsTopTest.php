@@ -184,6 +184,38 @@ class StatsTopTest extends TestCase
         $this->assertFalse($rows[0]->usersExact);
     }
 
+    public function test_utm_dimensions_rank_by_sessions_with_exact_users_and_keep_case_variants_apart(): void
+    {
+        $this->visit('v1', ['2026-03-08 10:00:00' => '/a'], ['utm_source' => 'newsletter', 'utm_medium' => 'email']);
+        $this->visit('v2', ['2026-03-08 11:00:00' => '/a'], ['utm_source' => 'newsletter', 'utm_medium' => 'email']);
+        $this->visit('v1', ['2026-03-09 10:00:00' => '/a'], ['utm_source' => 'newsletter', 'utm_medium' => 'email', 'is_new_visitor' => false]);
+        $this->visit('v3', ['2026-03-09 11:00:00' => '/a'], ['utm_source' => 'Newsletter']);
+        $this->rollUp();
+
+        $sources = $this->report()->top(RollupDimension::UtmSource);
+        $mediums = $this->report()->top(RollupDimension::UtmMedium);
+
+        $this->assertSame(['newsletter', 'Newsletter'], array_map(fn ($row) => $row->value, $sources));
+        $this->assertSame([3, 1], array_map(fn ($row) => $row->sessions, $sources));
+        $this->assertSame([2, 1], array_map(fn ($row) => $row->users, $sources));
+        $this->assertSame(['email'], array_map(fn ($row) => $row->value, $mediums));
+        $this->assertSame(2, $mediums[0]->users);
+    }
+
+    public function test_pruned_days_make_a_utm_row_inexact(): void
+    {
+        $this->visit('v1', ['2026-03-08 10:00:00' => '/a'], ['utm_term' => 'running shoes']);
+        $this->visit('v2', ['2026-03-09 10:00:00' => '/a'], ['utm_term' => 'running shoes']);
+        $this->rollUp();
+        AnalyticsEvent::query()->where('occurred_at', '<', Carbon::parse('2026-03-09'))->delete();
+        AnalyticsSession::query()->where('started_at', '<', Carbon::parse('2026-03-09'))->delete();
+
+        $rows = $this->report()->top(RollupDimension::UtmTerm);
+
+        $this->assertSame(2, $rows[0]->users);
+        $this->assertFalse($rows[0]->usersExact);
+    }
+
     public function test_the_total_dimension_cannot_be_ranked_and_no_rollups_give_no_rows(): void
     {
         $this->assertSame([], $this->report()->top(RollupDimension::Path));

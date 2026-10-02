@@ -163,7 +163,7 @@ class RollupBuilder
     private function addSessions(array &$rows, string $from, string $to): void
     {
         AnalyticsSession::query()
-            ->select(['id', 'started_at', 'last_seen_at', 'page_views', 'entry_path', 'exit_path', 'is_new_visitor', 'referrer_type', 'referrer_host', 'utm_campaign', 'device_type', 'os', 'browser', 'country'])
+            ->select(['id', 'started_at', 'last_seen_at', 'page_views', 'entry_path', 'exit_path', 'is_new_visitor', ...array_keys(RollupDimension::SESSION_COLUMNS)])
             ->where('is_bot', false)
             ->where('started_at', '>=', $from)
             ->where('started_at', '<', $to)
@@ -176,14 +176,12 @@ class RollupBuilder
                 $targets[] = [RollupDimension::ReferrerType, $session->referrer_type];
                 $targets[] = [RollupDimension::VisitorType, $session->is_new_visitor ? 'new' : 'returning'];
 
-                foreach (['referrer_host', 'utm_campaign', 'os', 'browser', 'country'] as $column) {
-                    if ($session->{$column} !== null) {
-                        $targets[] = [RollupDimension::SESSION_COLUMNS[$column], (string) $session->{$column}];
+                foreach (RollupDimension::SESSION_COLUMNS as $column => $dimension) {
+                    if ($dimension->is(RollupDimension::ReferrerType) || $session->{$column} === null) {
+                        continue;
                     }
-                }
 
-                if ($session->device_type !== null) {
-                    $targets[] = [RollupDimension::DeviceType, $session->device_type];
+                    $targets[] = [$dimension, $session->{$column}];
                 }
 
                 foreach ($targets as [$dimension, $value]) {

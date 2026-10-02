@@ -21,6 +21,10 @@ enum RollupDimension: string
     case Goal = 'goal';
     case OutboundHost = 'outbound_host';
     case ScrollDepth = 'scroll_depth';
+    case UtmSource = 'utm_source';
+    case UtmMedium = 'utm_medium';
+    case UtmTerm = 'utm_term';
+    case UtmContent = 'utm_content';
 
     /**
      * The analytics_sessions column behind each dimension that describes a session, keyed by column.
@@ -29,6 +33,10 @@ enum RollupDimension: string
         'referrer_type' => self::ReferrerType,
         'referrer_host' => self::ReferrerHost,
         'utm_campaign' => self::UtmCampaign,
+        'utm_source' => self::UtmSource,
+        'utm_medium' => self::UtmMedium,
+        'utm_term' => self::UtmTerm,
+        'utm_content' => self::UtmContent,
         'device_type' => self::DeviceType,
         'os' => self::Os,
         'browser' => self::Browser,
@@ -77,6 +85,10 @@ enum RollupDimension: string
             self::ReferrerType => 'Referrer type',
             self::ReferrerHost => 'Referrer host',
             self::UtmCampaign => 'UTM campaign',
+            self::UtmSource => 'UTM source',
+            self::UtmMedium => 'UTM medium',
+            self::UtmTerm => 'UTM term',
+            self::UtmContent => 'UTM content',
             self::DeviceType => 'Device type',
             self::Os => 'OS',
             self::Browser => 'Browser',
@@ -97,7 +109,7 @@ enum RollupDimension: string
         return match ($this) {
             self::Total => 'gray',
             self::Path, self::ExitPath => 'blue',
-            self::ReferrerType, self::ReferrerHost, self::UtmCampaign => 'purple',
+            self::ReferrerType, self::ReferrerHost, self::UtmCampaign, self::UtmSource, self::UtmMedium, self::UtmTerm, self::UtmContent => 'purple',
             self::DeviceType, self::Os, self::Browser, self::Country, self::VisitorType => 'green',
             self::Event, self::Goal, self::OutboundHost, self::ScrollDepth => 'orange',
         };

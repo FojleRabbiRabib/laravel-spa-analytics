@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `utm_source`, `utm_medium`, `utm_term` and `utm_content` rollup dimensions, rankable with `Stats::top()` with exact per-row users like `utm_campaign`. No migration: run `spa-analytics:rollup --since=YYYY-MM-DD` to fill history (with `retention_days` set, days before the cutoff that already have a rollup keep their old rows). `utm_term` and `utm_content` are often unique per link, so they add rollup rows the way `path` does.
+
 ## [0.4.0] - 2026-10-03
 
 ### Added

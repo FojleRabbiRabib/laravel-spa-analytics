@@ -88,16 +88,17 @@ php artisan vendor:publish --tag="spa-analytics-migrations"
 php artisan migrate
 ```
 
-**From 0.1.0** (custom events and session audience): the first migration adds `name` and `value` columns and makes `type`, `path` and
-`status` more permissive, which rewrites the `analytics_events` table on some
-engines, so run it off-peak on a large table. If you replaced the `EventStore`
-contract, its `store()` method now accepts `PageViewData|CustomEventData`.
-The audience migration adds nullable columns and two indexes to
-`analytics_sessions`; existing sessions keep empty values.
+**From 0.4.0**: no migration. The rollups gain the `utm_source`, `utm_medium`,
+`utm_term` and `utm_content` dimensions; run
+`php artisan spa-analytics:rollup --since=YYYY-MM-DD` to fill them for history.
+With `retention_days` set, days before the cutoff that already have a rollup
+are left alone (their raw rows may be pruned), so the new dimensions start at the
+cutoff.
 
 **From 0.3.0**: the rollups gain an `exit_path` dimension; run
 `php artisan spa-analytics:rollup --since=YYYY-MM-DD` again to fill it for
-history. The browser client gains SPA transitions, outbound clicks, scroll depth
+history (days before the `retention_days` cutoff that already have a rollup keep
+their old rows). The browser client gains SPA transitions, outbound clicks, scroll depth
 and `window.spaAnalytics`: publish the migrations again (one new migration adds
 `target_host`, `target_path` and `scroll_percent` to `analytics_events`, all
 nullable) and re-publish the script with
@@ -108,6 +109,13 @@ nullable) and re-publish the script with
 migrating, run `php artisan spa-analytics:rollup --since=YYYY-MM-DD` once to
 build the rollups for your existing history (see [Rollups and
 retention](#rollups-and-retention)).
+
+**From 0.1.0** (custom events and session audience): the first migration adds `name` and `value` columns and makes `type`, `path` and
+`status` more permissive, which rewrites the `analytics_events` table on some
+engines, so run it off-peak on a large table. If you replaced the `EventStore`
+contract, its `store()` method now accepts `PageViewData|CustomEventData`.
+The audience migration adds nullable columns and two indexes to
+`analytics_sessions`; existing sessions keep empty values.
 
 ## Configuration
 
@@ -448,9 +456,6 @@ nothing to move.
 
 ## Planned capabilities
 
-- **Sources:** reporting on `utm_source`, `utm_medium`, `utm_term` and
-  `utm_content` (they are stored on sessions; only `utm_campaign` has a
-  rollup dimension today).
 - **Audience:** viewport size (device, OS, browser and country are recorded on
   sessions and reported by `Stats`, see below).
 - **Behavior:** file downloads and engagement time beyond scroll depth
@@ -487,7 +492,7 @@ backfill history with `--period=day` and let the schedule keep the hours fresh.
 | `events`, `revenue` | Custom and goal events and the summed goal value |
 
 Dimensions: `total`, `path`, `exit_path`, `referrer_type`, `referrer_host`, `utm_campaign`,
-`device_type`, `os`, `browser`, `country`, `visitor_type` (`new` or `returning`),
+`utm_source`, `utm_medium`, `utm_term`, `utm_content`, `device_type`, `os`, `browser`, `country`, `visitor_type` (`new` or `returning`),
 `event` (custom event names), `goal`, `outbound_host` (target hosts of outbound
 clicks) and `scroll_depth` (the 25, 50, 75 and 100 milestones). The `events` column
 and the `total` row's events count custom events and goals only; clicks and
@@ -496,6 +501,10 @@ dimensions come from the session. For `path` the session columns count
 sessions by their entry path, and `exit_path` counts sessions by their last
 page (sessions, bounces and duration only, no page views). A value that is empty (no UTM campaign, no
 country) gets no row. Every bucket gets a `total` row, even with no traffic.
+The UTM values are set by whoever builds the link, so `utm_term` and
+`utm_content` in particular are often unique per keyword or per email and
+create a row per value in every hour and day bucket, the way `path` does;
+`analytics_rollups` grows with the number of distinct values.
 
 ### Retention
 
