@@ -16,8 +16,10 @@ calls, no data sharing.
 > **Status: pre-release (0.x).** Shipped: first-party visitor identity, page
 > view and session tracking, opt-in visitor re-linking, custom events and goals
 > from server code, device, OS, browser and country on sessions, and hourly and
-> daily rollups with a retention prune. Planned: the query API and the browser
-> tracker. Config keys and table layouts may change before 1.0; see the
+> daily rollups with a retention prune, the `Stats` query API (summary,
+> timeseries, top lists, goals, funnels and real-time) and the browser client
+> (SPA page views, outbound clicks, scroll depth and `window.spaAnalytics`).
+> Config keys and table layouts may change before 1.0; see the
 > [Changelog](CHANGELOG.md).
 
 ## Requirements
@@ -125,7 +127,7 @@ All keys live in `config/spa-analytics.php`.
 | `identity.cookie_lifetime_days` | `365` | Cookie lifetime, refreshed on every response |
 | `identity.tls_fingerprint_header` | `null` | Request header your proxy or CDN forwards the JA4 hash in; `null` disables the TLS signal |
 | `identity.nonce_ttl_seconds` | `60` | How long a handshake nonce stays valid |
-| `identity.route_prefix` | `spa-analytics` | URL prefix of the handshake and identify endpoints |
+| `identity.route_prefix` | `spa-analytics` | URL prefix of the handshake, identify and collect endpoints |
 | `identity.rate_limit_per_minute` | `30` | Per-visitor (cookie) limit on both endpoints |
 | `identity.rate_limit_per_ip_per_minute` | `600` | Per-address ceiling on both endpoints; high so visitors behind one shared address (carrier NAT, offices) do not block each other, and it stops clients that rotate cookies |
 | `identity.relink` | `false` | Adopt a previous visitor id when a first-time fingerprint matches exactly one known visitor (see [Re-linking](#re-linking-returning-visitors)) |
@@ -133,7 +135,7 @@ All keys live in `config/spa-analytics.php`.
 | `tracking.register_middleware` | `true` | Append the page view capture middleware to the `web` group |
 | `tracking.write_mode` | `defer` | `defer` (after the response is sent), `queue` (queued job) or `sync` |
 | `tracking.connection` / `tracking.queue` | `null` | Queue connection and queue name used by `queue` mode |
-| `tracking.excluded_paths` | `up`, `spa-analytics/*`, `reset-password/*`, `password/reset/*` | `request()->is()` patterns that are never recorded; add any other URL that carries a secret |
+| `tracking.excluded_paths` | `up`, `spa-analytics/*`, `reset-password/*`, `password/reset/*` | `request()->is()` patterns that are never recorded, also applied to the paths the browser script reports; add any other URL that carries a secret |
 | `tracking.bot_patterns` | see file | Case-insensitive user agent substrings that flag a request as a bot |
 | `tracking.search_hosts` / `tracking.social_hosts` | see file | Case-insensitive host substrings used to classify referrers |
 | `audience.country_header` | `null` | Request header your CDN fills with the visitor's country code (see [Audience](#audience)); `null` leaves the country empty |
@@ -216,7 +218,9 @@ records one row per page view in `analytics_events`.
 Each row stores the visitor id, path (never the query string), response status,
 referrer host and type (`direct`, `search`, `social`, `referral`; same-site
 referrers count as direct), the five UTM values, first `Accept-Language` tag,
-IP address, user agent (truncated to 512 characters) and time.
+IP address, user agent (truncated to 512 characters) and time. Page views
+reported by the browser script for single-page transitions have no status (see
+[Browser events](#browser-events)).
 
 - **Write modes:** `defer` (default) writes after the response is sent and still
   records 4xx and 5xx responses; `queue` dispatches a `WriteEvent` job (a failed
@@ -405,7 +409,7 @@ are bound in the register phase and yours wins.
 | `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\BotDetector` | `PatternBotDetector` (user agent substrings from config) | Decide whether a request is a bot |
 | `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\DeviceDetector` | `PatternDeviceDetector` (built-in user agent patterns) | Classify device type, OS and browser |
 | `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\GeoLocator` | `HeaderGeoLocator` (reads `audience.country_header`) | Find the visitor's country code |
-| `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore` | `DatabaseEventStore` (session plus event rows, under a lock) | Persist a page view or custom event |
+| `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore` | `DatabaseEventStore` (session plus event rows, under a lock) | Persist a page view or an event (custom event, goal, outbound click or scroll depth). `PageViewData::$status` and `CustomEventData::$name` can be null |
 
 ```php
 use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\BotDetector;
@@ -434,12 +438,10 @@ nothing to move.
   rollup dimension today).
 - **Audience:** viewport size (device, OS, browser and country are recorded on
   sessions and reported by `Stats`, see below).
-- **Behavior:** outbound link clicks, file downloads, 404s, scroll/
-  engagement depth (custom events, goals, their conversion and multi-step
-  funnels are reported by `Stats`, see below).
-- **Client-side tracker:** file downloads and engagement beyond scroll depth
-  (SPA transitions, outbound clicks, scroll depth and `window.spaAnalytics`
-  are available, see [Browser events](#browser-events)).
+- **Behavior:** file downloads and engagement time beyond scroll depth
+  (custom events, goals, their conversion, funnels, outbound clicks and scroll
+  depth are reported by `Stats`, see [Reading the numbers](#reading-the-numbers)
+  and [Browser events](#browser-events)).
 
 ## Rollups and retention
 

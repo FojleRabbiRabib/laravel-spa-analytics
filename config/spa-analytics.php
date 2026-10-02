@@ -64,7 +64,8 @@ return [
     |
     | Page view capture. write_mode is defer (after the response is sent),
     | queue (a queued job, using connection and queue below) or sync. Paths in
-    | excluded_paths use request()->is() patterns. Host and user agent lists
+    | excluded_paths use request()->is() patterns and also filter the paths
+    | the browser script reports. Host and user agent lists
     | are case-insensitive substring matches used to classify referrers and
     | flag bots; bots are stored with is_bot = true, never dropped.
     |

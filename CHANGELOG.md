@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-03
+
 ### Added
 
 - The browser script reports SPA page transitions, outbound clicks, scroll depth (25, 50, 75 and 100 per cent) and exposes `window.spaAnalytics.track()` and `goal()`, through a new `POST {route_prefix}/collect` endpoint with its own throttle (`collect.rate_limit_per_minute`, `collect.rate_limit_per_ip_per_minute`). Client paths are normalised and checked against `tracking.excluded_paths`; the server skips a client page view it just recorded.
@@ -14,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `Stats` facade for reading analytics: `between()` or `lastDays()` then `summary()`, `timeseries()`, `top()` and `goals()`, plus `realtime()`. Results are readonly objects with `toArray()`. Users are distinct people over the range counted from raw events, falling back to summed daily users (`usersExact` false) for pruned days; counts cover completed hours only. New config key `stats.realtime_minutes` (default 5).
 - `funnel()` on `Stats::between()` reports ordered multi-step funnels over paths, path prefixes, custom events and goals (`FunnelStep`, `Funnel` and `FunnelStepResult`, plus the `FunnelStepType` enum). Visitors are counted from raw events and pruned days are reported through `coveredFrom` and `complete`.
 - `exit_path` rollup dimension (sessions by their last page). Run `spa-analytics:rollup --since=YYYY-MM-DD` again to fill it for history.
+
+### Changed
+
+- If you bind your own `EventStore`: `PageViewData::$status` is now nullable (page views reported by the browser have no status), `CustomEventData::$name` is now nullable, and `CustomEventData` has the trailing optional `targetHost`, `targetPath` and `scrollPercent` fields. The `EventStore` contract itself is unchanged.
+- `EventType` and `RollupDimension` gained cases (`outbound_click`, `scroll_depth`, `outbound_host`), so an exhaustive `match` over them needs the new arms.
+- Upgrading: publish the migrations and the assets again (`php artisan vendor:publish --tag="spa-analytics-migrations"`, then `php artisan migrate`, and `--tag="spa-analytics-assets" --force`). A cached `client.js` from 0.3.0 keeps working but sends none of the new events.
 
 ## [0.3.0] - 2026-10-02
 
@@ -63,7 +71,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `BotDetector` and `EventStore` contracts, bound in the register phase so an app can replace them.
 - Publish tags `spa-analytics-config`, `spa-analytics-migrations` and `spa-analytics-assets`.
 
-[Unreleased]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/releases/tag/v0.1.0
