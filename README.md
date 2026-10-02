@@ -166,6 +166,21 @@ identity yourself.
 - **Limits:** fingerprinting is probabilistic. Two identical devices can share
   a stable hash, and a visitor whose cookie is cleared and whose volatile
   hashes all changed will look new.
+- **Why the fingerprint needs the script:** the request headers alone (user
+  agent, language, encoding, client hints, header order) are shared by many
+  people on the same browser and operating system, so a hash of them collides
+  far more often than one that includes rendering, hardware and screen signals.
+  The only request-side signal that is hard to fake is the TLS fingerprint, which
+  your proxy can forward (`identity.tls_fingerprint_header`) and which is used
+  whenever it is present. Neither kind proves a device is genuine: the cookie
+  is the authority and the fingerprint is only a hint for recognising a
+  returning visitor.
+- **Visits without the script:** a page view is always recorded from the
+  request and the cookie is set on that same response, so a visitor whose
+  browser blocks or never runs the script (a blocker, a failed load, leaving
+  before it ran) is still counted and keeps their cookie identity. They just
+  have no fingerprint, so they cannot be re-linked after clearing their
+  cookie. Crawlers and monitors that skip scripts are flagged as bots.
 - **Storage:** each identified visitor's hashes are kept in
   `analytics_visitor_fingerprints` (one row per visitor, with first and last
   seen). Events and sessions reference the visitor id only.
