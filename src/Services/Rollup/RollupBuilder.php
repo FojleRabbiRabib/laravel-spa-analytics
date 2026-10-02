@@ -132,6 +132,20 @@ class RollupBuilder
             );
         }
 
+        $this->addGroupedPageViews($rows, RollupDimension::Status, $base()->whereNotNull('e.status')->groupBy('e.status')->selectRaw('e.status as value'));
+
+        $errors = $base()->where('e.status', '>=', 400)->whereNotNull('e.path')
+            ->groupBy('e.status', DB::raw(Sql::exact('e.path')))
+            ->selectRaw('e.status as status, '.Sql::exact('e.path').' as path, count(*) as page_views, count(distinct '.Sql::exact('e.visitor_id').') as visitors')
+            ->get();
+
+        foreach ($errors as $group) {
+            $value = RollupDimension::errorPathValue((int) $group->status, (string) $group->path);
+
+            $this->set($rows, RollupDimension::ErrorPath, $value, 'page_views', (int) $group->page_views);
+            $this->set($rows, RollupDimension::ErrorPath, $value, 'visitors', (int) $group->visitors);
+        }
+
         $this->addGroupedPageViews(
             $rows,
             RollupDimension::VisitorType,

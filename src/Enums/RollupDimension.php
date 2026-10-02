@@ -25,6 +25,8 @@ enum RollupDimension: string
     case UtmMedium = 'utm_medium';
     case UtmTerm = 'utm_term';
     case UtmContent = 'utm_content';
+    case Status = 'status';
+    case ErrorPath = 'error_path';
 
     /**
      * The analytics_sessions column behind each dimension that describes a session, keyed by column.
@@ -66,6 +68,14 @@ enum RollupDimension: string
     }
 
     /**
+     * The stored value of an error path row: the response status, a space and the path, cut to the value column.
+     */
+    public static function errorPathValue(int|string $status, string $path): string
+    {
+        return mb_substr($status.' '.$path, 0, 512);
+    }
+
+    /**
      * Whether this case equals the given case.
      */
     public function is(self $dimension): bool
@@ -98,6 +108,8 @@ enum RollupDimension: string
             self::Goal => 'Goal',
             self::OutboundHost => 'Outbound host',
             self::ScrollDepth => 'Scroll depth',
+            self::Status => 'Status',
+            self::ErrorPath => 'Error path',
         };
     }
 
@@ -112,6 +124,7 @@ enum RollupDimension: string
             self::ReferrerType, self::ReferrerHost, self::UtmCampaign, self::UtmSource, self::UtmMedium, self::UtmTerm, self::UtmContent => 'purple',
             self::DeviceType, self::Os, self::Browser, self::Country, self::VisitorType => 'green',
             self::Event, self::Goal, self::OutboundHost, self::ScrollDepth => 'orange',
+            self::Status, self::ErrorPath => 'red',
         };
     }
 

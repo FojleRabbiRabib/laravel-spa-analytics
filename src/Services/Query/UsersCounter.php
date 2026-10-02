@@ -84,9 +84,14 @@ class UsersCounter
 
         $exactFrom = $this->exactFrom($plan);
 
-        if ($exactFrom->lessThan($plan->effectiveTo)) {
+        if ($exactFrom->lessThan($plan->effectiveTo) && $dimension->is(RollupDimension::ErrorPath)) {
+            foreach ($this->errorPathUsers($values, $exactFrom, $plan->effectiveTo) as $value => $users) {
+                $found[$value]['users'] += $users;
+            }
+        } elseif ($exactFrom->lessThan($plan->effectiveTo)) {
             [$query, $column, $visitor] = $this->source($dimension, $exactFrom, $plan->effectiveTo);
-            $numeric = $dimension->is(RollupDimension::VisitorType) || $dimension->is(RollupDimension::ScrollDepth);
+            $integer = $dimension->is(RollupDimension::ScrollDepth) || $dimension->is(RollupDimension::Status);
+            $numeric = $dimension->is(RollupDimension::VisitorType) || $integer;
             $expression = $numeric ? $column : Sql::exact($column);
 
             if ($viewersOnly) {
@@ -94,7 +99,7 @@ class UsersCounter
             }
 
             if (! $dimension->is(RollupDimension::VisitorType)) {
-                $bindings = $dimension->is(RollupDimension::ScrollDepth) ? array_map(intval(...), $values) : $values;
+                $bindings = $integer ? array_map(intval(...), $values) : $values;
 
                 $query->whereRaw($expression.' in ('.implode(', ', array_fill(0, count($values), '?')).')', $bindings);
             }
@@ -127,6 +132,42 @@ class UsersCounter
     }
 
     /**
+     * Distinct people for error path values, which are a status and a path, so the rows are matched on both parts.
+     *
+     * @param  array<int, string>  $values
+     * @return array<string, int>
+     */
+    private function errorPathUsers(array $values, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $statuses = $paths = [];
+
+        foreach ($values as $value) {
+            [$status, $path] = array_pad(explode(' ', $value, 2), 2, '');
+            $statuses[] = (int) $status;
+            $paths[] = $path;
+        }
+
+        $rows = $this->pageViews($from, $to)
+            ->whereIn('e.status', array_values(array_unique($statuses)))
+            ->whereRaw(Sql::exact('e.path').' in ('.implode(', ', array_fill(0, count($paths), '?')).')', $paths)
+            ->groupBy('e.status', DB::raw(Sql::exact('e.path')))
+            ->selectRaw('e.status as status, '.Sql::exact('e.path').' as path, count(distinct '.Sql::exact('e.visitor_id').') as users')
+            ->get();
+
+        $users = [];
+
+        foreach ($rows as $row) {
+            $value = RollupDimension::errorPathValue((int) $row->status, (string) $row->path);
+
+            if (in_array($value, $values, true)) {
+                $users[$value] = (int) $row->users;
+            }
+        }
+
+        return $users;
+    }
+
+    /**
      * The raw query behind a dimension, its value column and the visitor column to count.
      *
      * @return array{Builder, string, string}
@@ -148,6 +189,7 @@ class UsersCounter
             RollupDimension::Goal => [$this->events(EventType::Goal, $from, $to), 'e.name', 'e.visitor_id'],
             RollupDimension::OutboundHost => [$this->events(EventType::OutboundClick, $from, $to), 'e.target_host', 'e.visitor_id'],
             RollupDimension::ScrollDepth => [$this->events(EventType::ScrollDepth, $from, $to), 'e.scroll_percent', 'e.visitor_id'],
+            RollupDimension::Status => [$this->pageViews($from, $to), 'e.status', 'e.visitor_id'],
             RollupDimension::VisitorType => [$this->sessionPageViews($from, $to), 's.is_new_visitor', 'e.visitor_id'],
             default => [$this->sessionPageViews($from, $to), 's.'.($dimension->sessionColumn() ?? throw new \InvalidArgumentException('The dimension has no per-value users.')), 'e.visitor_id'],
         };
