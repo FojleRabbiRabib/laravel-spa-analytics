@@ -101,6 +101,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Collect
+    |--------------------------------------------------------------------------
+    |
+    | The browser script posts SPA page views, outbound clicks, scroll depth
+    | and manual events to the collect endpoint (under identity.route_prefix).
+    | rate_limit_per_minute limits each visitor cookie and
+    | rate_limit_per_ip_per_minute each address, both higher than the identity
+    | endpoints because a visit sends many small batches.
+    |
+    */
+
+    'collect' => [
+        'rate_limit_per_minute' => 120,
+        'rate_limit_per_ip_per_minute' => 1200,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Rollups
     |--------------------------------------------------------------------------
     |

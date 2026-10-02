@@ -106,22 +106,8 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
             'Re-linking' => config('spa-analytics.identity.relink') ? 'ON' : 'OFF',
         ]);
 
-        RateLimiter::for('spa-analytics-identity', function (Request $request): array {
-            $secret = (string) config('app.key');
-            $visitorId = $request->cookie((string) config('spa-analytics.identity.cookie_name'));
-
-            $limits = [
-                Limit::perMinute((int) config('spa-analytics.identity.rate_limit_per_ip_per_minute'))
-                    ->by('ip:'.hash_hmac('sha256', (string) $request->ip(), $secret)),
-            ];
-
-            if (is_string($visitorId) && Str::isUuid($visitorId)) {
-                array_unshift($limits, Limit::perMinute((int) config('spa-analytics.identity.rate_limit_per_minute'))
-                    ->by('visitor:'.hash_hmac('sha256', $visitorId, $secret)));
-            }
-
-            return $limits;
-        });
+        RateLimiter::for('spa-analytics-identity', fn (Request $request): array => $this->limits($request, 'identity'));
+        RateLimiter::for('spa-analytics-collect', fn (Request $request): array => $this->limits($request, 'collect'));
 
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
             if (! config('spa-analytics.enabled') || ! config('spa-analytics.rollups.schedule')) {
@@ -145,5 +131,28 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
         if (config('spa-analytics.enabled') && config('spa-analytics.tracking.register_middleware')) {
             $this->app->make(Kernel::class)->appendMiddlewareToGroup('web', CapturePageView::class);
         }
+    }
+
+    /**
+     * The throttle limits of a package endpoint group: one per visitor cookie and a higher one per address.
+     *
+     * @return array<int, Limit>
+     */
+    private function limits(Request $request, string $group): array
+    {
+        $secret = (string) config('app.key');
+        $visitorId = $request->cookie((string) config('spa-analytics.identity.cookie_name'));
+
+        $limits = [
+            Limit::perMinute((int) config('spa-analytics.'.$group.'.rate_limit_per_ip_per_minute'))
+                ->by('ip:'.hash_hmac('sha256', (string) $request->ip(), $secret)),
+        ];
+
+        if (is_string($visitorId) && Str::isUuid($visitorId)) {
+            array_unshift($limits, Limit::perMinute((int) config('spa-analytics.'.$group.'.rate_limit_per_minute'))
+                ->by('visitor:'.hash_hmac('sha256', $visitorId, $secret)));
+        }
+
+        return $limits;
     }
 }
