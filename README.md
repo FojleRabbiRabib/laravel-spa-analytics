@@ -381,8 +381,8 @@ nothing to move.
 - **Audience:** viewport size (device, OS, browser and country are recorded on
   sessions and reported by `Stats`, see below).
 - **Behavior:** outbound link clicks, file downloads, 404s, scroll/
-  engagement depth and multi-step funnels (custom events and goals are
-  recorded and their conversion is reported by `Stats`, see below).
+  engagement depth (custom events, goals, their conversion and multi-step
+  funnels are reported by `Stats`, see below).
 - **Client-side tracker:** a first-class JS client for SPA page-view
   transitions, outbound clicks, scroll depth, and custom
   `analytics.track()` events — runs alongside server-side middleware
@@ -450,6 +450,7 @@ plain readonly objects with a `toArray()` for JSON. The package ships no routes
 or UI: call it from your own controllers.
 
 ```php
+use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\FunnelStep;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupDimension;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupPeriod;
 use FojleRabbiRabib\LaravelSpaAnalytics\Facades\Stats;
@@ -460,6 +461,11 @@ $report->summary();                          // Summary
 $report->timeseries(RollupPeriod::Day);      // SeriesPoint[]
 $report->top(RollupDimension::Path, 10);     // TopRow[]
 $report->goals();                            // GoalRow[]
+$report->funnel([                            // Funnel
+    FunnelStep::path('/pricing'),
+    FunnelStep::event('clicked_signup'),
+    FunnelStep::goal('signup'),
+]);
 
 Stats::realtime();                           // Realtime
 ```
@@ -470,6 +476,7 @@ Stats::realtime();                           // Realtime
 | `timeseries(Hour or Day)` | One point per bucket of the range, empty buckets as zeros |
 | `top(dimension, limit)` | The best values of a dimension: paths by page views, events and goals by events, everything else by sessions. Use the entry-path sessions of `path` rows and the last page of `exit_path` rows for landing and exit pages |
 | `goals()` | Each goal with completions, revenue, users and conversion rate |
+| `funnel(steps)` | Users per step with the rate from the previous and from the first step, the overall conversion, `coveredFrom`, `complete` and `through` |
 | `realtime()` | Visitors with a page view in the last `stats.realtime_minutes` (default 5) and the page each of them viewed last, read from the raw events |
 
 How the numbers are built:
@@ -499,6 +506,22 @@ How the numbers are built:
   who was new and came back inside the range appears in both rows there.
 - Bots are never counted, and path, event and campaign values that differ only
   in case stay separate rows on every engine.
+
+Funnels take 2 to 10 steps: `FunnelStep::path()` (exact path),
+`pathStartingWith()` (literal prefix, no wildcards), `event()` and `goal()`, each
+with an optional label. A visitor reaches a step only after completing the steps
+before it, anywhere in the range and however many days apart, and one event moves
+them one step, so a step repeated twice needs two events. Within the same
+second a page view counts before a goal or event, because a request's page view
+is recorded after its controller has fired its goal; a goal fired during
+`/thank-you` therefore follows that page view, while one fired a full second
+earlier does not. Event and goal steps with the same
+name are different steps, and matching is case-exact. Funnels read raw events,
+which rollups cannot replace: days whose raw rows were pruned are not counted,
+`coveredFrom` says where counting starts and `complete` is `false` then. Like
+long-range users, a funnel scans every matching raw event in the range, and
+Laravel notes that `cursor()` still lets PDO buffer the raw result, so memory
+grows with the number of matching events.
 
 ## Testing
 

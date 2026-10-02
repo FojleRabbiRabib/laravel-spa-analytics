@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Query;
 
 use Carbon\CarbonImmutable;
+use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\Funnel;
+use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\FunnelStep;
+use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\FunnelStepResult;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\GoalRow;
+use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\PlannedBucket;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\RangePlan;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\SeriesPoint;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\Summary;
@@ -22,6 +26,7 @@ class StatsReport
         private readonly RollupCoverage $coverage,
         private readonly RollupReader $reader,
         private readonly UsersCounter $users,
+        private readonly FunnelCounter $funnels,
     ) {}
 
     /**
@@ -191,6 +196,58 @@ class StatsReport
             revenue: (string) $row['revenue'],
             conversionRate: $people['users'] > 0 ? min($converters[$row['value']]['users'], $people['goalUsers']) / $people['users'] : 0.0,
         ), $rows);
+    }
+
+    /**
+     * How many visitors got through each step in order, with page, event and goal steps.
+     *
+     * A visitor reaches a step only after completing the steps before it somewhere in the range, however many days
+     * apart, and one event moves them one step. Funnels read raw events, so days whose raw rows were pruned are not
+     * counted: `coveredFrom` says where counting starts and `complete` is false then.
+     *
+     * @param  array<int, FunnelStep>  $steps  Between 2 and 10 steps.
+     *
+     * @throws \InvalidArgumentException For fewer than 2 or more than 10 steps.
+     */
+    public function funnel(array $steps): Funnel
+    {
+        $steps = array_values($steps);
+
+        if (count($steps) < 2 || count($steps) > 10) {
+            throw new \InvalidArgumentException('A funnel needs between 2 and 10 steps.');
+        }
+
+        $through = $this->coverage->through();
+        $counts = array_fill(0, count($steps), 0);
+        $coveredFrom = null;
+        $complete = true;
+
+        if ($through !== null) {
+            $plan = $this->plan($through);
+            ['buckets' => $buckets] = $this->reader->resolve($plan);
+            $from = $this->users->exactFrom($plan);
+            $counts = $this->funnels->count($plan, $steps, $from);
+
+            $before = array_values(array_filter($buckets, fn (PlannedBucket $bucket): bool => $bucket->start->lessThan($from)));
+            $earlier = $before === [] ? ['page_views' => 0, 'events' => 0] : $this->reader->sums($before, RollupDimension::Total);
+            $complete = (int) $earlier['page_views'] + (int) $earlier['events'] === 0;
+            $coveredFrom = $from->lessThan($plan->effectiveTo) ? ($complete ? $plan->from : $from) : null;
+        }
+
+        $results = [];
+
+        foreach ($steps as $index => $step) {
+            $results[] = new FunnelStepResult(
+                type: $step->type,
+                value: $step->value,
+                label: $step->label,
+                users: $counts[$index],
+                fromPrevious: $index === 0 ? 1.0 : ($counts[$index - 1] > 0 ? $counts[$index] / $counts[$index - 1] : 0.0),
+                fromFirst: $index === 0 ? 1.0 : ($counts[0] > 0 ? $counts[$index] / $counts[0] : 0.0),
+            );
+        }
+
+        return new Funnel($results, $counts[0] > 0 ? $counts[count($counts) - 1] / $counts[0] : 0.0, $coveredFrom, $complete, $through);
     }
 
     private function plan(CarbonImmutable $through): RangePlan

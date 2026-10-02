@@ -16,6 +16,7 @@ class StatsService
         private readonly RollupReader $reader,
         private readonly UsersCounter $users,
         private readonly RealtimeReader $realtime,
+        private readonly FunnelCounter $funnels,
     ) {}
 
     /**
@@ -32,6 +33,7 @@ class StatsService
             $this->coverage,
             $this->reader,
             $this->users,
+            $this->funnels,
         );
     }
 

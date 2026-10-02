@@ -153,7 +153,11 @@ class UsersCounter
         return $this->pageViews($from, $to)->join('analytics_sessions as s', 's.id', '=', 'e.session_id');
     }
 
-    private function exactFrom(RangePlan $plan): CarbonImmutable
+    /**
+     * Where raw events can be counted from: the start of the plan, or the first day that still has raw events when
+     * the earlier ones were pruned. It is the end of the plan when there is nothing to count.
+     */
+    public function exactFrom(RangePlan $plan): CarbonImmutable
     {
         $floor = $this->rawFloor();
 
