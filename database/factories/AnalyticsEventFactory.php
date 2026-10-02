@@ -63,6 +63,31 @@ class AnalyticsEventFactory extends Factory
     }
 
     /**
+     * An outbound click: a target host and path on the page it happened on.
+     */
+    public function outboundClick(): static
+    {
+        return $this->state(fn (): array => [
+            'type' => EventType::OutboundClick,
+            'target_host' => fake()->domainName(),
+            'target_path' => '/'.fake()->slug(2),
+            'status' => null,
+        ]);
+    }
+
+    /**
+     * A scroll depth milestone reached on the page.
+     */
+    public function scrollDepth(int $percent = 50): static
+    {
+        return $this->state(fn (): array => [
+            'type' => EventType::ScrollDepth,
+            'scroll_percent' => $percent,
+            'status' => null,
+        ]);
+    }
+
+    /**
      * Mark the event as bot traffic.
      */
     public function bot(): static

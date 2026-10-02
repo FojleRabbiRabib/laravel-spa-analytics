@@ -15,7 +15,7 @@ final readonly class CustomEventData
     public function __construct(
         public EventType $type,
         public string $visitorId,
-        public string $name,
+        public ?string $name,
         public ?float $value,
         public array $properties,
         public ?string $path,
@@ -24,6 +24,9 @@ final readonly class CustomEventData
         public ?string $userAgent,
         public bool $isBot,
         public CarbonImmutable $occurredAt,
+        public ?string $targetHost = null,
+        public ?string $targetPath = null,
+        public ?int $scrollPercent = null,
     ) {
         if ($type->is(EventType::PageView)) {
             throw new \InvalidArgumentException('A custom event cannot use the page view type.');
@@ -38,7 +41,7 @@ final readonly class CustomEventData
         return new self(
             type: EventType::coerce($data['type']),
             visitorId: (string) $data['visitor_id'],
-            name: (string) $data['name'],
+            name: isset($data['name']) ? (string) $data['name'] : null,
             value: isset($data['value']) ? (float) $data['value'] : null,
             properties: is_array($data['properties'] ?? null) ? $data['properties'] : [],
             path: isset($data['path']) ? (string) $data['path'] : null,
@@ -47,6 +50,9 @@ final readonly class CustomEventData
             userAgent: isset($data['user_agent']) ? (string) $data['user_agent'] : null,
             isBot: (bool) $data['is_bot'],
             occurredAt: CarbonImmutable::parse($data['occurred_at']),
+            targetHost: isset($data['target_host']) ? (string) $data['target_host'] : null,
+            targetPath: isset($data['target_path']) ? (string) $data['target_path'] : null,
+            scrollPercent: isset($data['scroll_percent']) ? (int) $data['scroll_percent'] : null,
         );
     }
 
@@ -67,6 +73,9 @@ final readonly class CustomEventData
             $this->userAgent,
             $this->isBot,
             $this->occurredAt,
+            $this->targetHost,
+            $this->targetPath,
+            $this->scrollPercent,
         );
     }
 
@@ -81,6 +90,9 @@ final readonly class CustomEventData
             'type' => $this->type,
             'visitor_id' => $this->visitorId,
             'name' => $this->name,
+            'target_host' => $this->targetHost,
+            'target_path' => $this->targetPath,
+            'scroll_percent' => $this->scrollPercent,
             'value' => $this->value,
             'properties' => $this->properties === [] ? null : $this->properties,
             'path' => $this->path,

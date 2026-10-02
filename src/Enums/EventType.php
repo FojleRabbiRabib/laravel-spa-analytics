@@ -9,6 +9,8 @@ enum EventType: string
     case PageView = 'page_view';
     case Custom = 'custom';
     case Goal = 'goal';
+    case OutboundClick = 'outbound_click';
+    case ScrollDepth = 'scroll_depth';
 
     /**
      * Whether this case equals the given case.
@@ -27,6 +29,8 @@ enum EventType: string
             self::PageView => 'Page view',
             self::Custom => 'Custom event',
             self::Goal => 'Goal',
+            self::OutboundClick => 'Outbound click',
+            self::ScrollDepth => 'Scroll depth',
         };
     }
 
@@ -39,6 +43,8 @@ enum EventType: string
             self::PageView => 'blue',
             self::Custom => 'purple',
             self::Goal => 'green',
+            self::OutboundClick => 'orange',
+            self::ScrollDepth => 'gray',
         };
     }
 

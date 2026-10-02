@@ -56,6 +56,6 @@ class InstallCommandTest extends TestCase
         $this->assertFileExists(config_path('spa-analytics.php'));
         $this->assertFileExists(public_path('vendor/laravel-spa-analytics/client.js'));
         $this->assertCount(5, glob(database_path('migrations/*_create_analytics_*.php')));
-        $this->assertCount(2, glob(database_path('migrations/*_update_analytics_*.php')));
+        $this->assertCount(3, glob(database_path('migrations/*_update_analytics_*.php')));
     }
 }

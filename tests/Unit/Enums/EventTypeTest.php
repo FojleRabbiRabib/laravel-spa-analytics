@@ -19,12 +19,18 @@ class EventTypeTest extends TestCase
         $this->assertSame('blue', EventType::PageView->color());
         $this->assertSame('purple', EventType::Custom->color());
         $this->assertSame('green', EventType::Goal->color());
-        $this->assertSame(['page_view', 'custom', 'goal'], EventType::values());
+        $this->assertSame(['page_view', 'custom', 'goal', 'outbound_click', 'scroll_depth'], EventType::values());
+        $this->assertSame('Outbound click', EventType::OutboundClick->label());
+        $this->assertSame('Scroll depth', EventType::ScrollDepth->label());
+        $this->assertSame('orange', EventType::OutboundClick->color());
+        $this->assertSame('gray', EventType::ScrollDepth->color());
         $this->assertSame(EventType::PageView, EventType::default());
         $this->assertSame([
             ['value' => 'page_view', 'label' => 'Page view'],
             ['value' => 'custom', 'label' => 'Custom event'],
             ['value' => 'goal', 'label' => 'Goal'],
+            ['value' => 'outbound_click', 'label' => 'Outbound click'],
+            ['value' => 'scroll_depth', 'label' => 'Scroll depth'],
         ], EventType::options());
     }
 
