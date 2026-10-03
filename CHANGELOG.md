@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-03
+
+Two new migrations and a new browser script. After upgrading, publish the migrations again and migrate, and re-publish the script (`php artisan vendor:publish --tag=spa-analytics-assets --force`). There is no history to backfill. If you published the config file, add the new `collect.download_extensions` key (without it no file extension is listed, and only links with the `download` attribute count as downloads); if you published the views, add the new `data-downloads` attribute to your copy of `client-script.blade.php`.
+
 ### Added
 
 - File download tracking. The browser script reports a click or middle click on a link to a file (its path ends in one of the new `collect.download_extensions`, or the link has the `download` attribute), on this site or another, as a `file_download` event instead of an outbound click. The query string and fragment never leave the browser, and the server reads the extension from the path, never from the client. New `download` (the path of a file on the site, or `host/path` elsewhere) and `file_extension` rollup dimensions, rankable with `Stats::top()` by events with exact per-row users. The script tag gets a `data-downloads` attribute.
@@ -89,7 +93,8 @@ Reporting only: no migration and no new config. Run `spa-analytics:rollup --sinc
 - `BotDetector` and `EventStore` contracts, bound in the register phase so an app can replace them.
 - Publish tags `spa-analytics-config`, `spa-analytics-migrations` and `spa-analytics-assets`.
 
-[Unreleased]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.2.0...v0.3.0

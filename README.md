@@ -98,9 +98,11 @@ and re-publish the script with
 `php artisan vendor:publish --tag="spa-analytics-assets" --force`. An old
 cached `client.js` keeps working but reports links to files as outbound clicks
 and sends no viewport size.
-If you published the package views, add `data-downloads="{{ implode(',', config('spa-analytics.collect.download_extensions')) }}"`
-to your copy of `client-script.blade.php`, or the script gets no extension list
-and only links with the `download` attribute count.
+If you published the config file, add the new `collect.download_extensions`
+key, and if you published the package views, add
+`data-downloads="{{ implode(',', config('spa-analytics.collect.download_extensions')) }}"`
+to your copy of `client-script.blade.php`; without them the script gets no
+extension list and only links with the `download` attribute count.
 The rollups gain the `download`, `file_extension` and `viewport` dimensions,
 which have no history to fill. If you bind your own `EventStore`, `CustomEventData` has a new
 trailing `fileExtension` and the new `file_download` event type.
