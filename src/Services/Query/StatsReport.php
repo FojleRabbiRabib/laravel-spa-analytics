@@ -118,7 +118,7 @@ class StatsReport
     /**
      * The best values of a dimension, with users counted for those rows only.
      *
-     * Paths, statuses and error paths are ordered by page views, events and goals by events, and everything else by sessions.
+     * Paths, languages, statuses and error paths are ordered by page views, events and goals by events, and everything else by sessions.
      *
      * @return array<int, TopRow>
      *
@@ -140,7 +140,7 @@ class StatsReport
         ['buckets' => $buckets] = $this->reader->resolve($plan);
 
         $orderBy = match ($dimension) {
-            RollupDimension::Path, RollupDimension::Status, RollupDimension::ErrorPath => 'page_views',
+            RollupDimension::Path, RollupDimension::Language, RollupDimension::Status, RollupDimension::ErrorPath => 'page_views',
             RollupDimension::Event, RollupDimension::Goal, RollupDimension::OutboundHost, RollupDimension::ScrollDepth => 'events',
             default => 'sessions',
         };

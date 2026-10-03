@@ -89,7 +89,7 @@ php artisan migrate
 ```
 
 **From 0.4.0**: no migration. The rollups gain the `utm_source`, `utm_medium`,
-`utm_term` and `utm_content` dimensions plus `status` and `error_path`; run
+`utm_term` and `utm_content` dimensions plus `status`, `error_path` and `language`; run
 `php artisan spa-analytics:rollup --since=YYYY-MM-DD` to fill them for history.
 With `retention_days` set, days before the cutoff that already have a rollup
 are left alone (their raw rows may be pruned), so the new dimensions start at the
@@ -500,7 +500,10 @@ views that got a status of 400 or more, by status and path, stored as
 `404 /missing` or `500 /checkout`; unmatched URLs only count with a fallback
 route, see the 404 limit above). Both rank by page views in `Stats::top()`;
 page views reported by the browser script carry no status and add no row to
-either, and `error_path` rows have no sessions. The `events` column
+either, and `error_path` rows have no sessions. `language` is the first
+`Accept-Language` tag of each page view, lower-cased (`en-US` and `en-us` are
+one `en-us` row), ranked by page views, without session metrics.
+The `events` column
 and the `total` row's events count custom events and goals only; clicks and
 scroll milestones have their own dimensions. Bots are never counted. Audience
 dimensions come from the session. For `path` the session columns count
@@ -562,7 +565,7 @@ Stats::realtime();                           // Realtime
 |---|---|
 | `summary()` | `pageViews`, `users`, `usersExact`, `newUsers`, `returningUsers`, `sessions`, `bounces`, `bounceRate`, `avgSessionDuration`, `events`, `goalCompletions`, `revenue`, `conversionRate`, `through`, `incomplete` |
 | `timeseries(Hour or Day)` | One point per bucket of the range, empty buckets as zeros |
-| `top(dimension, limit)` | The best values of a dimension: paths, statuses and error paths by page views, events, goals, outbound hosts and scroll depth by events, everything else by sessions. Use the entry-path sessions of `path` rows and the last page of `exit_path` rows for landing and exit pages |
+| `top(dimension, limit)` | The best values of a dimension: paths, languages, statuses and error paths by page views, events, goals, outbound hosts and scroll depth by events, everything else by sessions. Use the entry-path sessions of `path` rows and the last page of `exit_path` rows for landing and exit pages |
 | `goals()` | Each goal with completions, revenue, users and conversion rate |
 | `funnel(steps)` | Users per step with the rate from the previous and from the first step, the overall conversion, `coveredFrom`, `complete` and `through` |
 | `realtime()` | Visitors with a page view in the last `stats.realtime_minutes` (default 5) and the page each of them viewed last, read from the raw events |

@@ -132,6 +132,7 @@ class RollupBuilder
             );
         }
 
+        $this->addGroupedPageViews($rows, RollupDimension::Language, $base()->whereNotNull('e.language')->groupBy(DB::raw('lower(e.language)'))->selectRaw('lower(e.language) as value'));
         $this->addGroupedPageViews($rows, RollupDimension::Status, $base()->whereNotNull('e.status')->groupBy('e.status')->selectRaw('e.status as value'));
 
         $errors = $base()->where('e.status', '>=', 400)->whereNotNull('e.path')

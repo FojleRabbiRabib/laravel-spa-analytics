@@ -27,9 +27,11 @@ class RollupDimensionTest extends TestCase
         $this->assertSame([
             'total', 'path', 'exit_path', 'referrer_type', 'referrer_host', 'utm_campaign', 'device_type',
             'os', 'browser', 'country', 'visitor_type', 'event', 'goal', 'outbound_host', 'scroll_depth',
-            'utm_source', 'utm_medium', 'utm_term', 'utm_content', 'status', 'error_path',
+            'utm_source', 'utm_medium', 'utm_term', 'utm_content', 'status', 'error_path', 'language',
         ], RollupDimension::values());
-        $this->assertCount(21, RollupDimension::options());
+        $this->assertSame('green', RollupDimension::Language->color());
+        $this->assertSame('Language', RollupDimension::Language->label());
+        $this->assertCount(22, RollupDimension::options());
         $this->assertSame('Error path', RollupDimension::ErrorPath->label());
         $this->assertSame('red', RollupDimension::Status->color());
         $this->assertNull(RollupDimension::Status->sessionColumn());

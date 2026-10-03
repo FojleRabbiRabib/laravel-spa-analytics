@@ -27,6 +27,7 @@ enum RollupDimension: string
     case UtmContent = 'utm_content';
     case Status = 'status';
     case ErrorPath = 'error_path';
+    case Language = 'language';
 
     /**
      * The analytics_sessions column behind each dimension that describes a session, keyed by column.
@@ -110,6 +111,7 @@ enum RollupDimension: string
             self::ScrollDepth => 'Scroll depth',
             self::Status => 'Status',
             self::ErrorPath => 'Error path',
+            self::Language => 'Language',
         };
     }
 
@@ -122,7 +124,7 @@ enum RollupDimension: string
             self::Total => 'gray',
             self::Path, self::ExitPath => 'blue',
             self::ReferrerType, self::ReferrerHost, self::UtmCampaign, self::UtmSource, self::UtmMedium, self::UtmTerm, self::UtmContent => 'purple',
-            self::DeviceType, self::Os, self::Browser, self::Country, self::VisitorType => 'green',
+            self::DeviceType, self::Os, self::Browser, self::Country, self::VisitorType, self::Language => 'green',
             self::Event, self::Goal, self::OutboundHost, self::ScrollDepth => 'orange',
             self::Status, self::ErrorPath => 'red',
         };

@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `utm_source`, `utm_medium`, `utm_term` and `utm_content` rollup dimensions, rankable with `Stats::top()` with exact per-row users like `utm_campaign`. No migration: run `spa-analytics:rollup --since=YYYY-MM-DD` to fill history (with `retention_days` set, days before the cutoff that already have a rollup keep their old rows). `utm_term` and `utm_content` are often unique per link, so they add rollup rows the way `path` does.
 
 - `status` and `error_path` rollup dimensions for site health: page views by response status, and page views with a status of 400 or more by status and path (`404 /missing`, `500 /checkout`), both rankable with `Stats::top()` by page views with exact per-row users. Only requests the package records are counted, so unmatched URLs show up only with a fallback route (see the 404 limit in the README). Page views reported by the browser script have no status and add no rows. No migration: run `spa-analytics:rollup --since=YYYY-MM-DD` to fill history (days before the `retention_days` cutoff that already have a rollup keep their old rows).
+- `language` rollup dimension: page views and visitors by the first `Accept-Language` tag, lower-cased (`en-US` and `en-us` are one `en-us` row), rankable with `Stats::top()` by page views with exact per-row users. No migration: run `spa-analytics:rollup --since=YYYY-MM-DD` to fill history (days before the `retention_days` cutoff that already have a rollup keep their old rows).
 
 ## [0.4.0] - 2026-10-03
 

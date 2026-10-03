@@ -189,6 +189,7 @@ class UsersCounter
             RollupDimension::Goal => [$this->events(EventType::Goal, $from, $to), 'e.name', 'e.visitor_id'],
             RollupDimension::OutboundHost => [$this->events(EventType::OutboundClick, $from, $to), 'e.target_host', 'e.visitor_id'],
             RollupDimension::ScrollDepth => [$this->events(EventType::ScrollDepth, $from, $to), 'e.scroll_percent', 'e.visitor_id'],
+            RollupDimension::Language => [$this->pageViews($from, $to), 'lower(e.language)', 'e.visitor_id'],
             RollupDimension::Status => [$this->pageViews($from, $to), 'e.status', 'e.visitor_id'],
             RollupDimension::VisitorType => [$this->sessionPageViews($from, $to), 's.is_new_visitor', 'e.visitor_id'],
             default => [$this->sessionPageViews($from, $to), 's.'.($dimension->sessionColumn() ?? throw new \InvalidArgumentException('The dimension has no per-value users.')), 'e.visitor_id'],
