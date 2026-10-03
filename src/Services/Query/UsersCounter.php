@@ -105,6 +105,10 @@ class UsersCounter
             if (! $dimension->is(RollupDimension::VisitorType)) {
                 $bindings = $integer ? array_map(intval(...), $values) : $values;
 
+                if (! $numeric) {
+                    $this->narrow($query, $column, $values);
+                }
+
                 $query->whereRaw($expression.' in ('.implode(', ', array_fill(0, count($values), '?')).')', $bindings);
             }
 
@@ -136,6 +140,22 @@ class UsersCounter
     }
 
     /**
+     * Narrow the rows to the given values with a plain comparison on the column, which an index can serve.
+     *
+     * The exact comparison that follows it (`binary` on MySQL and MariaDB) cannot use an index, and where the
+     * database ignores case the plain one only lets through a superset, so the exact one still decides. Anything
+     * that is not a plain column, such as a lower-cased expression, is left to the exact comparison alone.
+     *
+     * @param  array<int, string>  $values
+     */
+    private function narrow(Builder $query, string $column, array $values): void
+    {
+        if (preg_match('/^\w+\.\w+$/', $column) === 1) {
+            $query->whereRaw($column.' in ('.implode(', ', array_fill(0, count($values), '?')).')', array_values($values));
+        }
+    }
+
+    /**
      * Distinct people for error path values, which are a status and a path, so the rows are matched on both parts.
      *
      * @param  array<int, string>  $values
@@ -151,8 +171,11 @@ class UsersCounter
             $paths[] = $path;
         }
 
-        $rows = $this->pageViews($from, $to)
-            ->whereIn('e.status', array_values(array_unique($statuses)))
+        $query = $this->pageViews($from, $to)->whereIn('e.status', array_values(array_unique($statuses)));
+
+        $this->narrow($query, 'e.path', $paths);
+
+        $rows = $query
             ->whereRaw(Sql::exact('e.path').' in ('.implode(', ', array_fill(0, count($paths), '?')).')', $paths)
             ->groupBy('e.status', DB::raw(Sql::exact('e.path')))
             ->selectRaw('e.status as status, '.Sql::exact('e.path').' as path, count(distinct '.Sql::exact('e.visitor_id').') as users')
@@ -185,7 +208,11 @@ class UsersCounter
             $values,
         )));
 
-        $rows = $this->events(EventType::FileDownload, $from, $to)
+        $query = $this->events(EventType::FileDownload, $from, $to);
+
+        $this->narrow($query, 'e.target_path', $paths);
+
+        $rows = $query
             ->whereRaw(Sql::exact('e.target_path').' in ('.implode(', ', array_fill(0, count($paths), '?')).')', $paths)
             ->groupBy(DB::raw(Sql::exact('e.target_host')), DB::raw(Sql::exact('e.target_path')))
             ->selectRaw(Sql::exact('e.target_host').' as host, '.Sql::exact('e.target_path').' as path, count(distinct '.Sql::exact('e.visitor_id').') as users')
