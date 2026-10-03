@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- File download tracking. The browser script reports a click or middle click on a link to a file (its path ends in one of the new `collect.download_extensions`, or the link has the `download` attribute), on this site or another, as a `file_download` event instead of an outbound click. The query string and fragment never leave the browser, and the server reads the extension from the path, never from the client. New `download` (the path of a file on the site, or `host/path` elsewhere) and `file_extension` rollup dimensions, rankable with `Stats::top()` by events with exact per-row users. The script tag gets a `data-downloads` attribute.
+- Migration `update_analytics_events_table_for_downloads` adds a nullable `file_extension` column to `analytics_events`. After upgrading, publish the migrations again and migrate, and re-publish the script (`vendor:publish --tag=spa-analytics-assets --force`); an old cached script reports links to files as outbound clicks. There is no history to backfill.
+- `CustomEventData` gets a trailing `fileExtension` argument and `EventType` a `FileDownload` case; apps that bind their own `EventStore` should store `file_extension` and handle the new type.
+
 ## [0.5.0] - 2026-10-03
 
 Reporting only: no migration and no new config. Run `spa-analytics:rollup --since=YYYY-MM-DD` once after upgrading to fill the new dimensions for history.

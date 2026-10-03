@@ -1,4 +1,5 @@
 import { buildApi, replayQueued } from './api';
+import { downloadTarget } from './download';
 import { isInertiaPage } from './inertia';
 import { watchNavigation } from './navigation';
 import { outboundTarget } from './outbound';
@@ -7,11 +8,12 @@ import { createScrollTracker, scrollDepth } from './scroll';
 import { postEvents } from './transport';
 
 /**
- * Wire the page to the collect endpoint: transitions of a single-page app, outbound clicks, scroll depth and the
- * `window.spaAnalytics` API. The first page view of a load is recorded by the server, so it is not sent here, and
- * Inertia visits are left to the server for the same reason.
+ * Wire the page to the collect endpoint: transitions of a single-page app, file downloads, outbound clicks, scroll
+ * depth and the `window.spaAnalytics` API. The first page view of a load is recorded by the server, so it is not sent
+ * here, and Inertia visits are left to the server for the same reason. A click on a link to a file is a download and
+ * not an outbound click, even when the file is on another site.
  */
-export const startEvents = (collectUrl: string): void => {
+export const startEvents = (collectUrl: string, downloadExtensions: readonly string[] = []): void => {
     const queue = createQueue({
         send: (events) => postEvents(collectUrl, events),
         now: () => Date.now(),
@@ -38,7 +40,20 @@ export const startEvents = (collectUrl: string): void => {
 
     const onClick = (event: MouseEvent): void => {
         const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
-        const target = link instanceof HTMLAnchorElement ? outboundTarget(link.href, window.location.href) : null;
+
+        if (!(link instanceof HTMLAnchorElement)) {
+            return;
+        }
+
+        const file = downloadTarget(link.href, window.location.href, downloadExtensions, link.hasAttribute('download'));
+
+        if (file !== null) {
+            queue.push({ kind: 'download', path: window.location.pathname, url: file }, true);
+
+            return;
+        }
+
+        const target = outboundTarget(link.href, window.location.href);
 
         if (target !== null) {
             queue.push({ kind: 'outbound', path: window.location.pathname, url: target }, true);

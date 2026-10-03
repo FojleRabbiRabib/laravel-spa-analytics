@@ -11,6 +11,7 @@ enum ClientEventKind: string
     case Scroll = 'scroll';
     case Event = 'event';
     case Goal = 'goal';
+    case Download = 'download';
 
     /**
      * Whether this case equals the given case.
@@ -31,6 +32,7 @@ enum ClientEventKind: string
             self::Scroll => 'Scroll depth',
             self::Event => 'Custom event',
             self::Goal => 'Goal',
+            self::Download => 'File download',
         };
     }
 
@@ -45,6 +47,7 @@ enum ClientEventKind: string
             self::Scroll => 'gray',
             self::Event => 'purple',
             self::Goal => 'green',
+            self::Download => 'orange',
         };
     }
 

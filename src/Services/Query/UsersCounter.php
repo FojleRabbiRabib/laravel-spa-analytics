@@ -88,6 +88,10 @@ class UsersCounter
             foreach ($this->errorPathUsers($values, $exactFrom, $plan->effectiveTo) as $value => $users) {
                 $found[$value]['users'] += $users;
             }
+        } elseif ($exactFrom->lessThan($plan->effectiveTo) && $dimension->is(RollupDimension::Download)) {
+            foreach ($this->downloadUsers($values, $exactFrom, $plan->effectiveTo) as $value => $users) {
+                $found[$value]['users'] += $users;
+            }
         } elseif ($exactFrom->lessThan($plan->effectiveTo)) {
             [$query, $column, $visitor] = $this->source($dimension, $exactFrom, $plan->effectiveTo);
             $integer = $dimension->is(RollupDimension::ScrollDepth) || $dimension->is(RollupDimension::Status);
@@ -168,6 +172,39 @@ class UsersCounter
     }
 
     /**
+     * Distinct people for download values, which are a path or a host and a path. The rows are filtered on the exact
+     * paths only, because a file on the site has no host, and matched on the composed value.
+     *
+     * @param  array<int, string>  $values
+     * @return array<string, int>
+     */
+    private function downloadUsers(array $values, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $paths = array_values(array_unique(array_map(
+            fn (string $value): string => str_starts_with($value, '/') ? $value : (string) strstr($value, '/'),
+            $values,
+        )));
+
+        $rows = $this->events(EventType::FileDownload, $from, $to)
+            ->whereRaw(Sql::exact('e.target_path').' in ('.implode(', ', array_fill(0, count($paths), '?')).')', $paths)
+            ->groupBy(DB::raw(Sql::exact('e.target_host')), DB::raw(Sql::exact('e.target_path')))
+            ->selectRaw(Sql::exact('e.target_host').' as host, '.Sql::exact('e.target_path').' as path, count(distinct '.Sql::exact('e.visitor_id').') as users')
+            ->get();
+
+        $users = [];
+
+        foreach ($rows as $row) {
+            $value = RollupDimension::downloadValue($row->host, (string) $row->path);
+
+            if (in_array($value, $values, true)) {
+                $users[$value] = (int) $row->users;
+            }
+        }
+
+        return $users;
+    }
+
+    /**
      * The raw query behind a dimension, its value column and the visitor column to count.
      *
      * @return array{Builder, string, string}
@@ -189,6 +226,7 @@ class UsersCounter
             RollupDimension::Goal => [$this->events(EventType::Goal, $from, $to), 'e.name', 'e.visitor_id'],
             RollupDimension::OutboundHost => [$this->events(EventType::OutboundClick, $from, $to), 'e.target_host', 'e.visitor_id'],
             RollupDimension::ScrollDepth => [$this->events(EventType::ScrollDepth, $from, $to), 'e.scroll_percent', 'e.visitor_id'],
+            RollupDimension::FileExtension => [$this->events(EventType::FileDownload, $from, $to), 'e.file_extension', 'e.visitor_id'],
             RollupDimension::Language => [$this->pageViews($from, $to), 'lower(e.language)', 'e.visitor_id'],
             RollupDimension::Status => [$this->pageViews($from, $to), 'e.status', 'e.visitor_id'],
             RollupDimension::VisitorType => [$this->sessionPageViews($from, $to), 's.is_new_visitor', 'e.visitor_id'],

@@ -27,6 +27,7 @@ final readonly class CustomEventData
         public ?string $targetHost = null,
         public ?string $targetPath = null,
         public ?int $scrollPercent = null,
+        public ?string $fileExtension = null,
     ) {
         if ($type->is(EventType::PageView)) {
             throw new \InvalidArgumentException('A custom event cannot use the page view type.');
@@ -53,6 +54,7 @@ final readonly class CustomEventData
             targetHost: isset($data['target_host']) ? (string) $data['target_host'] : null,
             targetPath: isset($data['target_path']) ? (string) $data['target_path'] : null,
             scrollPercent: isset($data['scroll_percent']) ? (int) $data['scroll_percent'] : null,
+            fileExtension: isset($data['file_extension']) ? (string) $data['file_extension'] : null,
         );
     }
 
@@ -76,6 +78,7 @@ final readonly class CustomEventData
             $this->targetHost,
             $this->targetPath,
             $this->scrollPercent,
+            $this->fileExtension,
         );
     }
 
@@ -93,6 +96,7 @@ final readonly class CustomEventData
             'target_host' => $this->targetHost,
             'target_path' => $this->targetPath,
             'scroll_percent' => $this->scrollPercent,
+            'file_extension' => $this->fileExtension,
             'value' => $this->value,
             'properties' => $this->properties === [] ? null : $this->properties,
             'path' => $this->path,

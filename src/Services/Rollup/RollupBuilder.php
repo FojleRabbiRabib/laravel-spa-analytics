@@ -243,6 +243,33 @@ class RollupBuilder
 
         $this->addClientEvents($rows, $from, $to, EventType::OutboundClick, RollupDimension::OutboundHost, 'target_host', true);
         $this->addClientEvents($rows, $from, $to, EventType::ScrollDepth, RollupDimension::ScrollDepth, 'scroll_percent', false);
+        $this->addClientEvents($rows, $from, $to, EventType::FileDownload, RollupDimension::FileExtension, 'file_extension', true);
+        $this->addDownloads($rows, $from, $to);
+    }
+
+    /**
+     * Downloads by file: the path of a file on the site, or the host and path of a file on another site.
+     *
+     * @param  array<string, array<string, int|float>>  $rows
+     */
+    private function addDownloads(array &$rows, string $from, string $to): void
+    {
+        $groups = DB::table('analytics_events')
+            ->where('type', EventType::FileDownload)
+            ->where('is_bot', false)
+            ->where('occurred_at', '>=', $from)
+            ->where('occurred_at', '<', $to)
+            ->whereNotNull('target_path')
+            ->groupBy(DB::raw(Sql::exact('target_host')), DB::raw(Sql::exact('target_path')))
+            ->selectRaw(Sql::exact('target_host').' as host, '.Sql::exact('target_path').' as path, count(*) as events, count(distinct '.Sql::exact('visitor_id').') as visitors')
+            ->get();
+
+        foreach ($groups as $group) {
+            $value = RollupDimension::downloadValue($group->host, (string) $group->path);
+
+            $this->set($rows, RollupDimension::Download, $value, 'events', (int) $group->events);
+            $this->set($rows, RollupDimension::Download, $value, 'visitors', (int) $group->visitors);
+        }
     }
 
     /**

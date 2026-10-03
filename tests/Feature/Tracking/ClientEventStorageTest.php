@@ -103,6 +103,47 @@ class ClientEventStorageTest extends TestCase
         $this->assertNull($event->target_host);
     }
 
+    #[DataProvider('writeModes')]
+    public function test_a_file_download_keeps_its_target_and_extension_in_every_write_mode(string $mode): void
+    {
+        $this->write($mode, new CustomEventData(
+            type: EventType::FileDownload,
+            visitorId: 'visitor-1',
+            name: null,
+            value: null,
+            properties: [],
+            path: '/pricing',
+            language: null,
+            ip: null,
+            userAgent: null,
+            isBot: false,
+            occurredAt: CarbonImmutable::parse('2026-09-29 10:00:00'),
+            targetHost: 'cdn.example.org',
+            targetPath: '/a/report.zip',
+            fileExtension: 'zip',
+        ));
+
+        $event = AnalyticsEvent::query()->sole();
+
+        $this->assertSame(EventType::FileDownload, $event->type);
+        $this->assertSame('cdn.example.org', $event->target_host);
+        $this->assertSame('/a/report.zip', $event->target_path);
+        $this->assertSame('zip', $event->file_extension);
+    }
+
+    public function test_the_downloads_migration_adds_the_column_and_drops_it_again(): void
+    {
+        $migration = include __DIR__.'/../../../database/migrations/update_analytics_events_table_for_downloads.php.stub';
+
+        $migration->down();
+
+        $this->assertFalse(Schema::hasColumn('analytics_events', 'file_extension'));
+
+        $migration->up();
+
+        $this->assertTrue(Schema::hasColumn('analytics_events', 'file_extension'));
+    }
+
     public function test_the_new_fields_survive_to_array_and_from_array(): void
     {
         $click = CustomEventData::fromArray($this->outboundClick()->toArray());

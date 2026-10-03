@@ -15,7 +15,9 @@ class ClientEventKindTest extends TestCase
         $this->assertFalse(ClientEventKind::Goal->is(ClientEventKind::Event));
         $this->assertSame('Outbound click', ClientEventKind::Outbound->label());
         $this->assertSame('orange', ClientEventKind::Outbound->color());
-        $this->assertSame(['pageview', 'outbound', 'scroll', 'event', 'goal'], ClientEventKind::values());
+        $this->assertSame(['pageview', 'outbound', 'scroll', 'event', 'goal', 'download'], ClientEventKind::values());
+        $this->assertSame('File download', ClientEventKind::Download->label());
+        $this->assertSame('orange', ClientEventKind::Download->color());
         $this->assertSame(ClientEventKind::PageView, ClientEventKind::default());
         $this->assertSame(['value' => 'scroll', 'label' => 'Scroll depth'], ClientEventKind::options()[2]);
     }

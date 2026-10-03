@@ -11,6 +11,7 @@ enum EventType: string
     case Goal = 'goal';
     case OutboundClick = 'outbound_click';
     case ScrollDepth = 'scroll_depth';
+    case FileDownload = 'file_download';
 
     /**
      * Whether this case equals the given case.
@@ -31,6 +32,7 @@ enum EventType: string
             self::Goal => 'Goal',
             self::OutboundClick => 'Outbound click',
             self::ScrollDepth => 'Scroll depth',
+            self::FileDownload => 'File download',
         };
     }
 
@@ -45,6 +47,7 @@ enum EventType: string
             self::Goal => 'green',
             self::OutboundClick => 'orange',
             self::ScrollDepth => 'gray',
+            self::FileDownload => 'orange',
         };
     }
 

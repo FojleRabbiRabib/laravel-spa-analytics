@@ -28,6 +28,8 @@ enum RollupDimension: string
     case Status = 'status';
     case ErrorPath = 'error_path';
     case Language = 'language';
+    case Download = 'download';
+    case FileExtension = 'file_extension';
 
     /**
      * The analytics_sessions column behind each dimension that describes a session, keyed by column.
@@ -77,6 +79,14 @@ enum RollupDimension: string
     }
 
     /**
+     * The stored value of a download row: the path of a file on the site, or the host and path of a file elsewhere.
+     */
+    public static function downloadValue(?string $host, string $path): string
+    {
+        return mb_substr(($host ?? '').$path, 0, 512);
+    }
+
+    /**
      * Whether this case equals the given case.
      */
     public function is(self $dimension): bool
@@ -112,6 +122,8 @@ enum RollupDimension: string
             self::Status => 'Status',
             self::ErrorPath => 'Error path',
             self::Language => 'Language',
+            self::Download => 'Download',
+            self::FileExtension => 'File extension',
         };
     }
 
@@ -125,7 +137,7 @@ enum RollupDimension: string
             self::Path, self::ExitPath => 'blue',
             self::ReferrerType, self::ReferrerHost, self::UtmCampaign, self::UtmSource, self::UtmMedium, self::UtmTerm, self::UtmContent => 'purple',
             self::DeviceType, self::Os, self::Browser, self::Country, self::VisitorType, self::Language => 'green',
-            self::Event, self::Goal, self::OutboundHost, self::ScrollDepth => 'orange',
+            self::Event, self::Goal, self::OutboundHost, self::ScrollDepth, self::Download, self::FileExtension => 'orange',
             self::Status, self::ErrorPath => 'red',
         };
     }

@@ -1,3 +1,4 @@
+import { parseExtensions } from './events/download';
 import { startEvents } from './events/start';
 import { identify } from './identity/handshake-client';
 
@@ -11,5 +12,5 @@ if (handshakeUrl && identifyUrl) {
 }
 
 if (collectUrl) {
-    startEvents(collectUrl);
+    startEvents(collectUrl, parseExtensions(script?.dataset.downloads));
 }

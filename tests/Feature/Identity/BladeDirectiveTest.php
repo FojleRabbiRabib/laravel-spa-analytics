@@ -20,6 +20,15 @@ class BladeDirectiveTest extends TestCase
         $this->assertStringContainsString('data-collect="'.route('spa-analytics.collect').'"', $html);
     }
 
+    public function test_directive_passes_the_configured_download_extensions_to_the_script(): void
+    {
+        config()->set('spa-analytics.collect.download_extensions', ['pdf', 'epub']);
+
+        $html = Blade::render('@spaAnalytics', deleteCachedView: true);
+
+        $this->assertStringContainsString('data-downloads="pdf,epub"', $html);
+    }
+
     public function test_directive_renders_nothing_when_disabled(): void
     {
         config()->set('spa-analytics.enabled', false);

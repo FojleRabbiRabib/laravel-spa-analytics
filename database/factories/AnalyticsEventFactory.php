@@ -88,6 +88,20 @@ class AnalyticsEventFactory extends Factory
     }
 
     /**
+     * A file download: the path of the file (and its host when it is on another site) on the page it happened on.
+     */
+    public function download(string $path = '/files/guide.pdf', ?string $extension = 'pdf', ?string $host = null): static
+    {
+        return $this->state(fn (): array => [
+            'type' => EventType::FileDownload,
+            'target_host' => $host,
+            'target_path' => $path,
+            'file_extension' => $extension,
+            'status' => null,
+        ]);
+    }
+
+    /**
      * Mark the event as bot traffic.
      */
     public function bot(): static

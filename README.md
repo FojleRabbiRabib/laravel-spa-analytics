@@ -18,7 +18,8 @@ calls, no data sharing.
 > from server code, device, OS, browser and country on sessions, and hourly and
 > daily rollups with a retention prune, the `Stats` query API (summary,
 > timeseries, top lists, goals, funnels and real-time) and the browser client
-> (SPA page views, outbound clicks, scroll depth and `window.spaAnalytics`).
+> (SPA page views, outbound clicks, file downloads, scroll depth and
+> `window.spaAnalytics`).
 > Rollups also report UTM values, response status, error paths and language.
 > Config keys and table layouts may change before 1.0; see the
 > [Changelog](CHANGELOG.md).
@@ -89,6 +90,18 @@ php artisan vendor:publish --tag="spa-analytics-migrations"
 php artisan migrate
 ```
 
+**From 0.5.0**: file downloads. Publish the migrations again and migrate (one
+new migration adds a nullable `file_extension` column to `analytics_events`),
+and re-publish the script with
+`php artisan vendor:publish --tag="spa-analytics-assets" --force`. An old
+cached `client.js` keeps working but reports links to files as outbound clicks.
+If you published the package views, add `data-downloads="{{ implode(',', config('spa-analytics.collect.download_extensions')) }}"`
+to your copy of `client-script.blade.php`, or the script gets no extension list
+and only links with the `download` attribute count.
+The rollups gain the `download` and `file_extension` dimensions, which have no
+history to fill. If you bind your own `EventStore`, `CustomEventData` has a new
+trailing `fileExtension` and the new `file_download` event type.
+
 **From 0.4.0**: no migration. The rollups gain the `utm_source`, `utm_medium`,
 `utm_term` and `utm_content` dimensions plus `status`, `error_path` and
 `language`; run
@@ -129,6 +142,7 @@ All keys live in `config/spa-analytics.php`.
 | `retention_days` | `null` | Days of raw events and sessions to keep; `null`, empty, `0` or a non-number keeps everything (`SPA_ANALYTICS_RETENTION_DAYS`) |
 | `collect.rate_limit_per_minute` | `120` | Per-visitor (cookie) limit on the collect endpoint |
 | `collect.rate_limit_per_ip_per_minute` | `1200` | Per-address ceiling on the collect endpoint |
+| `collect.download_extensions` | `pdf`, `zip`, `docx`, `xlsx`, `csv`, `mp3`, `mp4` and others | File extensions the browser script reports as downloads (see the config file for the full list); a link with the `download` attribute counts too |
 | `rollups.schedule` | `true` | Register the hourly rollup and the daily prune in the Laravel scheduler |
 | `rollups.lookback_hours` | `3` | Recent hours each scheduled rollup recomputes |
 | `stats.realtime_minutes` | `5` | Window of `Stats::realtime()` |
@@ -389,6 +403,7 @@ on route changes and clicks at once, and when the page is hidden) with
 |---|---|---|
 | SPA page view | A change of pathname through `pushState` or the back and forward buttons. Not the first load (the server records it), `replaceState`, or a change of only the query or hash. Skipped on [Inertia](https://inertiajs.com) pages (`data-page`), which the server records; the server also ignores a client page view of the same path within five seconds of one it recorded | A `page_view` with no `status`, joining the session like any other |
 | Outbound click | A click or middle click on an `http(s)` link to another host: the host and path, never the query or fragment | `outbound_click` with `target_host` and `target_path` |
+| File download | A click or middle click on an `http(s)` link, on this site or another, whose path ends in one of `collect.download_extensions` or that has the `download` attribute: the host (for another site) and path, never the query or fragment, so signed links stay private. It replaces the outbound click for that link | `file_download` with `target_path`, `target_host` for another site, and `file_extension` when it is one of the configured extensions (read on the server from the path) |
 | Scroll depth | The 25, 50, 75 and 100 per cent milestones, once each per page, only after the visitor scrolls (a page that fits the window reports nothing) | `scroll_depth` with `scroll_percent` |
 | `window.spaAnalytics.track(name, properties?)` | A custom event | `custom`, like `Analytics::track()` |
 | `window.spaAnalytics.goal(name, value?, properties?)` | A goal, sent at once | `goal`, like `Analytics::goal()` |
@@ -421,7 +436,9 @@ to, without the query; it can still identify a specific document or profile on
 the other site. If that is more than you want to keep, clear the column after
 recording (for example in a model observer) or leave outbound clicks out of
 your retention plan. `target_host` and the host ranking in `Stats` do not
-depend on it.
+depend on it. The same goes for the path of a downloaded file, which can name a
+document; downloads are ranked by `target_path`, so clearing it removes the
+`download` rows but keeps `file_extension`.
 
 ## Extending
 
@@ -434,7 +451,7 @@ are bound in the register phase and yours wins.
 | `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\BotDetector` | `PatternBotDetector` (user agent substrings from config) | Decide whether a request is a bot |
 | `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\DeviceDetector` | `PatternDeviceDetector` (built-in user agent patterns) | Classify device type, OS and browser |
 | `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\GeoLocator` | `HeaderGeoLocator` (reads `audience.country_header`) | Find the visitor's country code |
-| `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore` | `DatabaseEventStore` (session plus event rows, under a lock) | Persist a page view or an event (custom event, goal, outbound click or scroll depth). `PageViewData::$status` and `CustomEventData::$name` can be null |
+| `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore` | `DatabaseEventStore` (session plus event rows, under a lock) | Persist a page view or an event (custom event, goal, outbound click, file download or scroll depth). `PageViewData::$status` and `CustomEventData::$name` can be null |
 
 ```php
 use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\BotDetector;
@@ -460,9 +477,10 @@ nothing to move.
 
 - **Audience:** viewport size (device, OS, browser and country are recorded on
   sessions and reported by `Stats`, see below).
-- **Behavior:** file downloads and engagement time beyond scroll depth
-  (custom events, goals, their conversion, funnels, outbound clicks and scroll
-  depth are reported by `Stats`, see [Reading the numbers](#reading-the-numbers)
+- **Behavior:** engagement time beyond scroll depth
+  (custom events, goals, their conversion, funnels, outbound clicks, file
+  downloads and scroll depth are reported by `Stats`, see
+  [Reading the numbers](#reading-the-numbers)
   and [Browser events](#browser-events)).
 
 ## Rollups and retention
@@ -496,7 +514,10 @@ backfill history with `--period=day` and let the schedule keep the hours fresh.
 Dimensions: `total`, `path`, `exit_path`, `referrer_type`, `referrer_host`, `utm_campaign`,
 `utm_source`, `utm_medium`, `utm_term`, `utm_content`, `device_type`, `os`, `browser`, `country`, `visitor_type` (`new` or `returning`),
 `event` (custom event names), `goal`, `outbound_host` (target hosts of outbound
-clicks), `scroll_depth` (the 25, 50, 75 and 100 milestones), `status` (the
+clicks), `scroll_depth` (the 25, 50, 75 and 100 milestones), `download` (files
+that were downloaded: the path of a file on the site, or `host/path` for a file
+elsewhere), `file_extension` (`pdf`, `zip` and the other configured extensions),
+`status` (the
 response status of page views, such as `200` or `404`) and `error_path` (page
 views that got a status of 400 or more, by status and path, stored as
 `404 /missing` or `500 /checkout`; unmatched URLs only count with a fallback
@@ -506,8 +527,8 @@ either, and `error_path` rows have no sessions. `language` is the first
 `Accept-Language` tag of each page view, lower-cased (`en-US` and `en-us` are
 one `en-us` row), ranked by page views, without session metrics.
 The `events` column
-and the `total` row's events count custom events and goals only; clicks and
-scroll milestones have their own dimensions. Bots are never counted. Audience
+and the `total` row's events count custom events and goals only; clicks,
+downloads and scroll milestones have their own dimensions. Bots are never counted. Audience
 dimensions come from the session. For `path` the session columns count
 sessions by their entry path, and `exit_path` counts sessions by their last
 page (sessions, bounces and duration only, no page views). A value that is empty (no UTM campaign, no
@@ -567,7 +588,7 @@ Stats::realtime();                           // Realtime
 |---|---|
 | `summary()` | `pageViews`, `users`, `usersExact`, `newUsers`, `returningUsers`, `sessions`, `bounces`, `bounceRate`, `avgSessionDuration`, `events`, `goalCompletions`, `revenue`, `conversionRate`, `through`, `incomplete` |
 | `timeseries(Hour or Day)` | One point per bucket of the range, empty buckets as zeros |
-| `top(dimension, limit)` | The best values of a dimension: paths, languages, statuses and error paths by page views, events, goals, outbound hosts and scroll depth by events, everything else by sessions. Use the entry-path sessions of `path` rows and the last page of `exit_path` rows for landing and exit pages |
+| `top(dimension, limit)` | The best values of a dimension: paths, languages, statuses and error paths by page views, events, goals, outbound hosts, scroll depth, downloads and file extensions by events, everything else by sessions. Use the entry-path sessions of `path` rows and the last page of `exit_path` rows for landing and exit pages |
 | `goals()` | Each goal with completions, revenue, users and conversion rate |
 | `funnel(steps)` | Users per step with the rate from the previous and from the first step, the overall conversion, `coveredFrom`, `complete` and `through` |
 | `realtime()` | Visitors with a page view in the last `stats.realtime_minutes` (default 5) and the page each of them viewed last, read from the raw events |

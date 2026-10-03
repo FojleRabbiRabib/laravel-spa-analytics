@@ -118,7 +118,7 @@ class StatsReport
     /**
      * The best values of a dimension, with users counted for those rows only.
      *
-     * Paths, languages, statuses and error paths are ordered by page views, events and goals by events, and everything else by sessions.
+     * Paths, languages, statuses and error paths are ordered by page views, events, goals, outbound hosts, scroll depth, downloads and file extensions by events, and everything else by sessions.
      *
      * @return array<int, TopRow>
      *
@@ -141,7 +141,7 @@ class StatsReport
 
         $orderBy = match ($dimension) {
             RollupDimension::Path, RollupDimension::Language, RollupDimension::Status, RollupDimension::ErrorPath => 'page_views',
-            RollupDimension::Event, RollupDimension::Goal, RollupDimension::OutboundHost, RollupDimension::ScrollDepth => 'events',
+            RollupDimension::Event, RollupDimension::Goal, RollupDimension::OutboundHost, RollupDimension::ScrollDepth, RollupDimension::Download, RollupDimension::FileExtension => 'events',
             default => 'sessions',
         };
 

@@ -83,6 +83,7 @@ class ClientEventRecorder
             ClientEventKind::PageView => $this->pageView($request, $context, $event, $path, $occurredAt),
             ClientEventKind::Outbound => $this->outbound($request, $context, $event, $path, $occurredAt),
             ClientEventKind::Scroll => $this->scroll($context, $event, $path, $occurredAt),
+            ClientEventKind::Download => $this->download($request, $context, $event, $path, $occurredAt),
             ClientEventKind::Event => $this->custom(EventType::Custom, $context, $event, $path, $occurredAt),
             ClientEventKind::Goal => $this->custom(EventType::Goal, $context, $event, $path, $occurredAt),
         };
@@ -141,6 +142,39 @@ class ClientEventRecorder
     }
 
     /**
+     * The host is kept only for a file on another site, and the extension is read from the path here, never taken
+     * from the client, and kept only when it is one of the configured download extensions.
+     *
+     * @param  array{visitorId: string, language: ?string, ip: ?string, userAgent: ?string, isBot: bool}  $context
+     * @param  array<string, mixed>  $event
+     */
+    private function download(Request $request, array $context, array $event, string $path, CarbonImmutable $occurredAt): ?CustomEventData
+    {
+        $parts = parse_url($this->text($event['url'] ?? null) ?? '');
+        $scheme = is_array($parts) ? strtolower((string) ($parts['scheme'] ?? '')) : '';
+        $host = is_array($parts) ? strtolower((string) ($parts['host'] ?? '')) : '';
+
+        if (! in_array($scheme, ['http', 'https'], true) || $host === '') {
+            return null;
+        }
+
+        $targetPath = $this->paths->normalize((string) ($parts['path'] ?? '/'));
+        $file = basename($targetPath);
+        $extension = strrpos($file, '.') > 0 ? strtolower(substr($file, (int) strrpos($file, '.') + 1)) : '';
+        $known = $extension !== '' && in_array($extension, array_map(fn (mixed $listed): string => ltrim(strtolower(trim((string) $listed)), '.'), (array) config('spa-analytics.collect.download_extensions')), true);
+
+        return $this->clientEvent(
+            EventType::FileDownload,
+            $context,
+            $path,
+            $occurredAt,
+            targetHost: $this->sameSite($host, $request->getHost()) ? null : mb_substr($host, 0, 255),
+            targetPath: $this->isExcluded($targetPath) ? null : $targetPath,
+            fileExtension: $known ? $extension : null,
+        );
+    }
+
+    /**
      * @param  array{visitorId: string, language: ?string, ip: ?string, userAgent: ?string, isBot: bool}  $context
      * @param  array<string, mixed>  $event
      */
@@ -180,7 +214,7 @@ class ClientEventRecorder
      * @param  array{visitorId: string, language: ?string, ip: ?string, userAgent: ?string, isBot: bool}  $context
      * @param  array<string, scalar|null>  $properties
      */
-    private function clientEvent(EventType $type, array $context, string $path, CarbonImmutable $occurredAt, ?string $name = null, ?float $value = null, array $properties = [], ?string $targetHost = null, ?string $targetPath = null, ?int $scrollPercent = null): CustomEventData
+    private function clientEvent(EventType $type, array $context, string $path, CarbonImmutable $occurredAt, ?string $name = null, ?float $value = null, array $properties = [], ?string $targetHost = null, ?string $targetPath = null, ?int $scrollPercent = null, ?string $fileExtension = null): CustomEventData
     {
         return new CustomEventData(
             type: $type,
@@ -197,6 +231,7 @@ class ClientEventRecorder
             targetHost: $targetHost,
             targetPath: $targetPath,
             scrollPercent: $scrollPercent,
+            fileExtension: $fileExtension,
         );
     }
 

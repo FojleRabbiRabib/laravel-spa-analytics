@@ -109,13 +109,16 @@ return [
     | and manual events to the collect endpoint (under identity.route_prefix).
     | rate_limit_per_minute limits each visitor cookie and
     | rate_limit_per_ip_per_minute each address, both higher than the identity
-    | endpoints because a visit sends many small batches.
+    | endpoints because a visit sends many small batches. A click on a link
+    | to a file with one of download_extensions (or with the download
+    | attribute) is reported as a file download instead of an outbound click.
     |
     */
 
     'collect' => [
         'rate_limit_per_minute' => 120,
         'rate_limit_per_ip_per_minute' => 1200,
+        'download_extensions' => ['pdf', 'zip', 'gz', 'rar', '7z', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'csv', 'txt', 'epub', 'mp3', 'mp4', 'dmg', 'exe', 'apk'],
     ],
 
     /*
