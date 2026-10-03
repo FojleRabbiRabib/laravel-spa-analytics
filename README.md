@@ -495,7 +495,10 @@ dashboard queries; they never replace the raw rows unless you turn retention on.
 
 `php artisan spa-analytics:rollup` recomputes the last `rollups.lookback_hours`
 hours and the days they touch from the raw rows, so late queued writes and
-sessions that are still open are picked up. It replaces each bucket's rows in
+sessions that are still open are picked up. Only hours and days that have ended
+are built, never the running one, so a missed schedule can leave a bucket
+missing (reported as `incomplete`, and it blocks the prune) but never a partial
+one that looks complete. It replaces each bucket's rows in
 one transaction, so it is safe to re-run, and it takes a cache lock so two runs
 never overlap (use a shared cache store, as for sessions). With
 `rollups.schedule` on (the default) the package registers it hourly and the

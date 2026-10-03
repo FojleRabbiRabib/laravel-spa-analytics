@@ -17,9 +17,11 @@ class RollupRunner
     ) {}
 
     /**
-     * Recompute the hourly and daily buckets from the start moment up to the current hour and day.
+     * Recompute the hourly and daily buckets from the start moment up to the last one that has ended.
      *
-     * Without a start, the configured lookback hours are recomputed. Before the retention cutoff a bucket is only
+     * The running hour and day are left alone: a row built early would look complete once the scheduler misses the
+     * runs that follow, and prune would then delete the raw rows it undercounted. A missing bucket is reported as
+     * incomplete instead. Without a start, the configured lookback hours are recomputed. Before the retention cutoff a bucket is only
      * computed when its day has no daily rollup yet: such a day was never pruned, so its raw rows are still all
      * there, while a day that has a rollup may already be pruned and recomputing it would replace good numbers
      * with zeros.
@@ -29,14 +31,14 @@ class RollupRunner
      */
     public function run(CarbonImmutable $now, ?CarbonImmutable $since = null, array $periods = [RollupPeriod::Hour, RollupPeriod::Day]): array
     {
-        $from = $since ?? $now->subHours((int) config('spa-analytics.rollups.lookback_hours'));
+        $from = $since ?? $now->subHours(max(1, (int) config('spa-analytics.rollups.lookback_hours')));
         $cutoff = $this->retention->cutoff($now);
         $rolledDays = $cutoff !== null && $from->lessThan($cutoff) ? $this->rolledDays($from, $cutoff) : [];
         $skipped = [];
         $counts = ['hours' => 0, 'days' => 0, 'skippedDays' => 0, 'cutoff' => $cutoff];
 
         foreach ($periods as $period) {
-            for ($start = $period->start($from); $start->lessThanOrEqualTo($now); $start = $period->end($start)) {
+            for ($start = $period->start($from); $period->end($start)->lessThanOrEqualTo($now); $start = $period->end($start)) {
                 $day = RollupPeriod::Day->start($start)->toDateTimeString();
 
                 if ($cutoff !== null && $start->lessThan($cutoff) && isset($rolledDays[$day])) {

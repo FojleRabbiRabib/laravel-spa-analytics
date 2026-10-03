@@ -151,7 +151,7 @@ class StatsSummaryTest extends TestCase
 
         $this->assertSame(1, $summary->pageViews);
         $this->assertSame(1, $summary->users);
-        $this->assertSame('2026-03-10 12:00:00', $summary->through?->toDateTimeString());
+        $this->assertSame('2026-03-10 11:00:00', $summary->through?->toDateTimeString());
     }
 
     public function test_the_hour_still_running_is_not_counted_for_users_either(): void

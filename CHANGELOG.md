@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The rollup command built the running hour and the running day, and Stats read those rows as complete. After a scheduler gap longer than `rollups.lookback_hours`, such a partial row was never rebuilt, so numbers were silently too low, and the prune could delete the raw rows the row had undercounted. Only hours and days that have ended are built now; a missed bucket has no row and shows as `incomplete` (and blocks the prune) until `spa-analytics:rollup --since=...` fills it. Buckets built by earlier versions are not rewritten: if the scheduler was down for a few hours at some point, run `rollup --since=DATE` for that period (days before the `retention_days` cutoff that already have a rollup keep their old rows). Stats now reads up to the last hour that ended before the last run.
+
+### Changed
+
+- The row of today's day and the row of the running hour are no longer written. If you read `analytics_rollups` directly, read the hour rows for today, or use `Stats`.
+
 ## [0.6.0] - 2026-10-03
 
 Two new migrations and a new browser script. After upgrading, publish the migrations again and migrate, and re-publish the script (`php artisan vendor:publish --tag=spa-analytics-assets --force`). There is no history to backfill. If you published the config file, add the new `collect.download_extensions` key (without it no file extension is listed, and only links with the `download` attribute count as downloads); if you published the views, add the new `data-downloads` attribute to your copy of `client-script.blade.php`.
