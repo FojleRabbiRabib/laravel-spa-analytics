@@ -40,6 +40,7 @@ class SessionDimensionRollupTest extends TestCase
         return match ($column) {
             'referrer_type' => ReferrerType::Search,
             'device_type' => DeviceType::Mobile,
+            'country' => 'BD',
             default => 'sample-'.$column,
         };
     }
