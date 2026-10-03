@@ -91,6 +91,14 @@ php artisan vendor:publish --tag="spa-analytics-migrations"
 php artisan migrate
 ```
 
+**From 0.6.0**: no migration. Only hours and days that have ended are rolled up
+now, so today's day row and the running hour's row no longer exist (read the
+hour rows, or use `Stats`). Buckets built by 0.6.0 and earlier can be partial
+if the scheduler was down for more than `rollups.lookback_hours`; run
+`php artisan spa-analytics:rollup --since=YYYY-MM-DD` for such a period (days
+before the `retention_days` cutoff that already have a rollup keep their old
+rows).
+
 **From 0.5.0**: file downloads and viewport size. Publish the migrations again
 and migrate (two new migrations add a nullable `file_extension` column to
 `analytics_events` and a nullable `viewport` column to `analytics_sessions`),

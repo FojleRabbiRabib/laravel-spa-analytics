@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-10-04
+
+No migration, no new config and no new script. After upgrading, run `spa-analytics:rollup --since=DATE` for any period in which the scheduler was down, because buckets built by earlier versions may be partial (see the first fix below).
+
 ### Fixed
 
 - The rollup command built the running hour and the running day, and Stats read those rows as complete. After a scheduler gap longer than `rollups.lookback_hours`, such a partial row was never rebuilt, so numbers were silently too low, and the prune could delete the raw rows the row had undercounted. Only hours and days that have ended are built now; a missed bucket has no row and shows as `incomplete` (and blocks the prune) until `spa-analytics:rollup --since=...` fills it. Buckets built by earlier versions are not rewritten: if the scheduler was down for a few hours at some point, run `rollup --since=DATE` for that period (days before the `retention_days` cutoff that already have a rollup keep their old rows). Stats now reads up to the last hour that ended before the last run.
@@ -103,7 +107,8 @@ Reporting only: no migration and no new config. Run `spa-analytics:rollup --sinc
 - `BotDetector` and `EventStore` contracts, bound in the register phase so an app can replace them.
 - Publish tags `spa-analytics-config`, `spa-analytics-migrations` and `spa-analytics-assets`.
 
-[Unreleased]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.3.0...v0.4.0
