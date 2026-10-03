@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Feature\Tracking;
 
+use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ViewportSize;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\SessionMerger;
@@ -58,6 +59,24 @@ class SessionMergerTest extends TestCase
         $this->assertEquals($this->at('09:40:00'), $survivor->last_seen_at);
         $this->assertTrue($survivor->is_new_visitor);
         $this->assertSame($adopted->id, AnalyticsEvent::query()->sole()->session_id);
+    }
+
+    public function test_the_survivor_takes_the_viewport_of_an_absorbed_session_only_when_it_has_none(): void
+    {
+        $this->visit('09:00:00', '09:10:00');
+        $moved = $this->visit('09:30:00', '09:40:00', ['viewport' => ViewportSize::Lg]);
+
+        $this->merge([$moved]);
+
+        $this->assertSame(ViewportSize::Lg, AnalyticsSession::query()->sole()->viewport);
+
+        AnalyticsSession::query()->delete();
+        $this->visit('09:00:00', '09:10:00', ['viewport' => ViewportSize::Xs]);
+        $moved = $this->visit('09:30:00', '09:40:00', ['viewport' => ViewportSize::Lg]);
+
+        $this->merge([$moved]);
+
+        $this->assertSame(ViewportSize::Xs, AnalyticsSession::query()->sole()->viewport);
     }
 
     public function test_a_gap_of_exactly_the_timeout_merges(): void

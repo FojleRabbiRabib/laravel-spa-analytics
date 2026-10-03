@@ -1,6 +1,7 @@
 {
     "events": [
         { "kind": "pageview", "path": "/docs", "referrer": "https://example.org/start", "age": 0 },
+        { "kind": "viewport", "path": "/docs", "width": 1280, "age": 5 },
         { "kind": "outbound", "path": "/docs", "url": "https://example.org/a", "age": 10 },
         { "kind": "download", "path": "/docs", "url": "https://example.org/files/guide.pdf", "age": 15 },
         { "kind": "scroll", "path": "/docs", "percent": 50, "age": 20 },

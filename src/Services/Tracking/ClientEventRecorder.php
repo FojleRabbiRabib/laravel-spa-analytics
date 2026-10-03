@@ -10,6 +10,8 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\CustomEventData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ClientEventKind;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
+use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ViewportSize;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -30,6 +32,7 @@ class ClientEventRecorder
         private readonly AudienceResolver $audience,
         private readonly PageViewGuard $guard,
         private readonly EventSanitizer $sanitizer,
+        private readonly SessionTracker $sessions,
     ) {}
 
     /**
@@ -79,11 +82,18 @@ class ClientEventRecorder
         $age = min(max(is_numeric($event['age'] ?? null) ? (int) $event['age'] : 0, 0), self::MAX_AGE_MS);
         $occurredAt = $now->subMilliseconds($age);
 
+        if ($kind->is(ClientEventKind::Viewport)) {
+            $this->viewport($context['visitorId'], $event, $occurredAt);
+
+            return;
+        }
+
         $data = match ($kind) {
             ClientEventKind::PageView => $this->pageView($request, $context, $event, $path, $occurredAt),
             ClientEventKind::Outbound => $this->outbound($request, $context, $event, $path, $occurredAt),
             ClientEventKind::Scroll => $this->scroll($context, $event, $path, $occurredAt),
             ClientEventKind::Download => $this->download($request, $context, $event, $path, $occurredAt),
+            ClientEventKind::Viewport => null,
             ClientEventKind::Event => $this->custom(EventType::Custom, $context, $event, $path, $occurredAt),
             ClientEventKind::Goal => $this->custom(EventType::Goal, $context, $event, $path, $occurredAt),
         };
@@ -139,6 +149,23 @@ class ClientEventRecorder
         $targetPath = $this->paths->normalize((string) ($parts['path'] ?? '/'));
 
         return $this->clientEvent(EventType::OutboundClick, $context, $path, $occurredAt, targetHost: mb_substr($host, 0, 255), targetPath: $this->isExcluded($targetPath) ? null : $targetPath);
+    }
+
+    /**
+     * Set the size class of the visitor's current session from the window width. It is not an event: it never opens
+     * a session or moves one, only the first value of a session is kept, and nothing is stored when the visitor has
+     * no session yet (for example while the page view is still queued) or the width is not plausible.
+     *
+     * @param  array<string, mixed>  $event
+     */
+    private function viewport(string $visitorId, array $event, CarbonImmutable $occurredAt): void
+    {
+        $size = is_numeric($event['width'] ?? null) ? ViewportSize::fromWidth((int) $event['width']) : null;
+        $session = $size === null ? null : $this->sessions->findActive($visitorId, $occurredAt);
+
+        if ($size !== null && $session !== null) {
+            AnalyticsSession::query()->whereKey($session->id)->whereNull('viewport')->update(['viewport' => $size]);
+        }
     }
 
     /**

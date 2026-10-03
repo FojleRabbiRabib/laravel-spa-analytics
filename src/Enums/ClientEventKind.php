@@ -12,6 +12,7 @@ enum ClientEventKind: string
     case Event = 'event';
     case Goal = 'goal';
     case Download = 'download';
+    case Viewport = 'viewport';
 
     /**
      * Whether this case equals the given case.
@@ -33,6 +34,7 @@ enum ClientEventKind: string
             self::Event => 'Custom event',
             self::Goal => 'Goal',
             self::Download => 'File download',
+            self::Viewport => 'Viewport size',
         };
     }
 
@@ -48,6 +50,7 @@ enum ClientEventKind: string
             self::Event => 'purple',
             self::Goal => 'green',
             self::Download => 'orange',
+            self::Viewport => 'gray',
         };
     }
 

@@ -71,6 +71,7 @@ class SessionMerger
         foreach ($chain as $absorbed) {
             $survivor->page_views += $absorbed->page_views;
             $survivor->is_new_visitor = $survivor->is_new_visitor || $absorbed->is_new_visitor;
+            $survivor->viewport ??= $absorbed->viewport;
 
             if ($absorbed->last_seen_at->greaterThan($survivor->last_seen_at)) {
                 $survivor->last_seen_at = $absorbed->last_seen_at;

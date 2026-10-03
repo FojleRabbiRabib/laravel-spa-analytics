@@ -6,9 +6,11 @@ import { outboundTarget } from './outbound';
 import { createQueue } from './queue';
 import { createScrollTracker, scrollDepth } from './scroll';
 import { postEvents } from './transport';
+import { viewportWidth } from './viewport';
 
 /**
- * Wire the page to the collect endpoint: transitions of a single-page app, file downloads, outbound clicks, scroll
+ * Wire the page to the collect endpoint: the window width once per load (queued, not flushed, so the server's own page
+ * view has been written before it arrives), transitions of a single-page app, file downloads, outbound clicks, scroll
  * depth and the `window.spaAnalytics` API. The first page view of a load is recorded by the server, so it is not sent
  * here, and Inertia visits are left to the server for the same reason. A click on a link to a file is a download and
  * not an outbound click, even when the file is on another site.
@@ -20,6 +22,12 @@ export const startEvents = (collectUrl: string, downloadExtensions: readonly str
         setTimer: (callback, ms) => window.setTimeout(callback, ms),
         clearTimer: (timer) => window.clearTimeout(timer as number),
     });
+
+    const width = viewportWidth(window.innerWidth);
+
+    if (width !== null) {
+        queue.push({ kind: 'viewport', path: window.location.pathname, width });
+    }
 
     const scroll = createScrollTracker((percent) => queue.push({ kind: 'scroll', path: window.location.pathname, percent }));
 

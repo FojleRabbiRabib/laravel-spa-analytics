@@ -9,6 +9,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Enums\DeviceType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupDimension;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupPeriod;
+use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ViewportSize;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsRollup;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
@@ -35,11 +36,12 @@ class SessionDimensionRollupTest extends TestCase
         return $cases;
     }
 
-    private function valueFor(string $column): string|ReferrerType|DeviceType
+    private function valueFor(string $column): string|ReferrerType|DeviceType|ViewportSize
     {
         return match ($column) {
             'referrer_type' => ReferrerType::Search,
             'device_type' => DeviceType::Mobile,
+            'viewport' => ViewportSize::Md,
             'country' => 'BD',
             default => 'sample-'.$column,
         };

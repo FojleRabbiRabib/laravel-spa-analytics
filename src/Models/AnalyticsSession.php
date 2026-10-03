@@ -8,6 +8,7 @@ use Carbon\CarbonInterface;
 use FojleRabbiRabib\LaravelSpaAnalytics\Database\Factories\AnalyticsSessionFactory;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\DeviceType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
+use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ViewportSize;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -37,6 +38,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property ?string $browser
  * @property ?string $browser_version
  * @property ?string $country
+ * @property ?ViewportSize $viewport
  */
 #[UseFactory(AnalyticsSessionFactory::class)]
 class AnalyticsSession extends Model
@@ -62,6 +64,7 @@ class AnalyticsSession extends Model
             'is_new_visitor' => 'boolean',
             'is_bot' => 'boolean',
             'device_type' => DeviceType::class,
+            'viewport' => ViewportSize::class,
         ];
     }
 

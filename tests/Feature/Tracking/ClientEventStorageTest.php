@@ -144,6 +144,19 @@ class ClientEventStorageTest extends TestCase
         $this->assertTrue(Schema::hasColumn('analytics_events', 'file_extension'));
     }
 
+    public function test_the_viewport_migration_adds_the_column_and_drops_it_again(): void
+    {
+        $migration = include __DIR__.'/../../../database/migrations/update_analytics_sessions_table_for_viewport.php.stub';
+
+        $migration->down();
+
+        $this->assertFalse(Schema::hasColumn('analytics_sessions', 'viewport'));
+
+        $migration->up();
+
+        $this->assertTrue(Schema::hasColumn('analytics_sessions', 'viewport'));
+    }
+
     public function test_the_new_fields_survive_to_array_and_from_array(): void
     {
         $click = CustomEventData::fromArray($this->outboundClick()->toArray());

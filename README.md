@@ -20,7 +20,8 @@ calls, no data sharing.
 > timeseries, top lists, goals, funnels and real-time) and the browser client
 > (SPA page views, outbound clicks, file downloads, scroll depth and
 > `window.spaAnalytics`).
-> Rollups also report UTM values, response status, error paths and language.
+> Rollups also report UTM values, response status, error paths, language and
+> viewport size.
 > Config keys and table layouts may change before 1.0; see the
 > [Changelog](CHANGELOG.md).
 
@@ -90,16 +91,18 @@ php artisan vendor:publish --tag="spa-analytics-migrations"
 php artisan migrate
 ```
 
-**From 0.5.0**: file downloads. Publish the migrations again and migrate (one
-new migration adds a nullable `file_extension` column to `analytics_events`),
+**From 0.5.0**: file downloads and viewport size. Publish the migrations again
+and migrate (two new migrations add a nullable `file_extension` column to
+`analytics_events` and a nullable `viewport` column to `analytics_sessions`),
 and re-publish the script with
 `php artisan vendor:publish --tag="spa-analytics-assets" --force`. An old
-cached `client.js` keeps working but reports links to files as outbound clicks.
+cached `client.js` keeps working but reports links to files as outbound clicks
+and sends no viewport size.
 If you published the package views, add `data-downloads="{{ implode(',', config('spa-analytics.collect.download_extensions')) }}"`
 to your copy of `client-script.blade.php`, or the script gets no extension list
 and only links with the `download` attribute count.
-The rollups gain the `download` and `file_extension` dimensions, which have no
-history to fill. If you bind your own `EventStore`, `CustomEventData` has a new
+The rollups gain the `download`, `file_extension` and `viewport` dimensions,
+which have no history to fill. If you bind your own `EventStore`, `CustomEventData` has a new
 trailing `fileExtension` and the new `file_download` event type.
 
 **From 0.4.0**: no migration. The rollups gain the `utm_source`, `utm_medium`,
@@ -404,6 +407,7 @@ on route changes and clicks at once, and when the page is hidden) with
 | SPA page view | A change of pathname through `pushState` or the back and forward buttons. Not the first load (the server records it), `replaceState`, or a change of only the query or hash. Skipped on [Inertia](https://inertiajs.com) pages (`data-page`), which the server records; the server also ignores a client page view of the same path within five seconds of one it recorded | A `page_view` with no `status`, joining the session like any other |
 | Outbound click | A click or middle click on an `http(s)` link to another host: the host and path, never the query or fragment | `outbound_click` with `target_host` and `target_path` |
 | File download | A click or middle click on an `http(s)` link, on this site or another, whose path ends in one of `collect.download_extensions` or that has the `download` attribute: the host (for another site) and path, never the query or fragment, so signed links stay private. It replaces the outbound click for that link | `file_download` with `target_path`, `target_host` for another site, and `file_extension` when it is one of the configured extensions (read on the server from the path) |
+| Viewport size | The window width (`innerWidth`, like a CSS media query) once per page load, sent with the next batch. The server turns it into a size class, never stores the width, and keeps only the first value of a session. It is not an event: it writes no row, never opens or extends a session, and is dropped when the visitor has no session yet (for example while the page view is still queued), so a first visit can miss it | `viewport` on the session |
 | Scroll depth | The 25, 50, 75 and 100 per cent milestones, once each per page, only after the visitor scrolls (a page that fits the window reports nothing) | `scroll_depth` with `scroll_percent` |
 | `window.spaAnalytics.track(name, properties?)` | A custom event | `custom`, like `Analytics::track()` |
 | `window.spaAnalytics.goal(name, value?, properties?)` | A goal, sent at once | `goal`, like `Analytics::goal()` |
@@ -475,8 +479,6 @@ nothing to move.
 
 ## Planned capabilities
 
-- **Audience:** viewport size (device, OS, browser and country are recorded on
-  sessions and reported by `Stats`, see below).
 - **Behavior:** engagement time beyond scroll depth
   (custom events, goals, their conversion, funnels, outbound clicks, file
   downloads and scroll depth are reported by `Stats`, see
@@ -517,7 +519,10 @@ Dimensions: `total`, `path`, `exit_path`, `referrer_type`, `referrer_host`, `utm
 clicks), `scroll_depth` (the 25, 50, 75 and 100 milestones), `download` (files
 that were downloaded: the path of a file on the site, or `host/path` for a file
 elsewhere), `file_extension` (`pdf`, `zip` and the other configured extensions),
-`status` (the
+`viewport` (the size class of the
+browser window, set from the first width the script reports for a session:
+`xs` under 576 px, `sm` 576 to 767, `md` 768 to 991, `lg` 992 to 1199, `xl` 1200
+and wider; sessions without it get no row), `status` (the
 response status of page views, such as `200` or `404`) and `error_path` (page
 views that got a status of 400 or more, by status and path, stored as
 `404 /missing` or `500 /checkout`; unmatched URLs only count with a fallback

@@ -6,6 +6,7 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Feature\Tracking;
 
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
+use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ViewportSize;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
@@ -203,6 +204,7 @@ class CollectEndpointTest extends TestCase
             [EventType::PageView, EventType::OutboundClick, EventType::FileDownload, EventType::ScrollDepth, EventType::Custom, EventType::Goal],
             $events->pluck('type')->all(),
         );
+        $this->assertSame(ViewportSize::Xl, AnalyticsSession::query()->sole()->viewport);
         $this->assertSame('example.org', $events[1]->target_host);
         $this->assertSame('/a', $events[1]->target_path);
         $this->assertSame('/files/guide.pdf', $events[2]->target_path);

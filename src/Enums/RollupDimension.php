@@ -30,6 +30,7 @@ enum RollupDimension: string
     case Language = 'language';
     case Download = 'download';
     case FileExtension = 'file_extension';
+    case Viewport = 'viewport';
 
     /**
      * The analytics_sessions column behind each dimension that describes a session, keyed by column.
@@ -46,6 +47,7 @@ enum RollupDimension: string
         'os' => self::Os,
         'browser' => self::Browser,
         'country' => self::Country,
+        'viewport' => self::Viewport,
     ];
 
     /**
@@ -124,6 +126,7 @@ enum RollupDimension: string
             self::Language => 'Language',
             self::Download => 'Download',
             self::FileExtension => 'File extension',
+            self::Viewport => 'Viewport',
         };
     }
 
@@ -136,7 +139,7 @@ enum RollupDimension: string
             self::Total => 'gray',
             self::Path, self::ExitPath => 'blue',
             self::ReferrerType, self::ReferrerHost, self::UtmCampaign, self::UtmSource, self::UtmMedium, self::UtmTerm, self::UtmContent => 'purple',
-            self::DeviceType, self::Os, self::Browser, self::Country, self::VisitorType, self::Language => 'green',
+            self::DeviceType, self::Os, self::Browser, self::Country, self::VisitorType, self::Language, self::Viewport => 'green',
             self::Event, self::Goal, self::OutboundHost, self::ScrollDepth, self::Download, self::FileExtension => 'orange',
             self::Status, self::ErrorPath => 'red',
         };
