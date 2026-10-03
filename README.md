@@ -19,6 +19,7 @@ calls, no data sharing.
 > daily rollups with a retention prune, the `Stats` query API (summary,
 > timeseries, top lists, goals, funnels and real-time) and the browser client
 > (SPA page views, outbound clicks, scroll depth and `window.spaAnalytics`).
+> Rollups also report UTM values, response status, error paths and language.
 > Config keys and table layouts may change before 1.0; see the
 > [Changelog](CHANGELOG.md).
 
@@ -89,7 +90,8 @@ php artisan migrate
 ```
 
 **From 0.4.0**: no migration. The rollups gain the `utm_source`, `utm_medium`,
-`utm_term` and `utm_content` dimensions plus `status`, `error_path` and `language`; run
+`utm_term` and `utm_content` dimensions plus `status`, `error_path` and
+`language`; run
 `php artisan spa-analytics:rollup --since=YYYY-MM-DD` to fill them for history.
 With `retention_days` set, days before the cutoff that already have a rollup
 are left alone (their raw rows may be pruned), so the new dimensions start at the
