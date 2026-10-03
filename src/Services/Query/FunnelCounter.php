@@ -15,14 +15,21 @@ use Illuminate\Support\Facades\DB;
 
 class FunnelCounter
 {
+    public function __construct(private readonly int $visitorsPerChunk = 500) {}
+
     /**
      * How many visitors reached each step, having completed the steps before it in order.
      *
-     * The raw events that can satisfy any step are read in one pass, ordered by visitor and then by time (events in
-     * the same second page views first, because a request's page view is recorded after its controller has fired
-     * any goal, then by when they were stored), and each visitor moves through the steps in PHP. One event moves a
-     * visitor one step at most. The SQL only narrows the rows; PHP decides which step an event satisfies, so
-     * matching is case-exact on every engine.
+     * The raw events that can satisfy any step are read a chunk of visitors at a time, so memory follows the chunk
+     * and not the range. Within a chunk they are ordered by visitor and then by time (events in the same second page
+     * views first, because a request's page view is recorded after its controller has fired any goal, then by when
+     * they were stored), and each visitor moves through the steps in PHP. One event moves a visitor one step at most.
+     * The SQL only narrows the rows; PHP decides which step an event satisfies, so matching is case-exact on every
+     * engine.
+     *
+     * The chunks are cut on the plain visitor column so its index is used. Where the database compares text without
+     * regard to case, visitors that differ only in case fall into the same chunk and are still told apart by the
+     * exact ordering and comparison inside it.
      *
      * @param  array<int, FunnelStep>  $steps
      * @return array<int, int> Users per step, in step order.
@@ -35,22 +42,54 @@ class FunnelCounter
             return $counts;
         }
 
-        $events = DB::table('analytics_events')
+        $matching = fn (): Builder => DB::table('analytics_events')
             ->where('is_bot', false)
             ->where('occurred_at', '>=', $from->toDateTimeString())
             ->where('occurred_at', '<', $plan->effectiveTo->toDateTimeString())
-            ->where(fn (Builder $query) => $this->matchingAnyStep($query, $steps))
+            ->where(fn (Builder $query) => $this->matchingAnyStep($query, $steps));
+
+        $limit = max(1, $this->visitorsPerChunk);
+        $last = null;
+
+        do {
+            $visitors = $matching()
+                ->when($last !== null, fn (Builder $query) => $query->where('visitor_id', '>', $last))
+                ->distinct()
+                ->orderBy('visitor_id')
+                ->limit($limit)
+                ->pluck('visitor_id')
+                ->all();
+
+            if ($visitors === []) {
+                break;
+            }
+
+            $this->walk($matching()->whereIn('visitor_id', $visitors), $steps, $counts);
+
+            $last = end($visitors);
+        } while (count($visitors) === $limit);
+
+        return $counts;
+    }
+
+    /**
+     * @param  array<int, FunnelStep>  $steps
+     * @param  array<int, int>  $counts
+     */
+    private function walk(Builder $events, array $steps, array &$counts): void
+    {
+        $visitor = null;
+        $next = 0;
+
+        $rows = $events
             ->orderByRaw(Sql::exact('visitor_id'))
             ->orderBy('occurred_at')
             ->orderByRaw('case when type = ? then 0 else 1 end', [EventType::PageView->value])
             ->orderBy('id')
             ->select(['visitor_id', 'type', 'path', 'name'])
-            ->cursor();
+            ->get();
 
-        $visitor = null;
-        $next = 0;
-
-        foreach ($events as $event) {
+        foreach ($rows as $event) {
             if ($event->visitor_id !== $visitor) {
                 $visitor = $event->visitor_id;
                 $next = 0;
@@ -61,8 +100,6 @@ class FunnelCounter
                 $next++;
             }
         }
-
-        return $counts;
     }
 
     /**

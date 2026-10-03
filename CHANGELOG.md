@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - The rollup command built the running hour and the running day, and Stats read those rows as complete. After a scheduler gap longer than `rollups.lookback_hours`, such a partial row was never rebuilt, so numbers were silently too low, and the prune could delete the raw rows the row had undercounted. Only hours and days that have ended are built now; a missed bucket has no row and shows as `incomplete` (and blocks the prune) until `spa-analytics:rollup --since=...` fills it. Buckets built by earlier versions are not rewritten: if the scheduler was down for a few hours at some point, run `rollup --since=DATE` for that period (days before the `retention_days` cutoff that already have a rollup keep their old rows). Stats now reads up to the last hour that ended before the last run.
+- Funnels read the matching raw events a chunk of 500 visitors at a time instead of in one buffered result, so memory follows the chunk and no longer grows with the range and the number of events. The numbers are unchanged. The chunks are cut on the plain `visitor_id` column so its index is used.
 
 ### Changed
 
