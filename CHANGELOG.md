@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-09
+
+Two new migrations, a new browser script, a new config key and new fields on `Summary` and `TopRow`. After upgrading, publish the migrations again and migrate, and re-publish the script (`php artisan vendor:publish --tag=spa-analytics-assets --force`). There is no history to backfill. If you published the config file, add `'disabled_dimensions' => []` to its `rollups` array (without the key nothing is disabled).
+
 ### Added
 
 - `rollups.disabled_dimensions` config key to stop building rollup dimensions you do not need (for example `utm_term`, `utm_content`, `download`), which keeps `analytics_rollups` small and makes the rollup cheaper. `Stats::top()` throws an `InvalidArgumentException` naming the key for a disabled dimension. `total`, `goal` and `visitor_type` cannot be disabled because `Stats` reads them; they and unknown names are ignored, and the rollup command warns about them. Turning a dimension off deletes nothing: `spa-analytics:rollup --purge-disabled` deletes the stored rows of the disabled dimensions on request (permanent: history before the `retention_days` cutoff cannot be rebuilt; it cannot be combined with `--since` or `--period`). Rebuilding a bucket leaves the stored rows of a disabled dimension as they were, and after you turn a dimension on again, run `rollup --since=DATE` from the day it was turned off. If you published the config file, add `'disabled_dimensions' => []` to its `rollups` array; without the key nothing is disabled.
@@ -119,7 +123,8 @@ Reporting only: no migration and no new config. Run `spa-analytics:rollup --sinc
 - `BotDetector` and `EventStore` contracts, bound in the register phase so an app can replace them.
 - Publish tags `spa-analytics-config`, `spa-analytics-migrations` and `spa-analytics-assets`.
 
-[Unreleased]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.4.0...v0.5.0

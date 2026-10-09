@@ -21,7 +21,7 @@ calls, no data sharing.
 > (SPA page views, outbound clicks, file downloads, scroll depth, engagement
 > time and `window.spaAnalytics`).
 > Rollups also report UTM values, response status, error paths, language and
-> viewport size.
+> viewport size, and the dimensions you do not need can be turned off.
 > Config keys and table layouts may change before 1.0; see the
 > [Changelog](CHANGELOG.md).
 
