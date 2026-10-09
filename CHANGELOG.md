@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `rollups.disabled_dimensions` config key to stop building rollup dimensions you do not need (for example `utm_term`, `utm_content`, `download`), which keeps `analytics_rollups` small and makes the rollup cheaper. `Stats::top()` throws an `InvalidArgumentException` naming the key for a disabled dimension. `total`, `goal` and `visitor_type` cannot be disabled because `Stats` reads them; they and unknown names are ignored, and the rollup command warns about them. Turning a dimension off deletes nothing: `spa-analytics:rollup --purge-disabled` deletes the stored rows of the disabled dimensions on request (permanent: history before the `retention_days` cutoff cannot be rebuilt; it cannot be combined with `--since` or `--period`). Rebuilding a bucket leaves the stored rows of a disabled dimension as they were, and after you turn a dimension on again, run `rollup --since=DATE` from the day it was turned off. If you published the config file, add `'disabled_dimensions' => []` to its `rollups` array; without the key nothing is disabled.
+
+### Changed
+
+- `RollupBuilder`, `RollupRunner`, `StatsService` and `StatsReport` take a new `DimensionSettings` constructor argument. The container resolves it; only code that builds these classes by hand is affected.
+
 ## [0.6.1] - 2026-10-04
 
 No migration, no new config and no new script. After upgrading, run `spa-analytics:rollup --since=DATE` for any period in which the scheduler was down, because buckets built by earlier versions may be partial (see the first fix below).

@@ -7,6 +7,7 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Query;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\Realtime;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Rollup\DimensionSettings;
 
 class StatsService
 {
@@ -17,6 +18,7 @@ class StatsService
         private readonly UsersCounter $users,
         private readonly RealtimeReader $realtime,
         private readonly FunnelCounter $funnels,
+        private readonly DimensionSettings $settings,
     ) {}
 
     /**
@@ -34,6 +36,7 @@ class StatsService
             $this->reader,
             $this->users,
             $this->funnels,
+            $this->settings,
         );
     }
 

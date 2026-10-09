@@ -19,14 +19,24 @@ class RollupBuilder
     private const INSERT_CHUNK = 50;
 
     /**
+     * @var list<RollupDimension>
+     */
+    private array $disabled = [];
+
+    public function __construct(private readonly DimensionSettings $settings) {}
+
+    /**
      * Recompute every row of one bucket from the raw events and sessions and replace what was stored.
      *
      * The bucket covers start (inclusive) to the end of the period (exclusive). Bots are left out. The bucket
-     * always gets a total row, even without traffic, which marks it as rolled up.
+     * always gets a total row, even without traffic, which marks it as rolled up. Dimensions turned off with
+     * rollups.disabled_dimensions are not computed, and their stored rows are left as they are for the purge
+     * option of the command to delete.
      * The caller is expected to hold the rollup lock.
      */
     public function rollup(RollupPeriod $period, CarbonImmutable $start): void
     {
+        $this->disabled = $this->settings->disabled();
         $start = $period->start($start);
         $rows = $this->rows($start->toDateTimeString(), $period->end($start)->toDateTimeString());
 
@@ -34,12 +44,18 @@ class RollupBuilder
             AnalyticsRollup::query()
                 ->where('period', $period)
                 ->where('bucket_start', $start->toDateTimeString())
+                ->when($this->disabled !== [], fn ($query) => $query->whereNotIn('dimension', $this->disabled))
                 ->delete();
 
             $records = [];
 
             foreach ($rows as $key => $metrics) {
                 [$dimension, $value] = RollupDimension::parseKey($key);
+
+                if (! $this->enabled($dimension)) {
+                    continue;
+                }
+
                 $value = mb_substr($value, 0, 512);
 
                 $records[] = [
@@ -56,6 +72,11 @@ class RollupBuilder
                 AnalyticsRollup::query()->insert($chunk);
             }
         });
+    }
+
+    private function enabled(RollupDimension $dimension): bool
+    {
+        return ! in_array($dimension, $this->disabled, true);
     }
 
     /**
@@ -119,9 +140,15 @@ class RollupBuilder
         $this->set($rows, RollupDimension::Total, '', 'page_views', (int) $total->page_views);
         $this->set($rows, RollupDimension::Total, '', 'visitors', (int) $total->visitors);
 
-        $this->addGroupedPageViews($rows, RollupDimension::Path, $base()->whereNotNull('e.path')->groupBy(DB::raw(Sql::exact('e.path')))->selectRaw(Sql::exact('e.path').' as value'));
+        if ($this->enabled(RollupDimension::Path)) {
+            $this->addGroupedPageViews($rows, RollupDimension::Path, $base()->whereNotNull('e.path')->groupBy(DB::raw(Sql::exact('e.path')))->selectRaw(Sql::exact('e.path').' as value'));
+        }
 
         foreach (RollupDimension::SESSION_COLUMNS as $column => $dimension) {
+            if (! $this->enabled($dimension)) {
+                continue;
+            }
+
             $this->addGroupedPageViews(
                 $rows,
                 $dimension,
@@ -132,19 +159,26 @@ class RollupBuilder
             );
         }
 
-        $this->addGroupedPageViews($rows, RollupDimension::Language, $base()->whereNotNull('e.language')->groupBy(DB::raw('lower(e.language)'))->selectRaw('lower(e.language) as value'));
-        $this->addGroupedPageViews($rows, RollupDimension::Status, $base()->whereNotNull('e.status')->groupBy('e.status')->selectRaw('e.status as value'));
+        if ($this->enabled(RollupDimension::Language)) {
+            $this->addGroupedPageViews($rows, RollupDimension::Language, $base()->whereNotNull('e.language')->groupBy(DB::raw('lower(e.language)'))->selectRaw('lower(e.language) as value'));
+        }
 
-        $errors = $base()->where('e.status', '>=', 400)->whereNotNull('e.path')
-            ->groupBy('e.status', DB::raw(Sql::exact('e.path')))
-            ->selectRaw('e.status as status, '.Sql::exact('e.path').' as path, count(*) as page_views, count(distinct '.Sql::exact('e.visitor_id').') as visitors')
-            ->get();
+        if ($this->enabled(RollupDimension::Status)) {
+            $this->addGroupedPageViews($rows, RollupDimension::Status, $base()->whereNotNull('e.status')->groupBy('e.status')->selectRaw('e.status as value'));
+        }
 
-        foreach ($errors as $group) {
-            $value = RollupDimension::errorPathValue((int) $group->status, (string) $group->path);
+        if ($this->enabled(RollupDimension::ErrorPath)) {
+            $errors = $base()->where('e.status', '>=', 400)->whereNotNull('e.path')
+                ->groupBy('e.status', DB::raw(Sql::exact('e.path')))
+                ->selectRaw('e.status as status, '.Sql::exact('e.path').' as path, count(*) as page_views, count(distinct '.Sql::exact('e.visitor_id').') as visitors')
+                ->get();
 
-            $this->set($rows, RollupDimension::ErrorPath, $value, 'page_views', (int) $group->page_views);
-            $this->set($rows, RollupDimension::ErrorPath, $value, 'visitors', (int) $group->visitors);
+            foreach ($errors as $group) {
+                $value = RollupDimension::errorPathValue((int) $group->status, (string) $group->path);
+
+                $this->set($rows, RollupDimension::ErrorPath, $value, 'page_views', (int) $group->page_views);
+                $this->set($rows, RollupDimension::ErrorPath, $value, 'visitors', (int) $group->visitors);
+            }
         }
 
         $this->addGroupedPageViews(
@@ -200,6 +234,10 @@ class RollupBuilder
                 }
 
                 foreach ($targets as [$dimension, $value]) {
+                    if (! $this->enabled($dimension)) {
+                        continue;
+                    }
+
                     $this->add($rows, $dimension, $value);
                     $key = $dimension->key($value);
                     $rows[$key]['sessions']++;
@@ -230,9 +268,11 @@ class RollupBuilder
         foreach ($events as $group) {
             $dimension = EventType::coerce($group->type)->is(EventType::Goal) ? RollupDimension::Goal : RollupDimension::Event;
 
-            $this->set($rows, $dimension, (string) $group->name, 'events', (int) $group->events);
-            $this->set($rows, $dimension, (string) $group->name, 'visitors', (int) $group->visitors);
-            $this->set($rows, $dimension, (string) $group->name, 'revenue', round((float) $group->revenue, 2));
+            if ($this->enabled($dimension)) {
+                $this->set($rows, $dimension, (string) $group->name, 'events', (int) $group->events);
+                $this->set($rows, $dimension, (string) $group->name, 'visitors', (int) $group->visitors);
+                $this->set($rows, $dimension, (string) $group->name, 'revenue', round((float) $group->revenue, 2));
+            }
 
             $totalEvents += (int) $group->events;
             $totalRevenue += (float) $group->revenue;
@@ -241,10 +281,19 @@ class RollupBuilder
         $this->set($rows, RollupDimension::Total, '', 'events', $totalEvents);
         $this->set($rows, RollupDimension::Total, '', 'revenue', round($totalRevenue, 2));
 
-        $this->addClientEvents($rows, $from, $to, EventType::OutboundClick, RollupDimension::OutboundHost, 'target_host', true);
-        $this->addClientEvents($rows, $from, $to, EventType::ScrollDepth, RollupDimension::ScrollDepth, 'scroll_percent', false);
-        $this->addClientEvents($rows, $from, $to, EventType::FileDownload, RollupDimension::FileExtension, 'file_extension', true);
-        $this->addDownloads($rows, $from, $to);
+        foreach ([
+            [EventType::OutboundClick, RollupDimension::OutboundHost, 'target_host', true],
+            [EventType::ScrollDepth, RollupDimension::ScrollDepth, 'scroll_percent', false],
+            [EventType::FileDownload, RollupDimension::FileExtension, 'file_extension', true],
+        ] as [$type, $dimension, $column, $text]) {
+            if ($this->enabled($dimension)) {
+                $this->addClientEvents($rows, $from, $to, $type, $dimension, $column, $text);
+            }
+        }
+
+        if ($this->enabled(RollupDimension::Download)) {
+            $this->addDownloads($rows, $from, $to);
+        }
     }
 
     /**

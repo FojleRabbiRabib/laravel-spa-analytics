@@ -14,7 +14,32 @@ class RollupRunner
     public function __construct(
         private readonly RollupBuilder $builder,
         private readonly RetentionPolicy $retention,
+        private readonly DimensionSettings $settings,
     ) {}
+
+    /**
+     * Delete the stored rows of the dimensions turned off with rollups.disabled_dimensions, in both periods and in
+     * chunks. Nothing else is touched, and the dimensions Stats needs are never in the list.
+     *
+     * @return int The number of rows deleted.
+     */
+    public function purgeDisabled(int $chunkSize = 1000): int
+    {
+        $disabled = $this->settings->disabled();
+        $deleted = 0;
+
+        if ($disabled === []) {
+            return $deleted;
+        }
+
+        $query = AnalyticsRollup::query()->whereIn('dimension', $disabled);
+
+        while (($ids = (clone $query)->orderBy('id')->limit($chunkSize)->pluck('id'))->isNotEmpty()) {
+            $deleted += AnalyticsRollup::query()->whereKey($ids->all())->delete();
+        }
+
+        return $deleted;
+    }
 
     /**
      * Recompute the hourly and daily buckets from the start moment up to the last one that has ended.

@@ -158,6 +158,7 @@ All keys live in `config/spa-analytics.php`.
 | `collect.download_extensions` | `pdf`, `zip`, `docx`, `xlsx`, `csv`, `mp3`, `mp4` and others | File extensions the browser script reports as downloads (see the config file for the full list); a link with the `download` attribute counts too |
 | `rollups.schedule` | `true` | Register the hourly rollup and the daily prune in the Laravel scheduler |
 | `rollups.lookback_hours` | `3` | Recent hours each scheduled rollup recomputes |
+| `rollups.disabled_dimensions` | `[]` | Rollup dimensions to stop building (for example `utm_term`, `download`); `total`, `goal` and `visitor_type` cannot be disabled. See [Turning dimensions off](#turning-dimensions-off) |
 | `stats.realtime_minutes` | `5` | Window of `Stats::realtime()` |
 | `identity.register_middleware` | `true` | Append the identity middleware to the `web` group |
 | `identity.cookie_name` | `spa_analytics_vid` | Visitor cookie name |
@@ -556,6 +557,33 @@ The UTM values are set by whoever builds the link, so `utm_term` and
 create a row per value in every hour and day bucket, the way `path` does;
 `analytics_rollups` grows with the number of distinct values.
 
+#### Turning dimensions off
+
+List the dimensions you do not need in `rollups.disabled_dimensions` (for
+example `['utm_term', 'utm_content', 'download']`) to keep that table small.
+They are no longer computed, so the rollup also gets cheaper, and
+`Stats::top()` throws an `InvalidArgumentException` naming the config key for a
+dimension that is off, so a missing number is never mistaken for no traffic.
+`total`, `goal` and `visitor_type` cannot be turned off because `Stats` needs
+them (goal completions, and new users on days whose raw rows were pruned); they
+and names that are not a dimension are ignored, and the rollup command warns
+about them.
+
+Turning a dimension off deletes nothing, and rebuilding a bucket leaves its
+stored rows for that dimension as they were. Those rows stay until you run
+`php artisan spa-analytics:rollup --purge-disabled`, which deletes the rows of
+the disabled dimensions (hour and day) in chunks and prints how many it
+removed; it does no rollup and cannot be combined with `--since` or `--period`.
+The delete is permanent: if you turn the dimension on again, `rollup
+--since=DATE` rebuilds only from raw rows that still exist, and days before the
+`retention_days` cutoff that already have a rollup are left as they are, so
+history before the cutoff does not come back.
+
+While a dimension is off its rows are not updated, and after you turn it on
+again `Stats::top()` does not know that buckets from the off period are missing
+or stale, so its ranking covers only the buckets that have rows. Run
+`rollup --since=DATE` from the day you turned it off, before reading it again.
+
 ### Retention
 
 Set `retention_days` and `php artisan spa-analytics:prune` deletes events and
@@ -606,7 +634,7 @@ Stats::realtime();                           // Realtime
 |---|---|
 | `summary()` | `pageViews`, `users`, `usersExact`, `newUsers`, `returningUsers`, `sessions`, `bounces`, `bounceRate`, `avgSessionDuration`, `events`, `goalCompletions`, `revenue`, `conversionRate`, `through`, `incomplete` |
 | `timeseries(Hour or Day)` | One point per bucket of the range, empty buckets as zeros |
-| `top(dimension, limit)` | The best values of a dimension: paths, languages, statuses and error paths by page views, events, goals, outbound hosts, scroll depth, downloads and file extensions by events, everything else by sessions. Use the entry-path sessions of `path` rows and the last page of `exit_path` rows for landing and exit pages |
+| `top(dimension, limit)` | The best values of a dimension: paths, languages, statuses and error paths by page views, events, goals, outbound hosts, scroll depth, downloads and file extensions by events, everything else by sessions. Use the entry-path sessions of `path` rows and the last page of `exit_path` rows for landing and exit pages. Throws an `InvalidArgumentException` for `total` and for a dimension in `rollups.disabled_dimensions` |
 | `goals()` | Each goal with completions, revenue, users and conversion rate |
 | `funnel(steps)` | Users per step with the rate from the previous and from the first step, the overall conversion, `coveredFrom`, `complete` and `through` |
 | `realtime()` | Visitors with a page view in the last `stats.realtime_minutes` (default 5) and the page each of them viewed last, read from the raw events |

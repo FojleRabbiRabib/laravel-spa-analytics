@@ -33,6 +33,12 @@ enum RollupDimension: string
     case Viewport = 'viewport';
 
     /**
+     * The dimensions that are always built: the total, and the two that Stats reads for its headline numbers (goal
+     * completions and new users on days whose raw rows were pruned).
+     */
+    public const REQUIRED = [self::Total, self::Goal, self::VisitorType];
+
+    /**
      * The analytics_sessions column behind each dimension that describes a session, keyed by column.
      */
     public const SESSION_COLUMNS = [

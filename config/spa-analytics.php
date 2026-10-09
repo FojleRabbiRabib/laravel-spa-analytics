@@ -133,12 +133,18 @@ return [
     | in the Laravel scheduler; turn it off to schedule them yourself.
     | lookback_hours is how many recent hours each run recomputes, so late
     | queued writes and still-open sessions are picked up.
+    | disabled_dimensions lists dimensions to stop building, to keep the
+    | rollup table small (for example 'utm_term', 'utm_content', 'download').
+    | Stats::top() refuses a disabled dimension, and rows already stored for it
+    | stay until you run spa-analytics:rollup --purge-disabled. 'total',
+    | 'goal' and 'visitor_type' cannot be disabled because Stats needs them.
     |
     */
 
     'rollups' => [
         'schedule' => true,
         'lookback_hours' => 3,
+        'disabled_dimensions' => [],
     ],
 
     /*

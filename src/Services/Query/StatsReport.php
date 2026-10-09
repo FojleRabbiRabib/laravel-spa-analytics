@@ -16,6 +16,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\Summary;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\TopRow;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupDimension;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupPeriod;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Rollup\DimensionSettings;
 
 class StatsReport
 {
@@ -27,6 +28,7 @@ class StatsReport
         private readonly RollupReader $reader,
         private readonly UsersCounter $users,
         private readonly FunnelCounter $funnels,
+        private readonly DimensionSettings $settings,
     ) {}
 
     /**
@@ -122,12 +124,17 @@ class StatsReport
      *
      * @return array<int, TopRow>
      *
-     * @throws \InvalidArgumentException For the total dimension, which has no values to rank.
+     * @throws \InvalidArgumentException For the total dimension, which has no values to rank, and for a dimension
+     *                                   turned off in rollups.disabled_dimensions.
      */
     public function top(RollupDimension $dimension, int $limit = 10): array
     {
         if ($dimension->is(RollupDimension::Total)) {
             throw new \InvalidArgumentException('The total dimension has no values to rank.');
+        }
+
+        if (! $this->settings->isEnabled($dimension)) {
+            throw new \InvalidArgumentException("The {$dimension->value} dimension is turned off in rollups.disabled_dimensions.");
         }
 
         $through = $this->coverage->through();
