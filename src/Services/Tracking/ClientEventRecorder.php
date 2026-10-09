@@ -22,6 +22,8 @@ class ClientEventRecorder
 
     private const SCROLL_MILESTONES = [25, 50, 75, 100];
 
+    private const MAX_ENGAGED_SECONDS = 1800;
+
     public function __construct(
         private readonly PathNormalizer $paths,
         private readonly UtmParser $utm,
@@ -94,6 +96,7 @@ class ClientEventRecorder
             ClientEventKind::Scroll => $this->scroll($context, $event, $path, $occurredAt),
             ClientEventKind::Download => $this->download($request, $context, $event, $path, $occurredAt),
             ClientEventKind::Viewport => null,
+            ClientEventKind::Engagement => $this->engagement($context, $event, $path, $occurredAt),
             ClientEventKind::Event => $this->custom(EventType::Custom, $context, $event, $path, $occurredAt),
             ClientEventKind::Goal => $this->custom(EventType::Goal, $context, $event, $path, $occurredAt),
         };
@@ -149,6 +152,24 @@ class ClientEventRecorder
         $targetPath = $this->paths->normalize((string) ($parts['path'] ?? '/'));
 
         return $this->clientEvent(EventType::OutboundClick, $context, $path, $occurredAt, targetHost: mb_substr($host, 0, 255), targetPath: $this->isExcluded($targetPath) ? null : $targetPath);
+    }
+
+    /**
+     * The seconds the visitor actively spent on the page. The browser measures them, so the server only keeps a
+     * number from one second up to the longest a single report may count (thirty minutes) and drops anything else.
+     *
+     * @param  array{visitorId: string, language: ?string, ip: ?string, userAgent: ?string, isBot: bool}  $context
+     * @param  array<string, mixed>  $event
+     */
+    private function engagement(array $context, array $event, string $path, CarbonImmutable $occurredAt): ?CustomEventData
+    {
+        $seconds = is_numeric($event['seconds'] ?? null) ? (int) floor((float) $event['seconds']) : 0;
+
+        if ($seconds < 1) {
+            return null;
+        }
+
+        return $this->clientEvent(EventType::Engagement, $context, $path, $occurredAt, engagedSeconds: min($seconds, self::MAX_ENGAGED_SECONDS));
     }
 
     /**
@@ -241,7 +262,7 @@ class ClientEventRecorder
      * @param  array{visitorId: string, language: ?string, ip: ?string, userAgent: ?string, isBot: bool}  $context
      * @param  array<string, scalar|null>  $properties
      */
-    private function clientEvent(EventType $type, array $context, string $path, CarbonImmutable $occurredAt, ?string $name = null, ?float $value = null, array $properties = [], ?string $targetHost = null, ?string $targetPath = null, ?int $scrollPercent = null, ?string $fileExtension = null): CustomEventData
+    private function clientEvent(EventType $type, array $context, string $path, CarbonImmutable $occurredAt, ?string $name = null, ?float $value = null, array $properties = [], ?string $targetHost = null, ?string $targetPath = null, ?int $scrollPercent = null, ?string $fileExtension = null, ?int $engagedSeconds = null): CustomEventData
     {
         return new CustomEventData(
             type: $type,
@@ -259,6 +280,7 @@ class ClientEventRecorder
             targetPath: $targetPath,
             scrollPercent: $scrollPercent,
             fileExtension: $fileExtension,
+            engagedSeconds: $engagedSeconds,
         );
     }
 

@@ -18,8 +18,8 @@ calls, no data sharing.
 > from server code, device, OS, browser and country on sessions, and hourly and
 > daily rollups with a retention prune, the `Stats` query API (summary,
 > timeseries, top lists, goals, funnels and real-time) and the browser client
-> (SPA page views, outbound clicks, file downloads, scroll depth and
-> `window.spaAnalytics`).
+> (SPA page views, outbound clicks, file downloads, scroll depth, engagement
+> time and `window.spaAnalytics`).
 > Rollups also report UTM values, response status, error paths, language and
 > viewport size.
 > Config keys and table layouts may change before 1.0; see the
@@ -90,6 +90,18 @@ are added.
 php artisan vendor:publish --tag="spa-analytics-migrations"
 php artisan migrate
 ```
+
+**From 0.6.x**: engagement time. Publish the migrations again and migrate (two
+new migrations add a nullable `engaged_seconds` column to `analytics_events` and
+an `engaged_seconds` column to `analytics_rollups`) and re-publish the script
+with `php artisan vendor:publish --tag="spa-analytics-assets" --force`; an old
+cached `client.js` keeps working but sends no engagement time. The numbers start
+at the upgrade, so there is nothing to backfill. `Summary` and `TopRow` have new
+fields (see the Stats table), and `rollups.disabled_dimensions` is a new key in
+the `rollups` config array (add `'disabled_dimensions' => []` if you published
+the config; without it nothing is disabled). If you bind your own `EventStore`,
+`CustomEventData` has a new trailing `engagedSeconds` and a new `engagement`
+event type.
 
 **From 0.6.0**: no migration. Only hours and days that have ended are rolled up
 now, so today's day row and the running hour's row no longer exist (read the
@@ -419,6 +431,7 @@ on route changes and clicks at once, and when the page is hidden) with
 | Outbound click | A click or middle click on an `http(s)` link to another host: the host and path, never the query or fragment | `outbound_click` with `target_host` and `target_path` |
 | File download | A click or middle click on an `http(s)` link, on this site or another, whose path ends in one of `collect.download_extensions` or that has the `download` attribute: the host (for another site) and path, never the query or fragment, so signed links stay private. It replaces the outbound click for that link | `file_download` with `target_path`, `target_host` for another site, and `file_extension` when it is one of the configured extensions (read on the server from the path) |
 | Viewport size | The window width (`innerWidth`, like a CSS media query) once per page load, sent with the next batch. The server turns it into a size class, never stores the width, and keeps only the first value of a session. It is not an event: it writes no row, never opens or extends a session, and is dropped when the visitor has no session yet (for example while the page view is still queued), so a first visit can miss it | `viewport` on the session |
+| Engagement time | The seconds the visitor actively spent on a page: the tab is visible and focused and something was done (scroll, key, pointer, touch) within the last 15 seconds. Sent once when the page is left, through a single-page navigation, or the tab is hidden, never on a timer, so a crashed tab loses that page's time. The server keeps whole seconds from 1 up to 1800 and drops the rest. Like the viewport it attaches to the active session and never opens or extends one | `engagement` with `engaged_seconds` |
 | Scroll depth | The 25, 50, 75 and 100 per cent milestones, once each per page, only after the visitor scrolls (a page that fits the window reports nothing) | `scroll_depth` with `scroll_percent` |
 | `window.spaAnalytics.track(name, properties?)` | A custom event | `custom`, like `Analytics::track()` |
 | `window.spaAnalytics.goal(name, value?, properties?)` | A goal, sent at once | `goal`, like `Analytics::goal()` |
@@ -488,14 +501,6 @@ visitor link lookup read and write the package's own tables directly, so a store
 that writes elsewhere gets no rows in `analytics_sessions` and re-linking finds
 nothing to move.
 
-## Planned capabilities
-
-- **Behavior:** engagement time beyond scroll depth
-  (custom events, goals, their conversion, funnels, outbound clicks, file
-  downloads and scroll depth are reported by `Stats`, see
-  [Reading the numbers](#reading-the-numbers)
-  and [Browser events](#browser-events)).
-
 ## Rollups and retention
 
 Raw events and sessions are the source of truth and are kept in full by
@@ -526,6 +531,7 @@ backfill history with `--period=day` and let the schedule keep the hours fresh.
 | `page_views`, `visitors` | Page views and distinct visitors in the bucket; a day counts a visitor once, not once per hour |
 | `sessions`, `bounces`, `duration_seconds` | Sessions that started in the bucket, those with a single page view, and their summed length |
 | `events`, `revenue` | Custom and goal events and the summed goal value |
+| `engaged_seconds` | Seconds of active time reported by the browser; only the `total` row and the `path` rows (by the page the time was spent on) carry it |
 
 Dimensions: `total`, `path`, `exit_path`, `referrer_type`, `referrer_host`, `utm_campaign`,
 `utm_source`, `utm_medium`, `utm_term`, `utm_content`, `device_type`, `os`, `browser`, `country`, `visitor_type` (`new` or `returning`),
@@ -632,7 +638,7 @@ Stats::realtime();                           // Realtime
 
 | Call | Returns |
 |---|---|
-| `summary()` | `pageViews`, `users`, `usersExact`, `newUsers`, `returningUsers`, `sessions`, `bounces`, `bounceRate`, `avgSessionDuration`, `events`, `goalCompletions`, `revenue`, `conversionRate`, `through`, `incomplete` |
+| `summary()` | `pageViews`, `users`, `usersExact`, `newUsers`, `returningUsers`, `sessions`, `bounces`, `bounceRate`, `avgSessionDuration`, `events`, `goalCompletions`, `revenue`, `conversionRate`, `through`, `incomplete`, `engagedSeconds`, `avgEngagementPerUser`, `avgEngagementPerSession` |
 | `timeseries(Hour or Day)` | One point per bucket of the range, empty buckets as zeros |
 | `top(dimension, limit)` | The best values of a dimension: paths, languages, statuses and error paths by page views, events, goals, outbound hosts, scroll depth, downloads and file extensions by events, everything else by sessions. Use the entry-path sessions of `path` rows and the last page of `exit_path` rows for landing and exit pages. Throws an `InvalidArgumentException` for `total` and for a dimension in `rollups.disabled_dimensions` |
 | `goals()` | Each goal with completions, revenue, users and conversion rate |
@@ -664,6 +670,18 @@ How the numbers are built:
   user is anyone with a first-ever session in the range. In `top(VisitorType)`
   the `returning` row counts everyone with a returning session, so a visitor
   who was new and came back inside the range appears in both rows there.
+- **Engagement time** follows GA4: `avgEngagementPerUser` is the total engaged
+  seconds divided by users and `avgEngagementPerSession` by sessions, and a
+  `top(Path)` row's `avgEngagement` is the seconds spent on that page divided by
+  the users who viewed it. Time is reported only by the browser script and only
+  when a page is left or hidden, so visitors without the script, pages left
+  within a second and tabs that crashed count as zero and the averages read a
+  little low. Time is attributed to the page it was spent on, in the hour it was
+  reported, so a row can carry engagement without page views in a bucket that
+  starts after the visit. The `events` total is not touched. Only `path` rows
+  carry engagement; `engagedSeconds` and `avgEngagement` are `0` and `0.0` for
+  every other dimension. Each page view with the script adds about one more raw
+  event row, which matters for `retention_days`.
 - Bots are never counted, and path, event and campaign values that differ only
   in case stay separate rows on every engine.
 

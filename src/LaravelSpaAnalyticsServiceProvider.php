@@ -58,6 +58,8 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
                 'update_analytics_events_table_for_client_events',
                 'update_analytics_events_table_for_downloads',
                 'update_analytics_sessions_table_for_viewport',
+                'update_analytics_events_table_for_engagement',
+                'update_analytics_rollups_table_for_engagement',
             ])
             ->hasInstallCommand(function (InstallCommand $command): void {
                 $command

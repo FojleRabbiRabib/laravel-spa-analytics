@@ -26,6 +26,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $duration_seconds
  * @property int $events
  * @property string $revenue
+ * @property int $engaged_seconds
  */
 #[UseFactory(AnalyticsRollupFactory::class)]
 class AnalyticsRollup extends Model
@@ -64,6 +65,7 @@ class AnalyticsRollup extends Model
             'duration_seconds' => 'integer',
             'events' => 'integer',
             'revenue' => 'decimal:2',
+            'engaged_seconds' => 'integer',
         ];
     }
 }

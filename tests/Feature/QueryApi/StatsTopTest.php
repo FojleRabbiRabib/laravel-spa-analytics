@@ -232,7 +232,7 @@ class StatsTopTest extends TestCase
 
         $row = $this->report()->top(RollupDimension::Path)[0]->toArray();
 
-        $this->assertSame(['value', 'pageViews', 'users', 'usersExact', 'sessions', 'bounces', 'bounceRate', 'avgSessionDuration', 'events', 'revenue'], array_keys($row));
+        $this->assertSame(['value', 'pageViews', 'users', 'usersExact', 'sessions', 'bounces', 'bounceRate', 'avgSessionDuration', 'events', 'revenue', 'engagedSeconds', 'avgEngagement'], array_keys($row));
         $this->assertSame('/a', $row['value']);
         $this->assertNotFalse(json_encode($row));
     }

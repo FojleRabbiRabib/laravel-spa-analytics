@@ -8,6 +8,7 @@ final readonly class TopRow
 {
     /**
      * Sessions, bounces and the durations of a path row belong to the sessions that entered on that path.
+     * The engaged seconds and their average are filled for path rows only; every other dimension has 0 and 0.0.
      *
      * @param  bool  $usersExact  False when part of the range lies in days whose raw rows were pruned, so users there are summed daily uniques.
      * @param  string  $revenue  A decimal string with two places.
@@ -23,6 +24,8 @@ final readonly class TopRow
         public float $avgSessionDuration,
         public int $events,
         public string $revenue,
+        public int $engagedSeconds,
+        public float $avgEngagement,
     ) {}
 
     /**
@@ -41,6 +44,8 @@ final readonly class TopRow
             'avgSessionDuration' => $this->avgSessionDuration,
             'events' => $this->events,
             'revenue' => $this->revenue,
+            'engagedSeconds' => $this->engagedSeconds,
+            'avgEngagement' => $this->avgEngagement,
         ];
     }
 }

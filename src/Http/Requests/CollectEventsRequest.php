@@ -39,6 +39,7 @@ class CollectEventsRequest extends FormRequest
             'events.*.url' => ['sometimes'],
             'events.*.percent' => ['sometimes'],
             'events.*.width' => ['sometimes'],
+            'events.*.seconds' => ['sometimes'],
             'events.*.name' => ['sometimes'],
             'events.*.value' => ['sometimes'],
             'events.*.properties' => ['sometimes'],

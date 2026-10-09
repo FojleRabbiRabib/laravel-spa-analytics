@@ -39,7 +39,7 @@ class StatsReport
         $through = $this->coverage->through();
 
         if ($through === null) {
-            return new Summary(0, 0, true, 0, 0, 0, 0, 0.0, 0.0, 0, 0, '0.00', 0.0, null, false);
+            return new Summary(0, 0, true, 0, 0, 0, 0, 0.0, 0.0, 0, 0, '0.00', 0.0, null, false, 0, 0.0, 0.0);
         }
 
         $plan = $this->plan($through);
@@ -67,6 +67,9 @@ class StatsReport
             conversionRate: $people['users'] > 0 ? min(1.0, $people['goalUsers'] / $people['users']) : 0.0,
             through: $through,
             incomplete: $incomplete,
+            engagedSeconds: (int) $total['engaged_seconds'],
+            avgEngagementPerUser: $people['users'] > 0 ? (int) $total['engaged_seconds'] / $people['users'] : 0.0,
+            avgEngagementPerSession: $sessions > 0 ? (int) $total['engaged_seconds'] / $sessions : 0.0,
         );
     }
 
@@ -169,6 +172,8 @@ class StatsReport
                 avgSessionDuration: $sessions > 0 ? (int) $row['duration_seconds'] / $sessions : 0.0,
                 events: (int) $row['events'],
                 revenue: (string) $row['revenue'],
+                engagedSeconds: (int) $row['engaged_seconds'],
+                avgEngagement: $users[$row['value']]['users'] > 0 ? (int) $row['engaged_seconds'] / $users[$row['value']]['users'] : 0.0,
             );
         }, $rows);
     }
@@ -268,7 +273,7 @@ class StatsReport
      */
     private function sumHours(array $hours, CarbonImmutable $from, CarbonImmutable $to): array
     {
-        $sum = ['page_views' => 0, 'visitors' => 0, 'sessions' => 0, 'bounces' => 0, 'duration_seconds' => 0, 'events' => 0, 'revenue' => 0.0];
+        $sum = ['page_views' => 0, 'visitors' => 0, 'sessions' => 0, 'bounces' => 0, 'duration_seconds' => 0, 'events' => 0, 'revenue' => 0.0, 'engaged_seconds' => 0];
 
         for ($hour = $from; $hour->lessThan($to); $hour = $hour->addHour()) {
             foreach ($hours[$hour->toDateTimeString()] ?? [] as $metric => $value) {

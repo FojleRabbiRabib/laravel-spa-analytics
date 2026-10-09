@@ -80,7 +80,7 @@ class RollupBuilder
     }
 
     /**
-     * @return array<string, array{page_views: int, visitors: int, sessions: int, bounces: int, duration_seconds: int, events: int, revenue: float}>
+     * @return array<string, array{page_views: int, visitors: int, sessions: int, bounces: int, duration_seconds: int, events: int, revenue: float, engaged_seconds: int}>
      */
     private function rows(string $from, string $to): array
     {
@@ -91,8 +91,40 @@ class RollupBuilder
         $this->addPageViews($rows, $from, $to);
         $this->addSessions($rows, $from, $to);
         $this->addNamedEvents($rows, $from, $to);
+        $this->addEngagement($rows, $from, $to);
 
         return $rows;
+    }
+
+    /**
+     * The seconds visitors actively spent on pages, in total and by the page they were on. The total counts the
+     * events and the total events number is not touched, since these rows are not custom events or goals.
+     *
+     * @param  array<string, array<string, int|float>>  $rows
+     */
+    private function addEngagement(array &$rows, string $from, string $to): void
+    {
+        $groups = DB::table('analytics_events')
+            ->where('type', EventType::Engagement)
+            ->where('is_bot', false)
+            ->where('occurred_at', '>=', $from)
+            ->where('occurred_at', '<', $to)
+            ->whereNotNull('engaged_seconds')
+            ->groupBy(DB::raw(Sql::exact('path')))
+            ->selectRaw(Sql::exact('path').' as path, coalesce(sum(engaged_seconds), 0) as seconds')
+            ->get();
+
+        $total = 0;
+
+        foreach ($groups as $group) {
+            $total += (int) $group->seconds;
+
+            if ($group->path !== null && $this->enabled(RollupDimension::Path)) {
+                $this->set($rows, RollupDimension::Path, (string) $group->path, 'engaged_seconds', (int) $group->seconds);
+            }
+        }
+
+        $this->set($rows, RollupDimension::Total, '', 'engaged_seconds', $total);
     }
 
     /**
@@ -111,6 +143,7 @@ class RollupBuilder
             'duration_seconds' => 0,
             'events' => 0,
             'revenue' => 0.0,
+            'engaged_seconds' => 0,
         ];
 
         return $rows[$key];

@@ -14,7 +14,7 @@ use Illuminate\Database\Query\Builder;
 
 class RollupReader
 {
-    private const METRICS = ['page_views', 'visitors', 'sessions', 'bounces', 'duration_seconds', 'events', 'revenue'];
+    private const METRICS = ['page_views', 'visitors', 'sessions', 'bounces', 'duration_seconds', 'events', 'revenue', 'engaged_seconds'];
 
     /**
      * Check the planned buckets against the rollup table. A planned day without a day row is read from its hours

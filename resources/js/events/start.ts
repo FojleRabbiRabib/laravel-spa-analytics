@@ -1,5 +1,6 @@
 import { buildApi, replayQueued } from './api';
 import { downloadTarget } from './download';
+import { createEngagementTracker } from './engagement';
 import { isInertiaPage } from './inertia';
 import { watchNavigation } from './navigation';
 import { outboundTarget } from './outbound';
@@ -11,7 +12,8 @@ import { viewportWidth } from './viewport';
 /**
  * Wire the page to the collect endpoint: the window width once per load (queued, not flushed, so the server's own page
  * view has been written before it arrives), transitions of a single-page app, file downloads, outbound clicks, scroll
- * depth and the `window.spaAnalytics` API. The first page view of a load is recorded by the server, so it is not sent
+ * depth, the time the visitor actively spends on each page (sent when the page is left or hidden) and the
+ * `window.spaAnalytics` API. The first page view of a load is recorded by the server, so it is not sent
  * here, and Inertia visits are left to the server for the same reason. A click on a link to a file is a download and
  * not an outbound click, even when the file is on another site.
  */
@@ -31,6 +33,16 @@ export const startEvents = (collectUrl: string, downloadExtensions: readonly str
 
     const scroll = createScrollTracker((percent) => queue.push({ kind: 'scroll', path: window.location.pathname, percent }));
 
+    const engagement = createEngagementTracker(Date.now(), document.visibilityState === 'visible' && document.hasFocus());
+
+    const reportEngagement = (path: string): void => {
+        const seconds = engagement.take(Date.now());
+
+        if (seconds > 0) {
+            queue.push({ kind: 'engagement', path, seconds });
+        }
+    };
+
     watchNavigation(
         {
             history: window.history,
@@ -38,6 +50,8 @@ export const startEvents = (collectUrl: string, downloadExtensions: readonly str
             onPopState: (listener) => window.addEventListener('popstate', listener),
         },
         (from, to) => {
+            reportEngagement(from);
+            engagement.reset(Date.now());
             scroll.reset();
 
             if (!isInertiaPage(document)) {
@@ -88,12 +102,36 @@ export const startEvents = (collectUrl: string, downloadExtensions: readonly str
         { passive: true },
     );
 
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') {
-            void queue.flush();
+    for (const type of ['keydown', 'pointerdown', 'pointermove', 'touchstart', 'wheel', 'scroll']) {
+        window.addEventListener(type, () => engagement.activity(Date.now()), { passive: true, capture: true });
+    }
+
+    window.addEventListener('blur', () => engagement.hidden(Date.now()));
+    window.addEventListener('focus', () => {
+        if (document.visibilityState === 'visible') {
+            engagement.visible(Date.now());
         }
     });
-    window.addEventListener('pagehide', () => void queue.flush());
+    window.addEventListener('pageshow', (event) => {
+        if (event.persisted && document.visibilityState === 'visible') {
+            engagement.visible(Date.now());
+        }
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            reportEngagement(window.location.pathname);
+            engagement.hidden(Date.now());
+            void queue.flush();
+        } else {
+            engagement.visible(Date.now());
+        }
+    });
+    window.addEventListener('pagehide', () => {
+        reportEngagement(window.location.pathname);
+        engagement.hidden(Date.now());
+        void queue.flush();
+    });
 
     const queued = window.spaAnalytics;
     const api = buildApi(queue.push, () => window.location.pathname);

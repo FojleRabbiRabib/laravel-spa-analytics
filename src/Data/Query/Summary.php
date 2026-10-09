@@ -30,6 +30,9 @@ final readonly class Summary
         public float $conversionRate,
         public ?CarbonImmutable $through,
         public bool $incomplete,
+        public int $engagedSeconds,
+        public float $avgEngagementPerUser,
+        public float $avgEngagementPerSession,
     ) {}
 
     /**
@@ -53,6 +56,9 @@ final readonly class Summary
             'conversionRate' => $this->conversionRate,
             'through' => $this->through?->toIso8601String(),
             'incomplete' => $this->incomplete,
+            'engagedSeconds' => $this->engagedSeconds,
+            'avgEngagementPerUser' => $this->avgEngagementPerUser,
+            'avgEngagementPerSession' => $this->avgEngagementPerSession,
         ];
     }
 }

@@ -102,6 +102,18 @@ class AnalyticsEventFactory extends Factory
     }
 
     /**
+     * The seconds a visitor actively spent on the page.
+     */
+    public function engagement(int $seconds = 30): static
+    {
+        return $this->state(fn (): array => [
+            'type' => EventType::Engagement,
+            'engaged_seconds' => $seconds,
+            'status' => null,
+        ]);
+    }
+
+    /**
      * Mark the event as bot traffic.
      */
     public function bot(): static

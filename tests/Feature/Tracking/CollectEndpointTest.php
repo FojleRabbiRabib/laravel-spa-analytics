@@ -201,18 +201,19 @@ class CollectEndpointTest extends TestCase
         $events = AnalyticsEvent::query()->orderBy('id')->get();
 
         $this->assertSame(
-            [EventType::PageView, EventType::OutboundClick, EventType::FileDownload, EventType::ScrollDepth, EventType::Custom, EventType::Goal],
+            [EventType::PageView, EventType::Engagement, EventType::OutboundClick, EventType::FileDownload, EventType::ScrollDepth, EventType::Custom, EventType::Goal],
             $events->pluck('type')->all(),
         );
         $this->assertSame(ViewportSize::Xl, AnalyticsSession::query()->sole()->viewport);
-        $this->assertSame('example.org', $events[1]->target_host);
-        $this->assertSame('/a', $events[1]->target_path);
-        $this->assertSame('/files/guide.pdf', $events[2]->target_path);
-        $this->assertSame('pdf', $events[2]->file_extension);
-        $this->assertSame(50, $events[3]->scroll_percent);
-        $this->assertSame(['plan' => 'pro'], $events[4]->properties);
-        $this->assertSame('49.50', $events[5]->value);
-        $this->assertSame(['order' => 'A1'], $events[5]->properties);
+        $this->assertSame(42, $events[1]->engaged_seconds);
+        $this->assertSame('example.org', $events[2]->target_host);
+        $this->assertSame('/a', $events[2]->target_path);
+        $this->assertSame('/files/guide.pdf', $events[3]->target_path);
+        $this->assertSame('pdf', $events[3]->file_extension);
+        $this->assertSame(50, $events[4]->scroll_percent);
+        $this->assertSame(['plan' => 'pro'], $events[5]->properties);
+        $this->assertSame('49.50', $events[6]->value);
+        $this->assertSame(['order' => 'A1'], $events[6]->properties);
     }
 
     public function test_invalid_batches_are_rejected(): void

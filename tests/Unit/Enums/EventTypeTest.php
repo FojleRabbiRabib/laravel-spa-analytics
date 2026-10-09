@@ -19,7 +19,8 @@ class EventTypeTest extends TestCase
         $this->assertSame('blue', EventType::PageView->color());
         $this->assertSame('purple', EventType::Custom->color());
         $this->assertSame('green', EventType::Goal->color());
-        $this->assertSame(['page_view', 'custom', 'goal', 'outbound_click', 'scroll_depth', 'file_download'], EventType::values());
+        $this->assertSame(['page_view', 'custom', 'goal', 'outbound_click', 'scroll_depth', 'file_download', 'engagement'], EventType::values());
+        $this->assertSame('Engagement time', EventType::Engagement->label());
         $this->assertSame('File download', EventType::FileDownload->label());
         $this->assertSame('orange', EventType::FileDownload->color());
         $this->assertSame('Outbound click', EventType::OutboundClick->label());
@@ -34,6 +35,7 @@ class EventTypeTest extends TestCase
             ['value' => 'outbound_click', 'label' => 'Outbound click'],
             ['value' => 'scroll_depth', 'label' => 'Scroll depth'],
             ['value' => 'file_download', 'label' => 'File download'],
+            ['value' => 'engagement', 'label' => 'Engagement time'],
         ], EventType::options());
     }
 

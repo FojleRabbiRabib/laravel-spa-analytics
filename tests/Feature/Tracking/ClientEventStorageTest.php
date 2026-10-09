@@ -144,6 +144,48 @@ class ClientEventStorageTest extends TestCase
         $this->assertTrue(Schema::hasColumn('analytics_events', 'file_extension'));
     }
 
+    #[DataProvider('writeModes')]
+    public function test_engaged_seconds_survive_every_write_mode(string $mode): void
+    {
+        $this->write($mode, new CustomEventData(
+            type: EventType::Engagement,
+            visitorId: 'visitor-1',
+            name: null,
+            value: null,
+            properties: [],
+            path: '/pricing',
+            language: null,
+            ip: null,
+            userAgent: null,
+            isBot: false,
+            occurredAt: CarbonImmutable::parse('2026-09-29 10:00:00'),
+            engagedSeconds: 75,
+        ));
+
+        $event = AnalyticsEvent::query()->sole();
+
+        $this->assertSame(EventType::Engagement, $event->type);
+        $this->assertSame(75, $event->engaged_seconds);
+    }
+
+    public function test_the_engagement_migrations_add_their_columns_and_drop_them_again(): void
+    {
+        $events = include __DIR__.'/../../../database/migrations/update_analytics_events_table_for_engagement.php.stub';
+        $rollups = include __DIR__.'/../../../database/migrations/update_analytics_rollups_table_for_engagement.php.stub';
+
+        $events->down();
+        $rollups->down();
+
+        $this->assertFalse(Schema::hasColumn('analytics_events', 'engaged_seconds'));
+        $this->assertFalse(Schema::hasColumn('analytics_rollups', 'engaged_seconds'));
+
+        $events->up();
+        $rollups->up();
+
+        $this->assertTrue(Schema::hasColumn('analytics_events', 'engaged_seconds'));
+        $this->assertTrue(Schema::hasColumn('analytics_rollups', 'engaged_seconds'));
+    }
+
     public function test_the_viewport_migration_adds_the_column_and_drops_it_again(): void
     {
         $migration = include __DIR__.'/../../../database/migrations/update_analytics_sessions_table_for_viewport.php.stub';
