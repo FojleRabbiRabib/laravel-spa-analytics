@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Re-publish the script after upgrading (`php artisan vendor:publish --tag=spa-analytics-assets --force`), and publish the migrations again and migrate (see Changed); there is no new config.
+## [0.8.0] - 2026-10-25
+
+Folded migrations, a fixed browser script and one new optional config key. After upgrading, publish the migrations again and migrate, and re-publish the script (`php artisan vendor:publish --tag=spa-analytics-assets --force`). If you published the package views, copy `src="{{ $scriptUrl }}"` into your `client-script.blade.php`. The old `update_analytics_*` migration files in your app are deleted for you. You can upgrade from any version straight to this one.
 
 ### Changed
 
@@ -139,7 +141,8 @@ Reporting only: no migration and no new config. Run `spa-analytics:rollup --sinc
 - `BotDetector` and `EventStore` contracts, bound in the register phase so an app can replace them.
 - Publish tags `spa-analytics-config`, `spa-analytics-migrations` and `spa-analytics-assets`.
 
-[Unreleased]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.5.0...v0.6.0

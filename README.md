@@ -133,6 +133,15 @@ To go back to 0.7.x, do not publish the migrations again: the schema is identica
 and publishing under 0.7.x would add the seven old files with new timestamps, which
 fail with "duplicate column" on a database that already has the columns.
 
+**From 0.7.x**: folded migrations, a fixed browser script and an optional
+`database.connection` key. Publish the migrations again and migrate, and re-publish
+the script with `php artisan vendor:publish --tag="spa-analytics-assets" --force`
+(a re-published script now reaches visitors at once, and Inertia visits served
+from the prefetch cache are counted). The seven old `update_analytics_*` files in
+your app are deleted for you. If you published the package views, copy
+`src="{{ $scriptUrl }}"` into your `client-script.blade.php`. To keep the analytics
+tables on their own database, see "A separate database" under Extending.
+
 **From 0.6.x**: engagement time. Publish the migrations again and migrate (one
 new migration adds a nullable `engaged_seconds` column to `analytics_events` and
 an `engaged_seconds` column to `analytics_rollups`) and re-publish the script
