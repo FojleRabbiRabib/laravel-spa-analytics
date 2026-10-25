@@ -734,6 +734,48 @@ Stats::realtime();                           // Realtime
 | `funnel(steps)` | Users per step with the rate from the previous and from the first step, the overall conversion, `coveredFrom`, `complete` and `through` |
 | `realtime()` | Visitors with a page view in the last `stats.realtime_minutes` (default 5) and the page each of them viewed last, read from the raw events |
 
+### Comparing periods
+
+Like GA's compare, a report can be put next to another period:
+
+```php
+$comparison = Stats::between($from, $to)->compareToPrevious();   // the period right before, same length
+// or any range, for example the same days a year ago:
+$comparison = Stats::between($from, $to)->compareTo($yearAgoFrom, $yearAgoTo);
+
+$comparison->summary();                        // SummaryComparison: current, previous, changes
+$comparison->timeseries(RollupPeriod::Day);    // SeriesPointComparison[]
+$comparison->top(RollupDimension::Path, 10);   // TopRowComparison[]
+$comparison->goals();                          // GoalRowComparison[]
+$comparison->funnel($steps);                   // FunnelComparison
+```
+
+Every result has `current`, `previous` and `changes`. A `Change` is `absolute`
+(current minus previous; for a rate such as `bounceRate` it is the difference of the
+two ratios, so `0.05` is five points) and `percent` (the absolute change as a
+percentage of the previous value; `null` when the previous value is 0, never
+infinite). Revenue changes are worked out in whole cents. `top()` and `goals()`
+take their rows from the current period and look up the same values in the other
+one: a value that had no row there has `previous` `null`, and a value that only
+existed in the other period is not listed. Series points are paired by position
+(the first with the first), so a period with fewer points leaves the rest without
+a counterpart. Both sides follow the live setting of the report, and each keeps its
+own `usersExact` and `incomplete`.
+
+`compareToPrevious()` cuts the previous period where the current one has read to,
+so the change is fair: for today so far with live on, yesterday up to the same time
+of day, to the second (that last partial hour is read from the raw events, so with a
+short `retention_days` it can read low); with `withoutLive()`, yesterday up to the
+end of the last rolled-up hour. A range that is over, or in the future, is compared
+with the whole previous period. A range of whole days moves back by the same number
+of calendar days, so the time of day survives a daylight saving change. Any other
+range moves back by its own length, so a calendar month is compared with the 28 to
+31 days before it, not with the previous calendar month; use `compareTo()` with the
+month you mean. The range is snapped outward to whole hours first, as for any
+report. `compareTo()` throws an `InvalidArgumentException` for an empty or reversed
+range. `->current()` and `->previous()` give the two reports if you want other
+measures.
+
 How the numbers are built:
 
 - **Range:** read in `app.timezone` and snapped outward to whole hours, using

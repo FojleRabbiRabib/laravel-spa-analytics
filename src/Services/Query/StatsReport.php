@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Query;
 
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\Funnel;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\FunnelStep;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\FunnelStepResult;
@@ -42,6 +43,7 @@ class StatsReport
         private readonly DimensionSettings $settings,
         private readonly RollupBuilder $builder,
         private readonly bool $live,
+        private readonly bool $exactEnd = false,
     ) {}
 
     /**
@@ -167,13 +169,7 @@ class StatsReport
      */
     public function top(RollupDimension $dimension, int $limit = 10): array
     {
-        if ($dimension->is(RollupDimension::Total)) {
-            throw new \InvalidArgumentException('The total dimension has no values to rank.');
-        }
-
-        if (! $this->settings->isEnabled($dimension)) {
-            throw new \InvalidArgumentException("The {$dimension->value} dimension is turned off in rollups.disabled_dimensions.");
-        }
+        $this->assertRankable($dimension);
 
         $range = $this->range();
 
@@ -181,17 +177,169 @@ class StatsReport
             return [];
         }
 
-        ['plan' => $plan, 'buckets' => $buckets, 'tail' => $tail] = $range;
+        $rows = $this->ranked($range['buckets'], $range['tail'], $dimension, $this->rankedBy($dimension), max(1, min($limit, 1000)));
 
-        $orderBy = match ($dimension) {
+        return $this->topRows($range, $dimension, $rows);
+    }
+
+    /**
+     * The rows of the given values of a dimension, by value: the same rows top() builds, for values you already have.
+     * A value with nothing in the range is left out. Used to compare the rows of two periods.
+     *
+     * @param  array<int, string>  $values
+     * @return array<string, TopRow>
+     *
+     * @throws \InvalidArgumentException As top() does.
+     */
+    public function topFor(RollupDimension $dimension, array $values): array
+    {
+        $this->assertRankable($dimension);
+
+        $range = $this->range();
+
+        if ($range === null || $values === []) {
+            return [];
+        }
+
+        $found = [];
+
+        foreach ($this->topRows($range, $dimension, $this->valueRows($range['buckets'], $range['tail'], $dimension, $values)) as $row) {
+            $found[$row->value] = $row;
+        }
+
+        return $found;
+    }
+
+    /**
+     * Each goal with its completions, revenue, distinct completers and conversion rate, most completed first.
+     *
+     * @return array<int, GoalRow>
+     */
+    public function goals(int $limit = 50): array
+    {
+        $range = $this->range();
+
+        if ($range === null) {
+            return [];
+        }
+
+        return $this->goalRows($range, $this->ranked($range['buckets'], $range['tail'], RollupDimension::Goal, 'events', max(1, min($limit, 1000))));
+    }
+
+    /**
+     * The rows of the given goals, by name; a goal with no completions in the range is left out.
+     *
+     * @param  array<int, string>  $names
+     * @return array<string, GoalRow>
+     */
+    public function goalsFor(array $names): array
+    {
+        $range = $this->range();
+
+        if ($range === null || $names === []) {
+            return [];
+        }
+
+        $found = [];
+
+        foreach ($this->goalRows($range, $this->valueRows($range['buckets'], $range['tail'], RollupDimension::Goal, $names)) as $row) {
+            $found[$row->name] = $row;
+        }
+
+        return $found;
+    }
+
+    /**
+     * This report next to the same measures over another range, to see what changed.
+     *
+     * @throws \InvalidArgumentException When the range is empty or reversed.
+     */
+    public function compareTo(CarbonInterface $from, CarbonInterface $to): StatsComparison
+    {
+        $timezone = (string) config('app.timezone');
+        $from = CarbonImmutable::instance($from)->setTimezone($timezone);
+        $to = CarbonImmutable::instance($to)->setTimezone($timezone);
+
+        if ($from->greaterThanOrEqualTo($to)) {
+            throw new \InvalidArgumentException('The range must end after it starts.');
+        }
+
+        return new StatsComparison($this, $this->over($from, $to));
+    }
+
+    /**
+     * This report next to the period of the same length right before it. The previous period is cut where this one
+     * has actually read to: for today so far, yesterday up to the same time of day (to the second, with live on), so
+     * the change is fair. A range that is over, or that has nothing read yet (in the future), is compared with the
+     * whole previous period. A range of whole days moves back by the same number of calendar days, so the time of
+     * day survives a daylight saving change; any other range moves back by its own length, so a calendar month is
+     * compared with the 28 to 31 days before it, not with the previous calendar month.
+     *
+     * @throws \InvalidArgumentException When the range is empty or reversed.
+     */
+    public function compareToPrevious(): StatsComparison
+    {
+        if ($this->from->greaterThanOrEqualTo($this->to)) {
+            throw new \InvalidArgumentException('The range must end after it starts.');
+        }
+
+        $start = RollupPeriod::Hour->start($this->from);
+        $end = RollupPeriod::Hour->start($this->to);
+        $end = $end->equalTo($this->to) ? $end : $end->addHour();
+        $read = $this->range()['through'] ?? null;
+        $cut = $read !== null && $read->greaterThan($start) && $read->lessThan($end) ? $read : null;
+        $days = (int) round(($end->getTimestamp() - $start->getTimestamp()) / 86400);
+
+        if ($days > 0 && $start->addDays($days)->equalTo($end)) {
+            $previousStart = $start->subDays($days);
+            $previousEnd = $previousStart->addDays($days);
+            $previousCut = $cut?->subDays($days);
+        } else {
+            $length = $end->getTimestamp() - $start->getTimestamp();
+            $previousStart = $start->subSeconds($length);
+            $previousEnd = $start;
+            $previousCut = $cut?->subSeconds($length);
+        }
+
+        return new StatsComparison($this, $this->over($previousStart, $previousCut ?? $previousEnd, $previousCut !== null));
+    }
+
+    private function over(CarbonImmutable $from, CarbonImmutable $to, bool $exactEnd = false): self
+    {
+        return new self($from, $to, $this->planner, $this->coverage, $this->reader, $this->users, $this->funnels, $this->settings, $this->builder, $this->live, $exactEnd);
+    }
+
+    /**
+     * @throws \InvalidArgumentException
+     */
+    private function assertRankable(RollupDimension $dimension): void
+    {
+        if ($dimension->is(RollupDimension::Total)) {
+            throw new \InvalidArgumentException('The total dimension has no values to rank.');
+        }
+
+        if (! $this->settings->isEnabled($dimension)) {
+            throw new \InvalidArgumentException("The {$dimension->value} dimension is turned off in rollups.disabled_dimensions.");
+        }
+    }
+
+    private function rankedBy(RollupDimension $dimension): string
+    {
+        return match ($dimension) {
             RollupDimension::Path, RollupDimension::Language, RollupDimension::Status, RollupDimension::ErrorPath => 'page_views',
             RollupDimension::Event, RollupDimension::Goal, RollupDimension::OutboundHost, RollupDimension::ScrollDepth, RollupDimension::Download, RollupDimension::FileExtension => 'events',
             default => 'sessions',
         };
+    }
 
-        $limit = max(1, min($limit, 1000));
-        $rows = $this->ranked($buckets, $tail, $dimension, $orderBy, $limit);
-        $users = $this->users->forValues($plan, $buckets, $dimension, array_column($rows, 'value'));
+    /**
+     * @param  array{plan: RangePlan, buckets: array<int, PlannedBucket>, tail: LiveTail}  $range
+     * @param  array<int, array<string, int|string>>  $rows
+     * @return array<int, TopRow>
+     */
+    private function topRows(array $range, RollupDimension $dimension, array $rows): array
+    {
+        $users = $this->users->forValues($range['plan'], $range['buckets'], $dimension, array_column($rows, 'value'));
 
         return array_map(function (array $row) use ($users): TopRow {
             $sessions = (int) $row['sessions'];
@@ -214,21 +362,14 @@ class StatsReport
     }
 
     /**
-     * Each goal with its completions, revenue, distinct completers and conversion rate, most completed first.
-     *
+     * @param  array{plan: RangePlan, buckets: array<int, PlannedBucket>, tail: LiveTail}  $range
+     * @param  array<int, array<string, int|string>>  $rows
      * @return array<int, GoalRow>
      */
-    public function goals(int $limit = 50): array
+    private function goalRows(array $range, array $rows): array
     {
-        $range = $this->range();
+        ['plan' => $plan, 'buckets' => $buckets] = $range;
 
-        if ($range === null) {
-            return [];
-        }
-
-        ['plan' => $plan, 'buckets' => $buckets, 'tail' => $tail] = $range;
-
-        $rows = $this->ranked($buckets, $tail, RollupDimension::Goal, 'events', max(1, min($limit, 1000)));
         $names = array_column($rows, 'value');
         $completers = $this->users->forValues($plan, $buckets, RollupDimension::Goal, $names);
         $converters = $this->users->forValues($plan, $buckets, RollupDimension::Goal, $names, viewersOnly: true);
@@ -297,7 +438,7 @@ class StatsReport
 
     private function liveAs(bool $live): self
     {
-        return new self($this->from, $this->to, $this->planner, $this->coverage, $this->reader, $this->users, $this->funnels, $this->settings, $this->builder, $live);
+        return new self($this->from, $this->to, $this->planner, $this->coverage, $this->reader, $this->users, $this->funnels, $this->settings, $this->builder, $live, $this->exactEnd);
     }
 
     /**
@@ -326,7 +467,14 @@ class StatsReport
         }
 
         $base = $stored ?? RollupPeriod::Hour->start($this->from);
-        $plan = $this->planner->plan($this->from, $this->to, $base);
+        $snappedFrom = RollupPeriod::Hour->start($this->from);
+        $floor = RollupPeriod::Hour->start($this->to);
+        $exact = $this->live && $this->exactEnd && ! $floor->equalTo($this->to);
+        $plan = match (true) {
+            ! $exact => $this->planner->plan($this->from, $this->to, $base),
+            $floor->greaterThan($snappedFrom) => $this->planner->plan($this->from, $floor, $base),
+            default => new RangePlan($snappedFrom, $this->to, $base, $snappedFrom, []),
+        };
         ['buckets' => $buckets, 'incomplete' => $incomplete] = $this->reader->resolve($plan);
         $through = $stored;
         $tail = new LiveTail;
@@ -334,8 +482,9 @@ class StatsReport
         if ($this->live) {
             $timezone = (string) config('app.timezone');
             $now = CarbonImmutable::now($timezone);
-            $end = $now->lessThan($plan->to) ? $now : $plan->to;
-            $start = max($base, $plan->from);
+            $end = $exact ? $this->to : ($now->lessThan($plan->to) ? $now : $plan->to);
+            $start = $exact ? max(min($base, $floor), $snappedFrom) : max($base, $plan->from);
+            $lastHourOnly = $exact && $base->greaterThanOrEqualTo($floor);
 
             if ($stored === null) {
                 $oldest = AnalyticsDatabase::table('analytics_events')->min('occurred_at');
@@ -343,7 +492,7 @@ class StatsReport
             }
 
             if ($start->lessThan($end)) {
-                if ($start->lessThan(RollupPeriod::Hour->start($now->subHours(max(1, (int) config('spa-analytics.stats.live_max_hours')))))) {
+                if (! $lastHourOnly && $start->lessThan(RollupPeriod::Hour->start($now->subHours(max(1, (int) config('spa-analytics.stats.live_max_hours')))))) {
                     $incomplete = true;
                     $this->behind = $stored === null;
                 } else {
@@ -358,7 +507,9 @@ class StatsReport
             return null;
         }
 
-        return $this->range = ['plan' => $plan, 'buckets' => $buckets, 'incomplete' => $incomplete, 'through' => $through, 'stored' => $stored, 'tail' => $tail];
+        $storedEnd = $exact && $stored !== null ? min($stored, $floor) : $stored;
+
+        return $this->range = ['plan' => $plan, 'buckets' => $buckets, 'incomplete' => $incomplete, 'through' => $through, 'stored' => $storedEnd, 'tail' => $tail];
     }
 
     private function tail(CarbonImmutable $start, CarbonImmutable $end): LiveTail
@@ -396,10 +547,8 @@ class StatsReport
             $merged[(string) $row['value']] = $row;
         }
 
-        foreach (array_chunk(array_map('strval', array_keys($live)), 500) as $values) {
-            foreach ($this->reader->grouped($buckets, $dimension, $orderBy, null, $values) as $row) {
-                $merged[(string) $row['value']] = $row;
-            }
+        foreach ($this->storedRows($buckets, $dimension, $orderBy, array_map('strval', array_keys($live))) as $value => $row) {
+            $merged[(string) $value] = $row;
         }
 
         foreach ($live as $value => $metrics) {
@@ -410,6 +559,51 @@ class StatsReport
         usort($merged, fn (array $a, array $b): int => $b[$orderBy] <=> $a[$orderBy] ?: strcmp((string) $a['value'], (string) $b['value']));
 
         return array_slice($merged, 0, $limit);
+    }
+
+    /**
+     * The rows of the given values over the stored buckets and the live tail together; values with nothing in either
+     * are left out.
+     *
+     * @param  array<int, PlannedBucket>  $buckets
+     * @param  array<int, string>  $values
+     * @return array<int, array<string, int|string>>
+     */
+    private function valueRows(array $buckets, LiveTail $tail, RollupDimension $dimension, array $values): array
+    {
+        $values = array_map('strval', $values);
+        $merged = $this->storedRows($buckets, $dimension, $this->rankedBy($dimension), $values);
+        $wanted = array_flip($values);
+
+        foreach ($tail->grouped($dimension) as $value => $metrics) {
+            $value = (string) $value;
+
+            if (isset($wanted[$value])) {
+                $merged[$value] = ['value' => $value, ...LiveTail::add($merged[$value] ?? [], $metrics)];
+            }
+        }
+
+        return array_values($merged);
+    }
+
+    /**
+     * The stored rows of the given values, by value, read in chunks so the list of hashes stays short.
+     *
+     * @param  array<int, PlannedBucket>  $buckets
+     * @param  array<int, string>  $values
+     * @return array<string, array<string, int|string>>
+     */
+    private function storedRows(array $buckets, RollupDimension $dimension, string $orderBy, array $values): array
+    {
+        $rows = [];
+
+        foreach (array_chunk($values, 500) as $chunk) {
+            foreach ($this->reader->grouped($buckets, $dimension, $orderBy, null, $chunk) as $row) {
+                $rows[(string) $row['value']] = $row;
+            }
+        }
+
+        return $rows;
     }
 
     /**
