@@ -6,6 +6,7 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Feature\QueryApi;
 
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\Change;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\FunnelStep;
+use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupDimension;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupPeriod;
 use FojleRabbiRabib\LaravelSpaAnalytics\Facades\Stats;
@@ -149,6 +150,21 @@ class StatsCompareTest extends TestCase
         $this->assertSame('purchase', $goals[0]->current->name);
         $this->assertNull($goals[0]->previous);
         $this->assertEqualsWithDelta(1.0, $goals[0]->changes['completions']->absolute, 0.0001);
+    }
+
+    public function test_scroll_depth_by_path_is_compared_by_value_with_exact_users(): void
+    {
+        foreach ([['a', '2026-03-09 09:00:00'], ['b', '2026-03-09 10:00:00'], ['a', '2026-03-08 09:00:00']] as [$visitor, $at]) {
+            AnalyticsEvent::factory()->create(['type' => EventType::ScrollDepth, 'visitor_id' => $visitor, 'name' => null, 'path' => '/pricing', 'scroll_percent' => 50, 'occurred_at' => Carbon::parse($at)]);
+        }
+        $this->rollUp();
+
+        $rows = $this->yesterday()->top(RollupDimension::PathScroll);
+
+        $this->assertSame('50 /pricing', $rows[0]->current->value);
+        $this->assertSame(2, $rows[0]->current->users);
+        $this->assertSame(1, $rows[0]->previous?->users);
+        $this->assertEqualsWithDelta(100.0, $rows[0]->changes['users']->percent, 0.0001);
     }
 
     public function test_the_series_pairs_each_point_with_the_one_at_the_same_place(): void

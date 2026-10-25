@@ -31,6 +31,7 @@ enum RollupDimension: string
     case Download = 'download';
     case FileExtension = 'file_extension';
     case Viewport = 'viewport';
+    case PathScroll = 'path_scroll';
 
     /**
      * The dimensions that are always built: the total, and the two that Stats reads for its headline numbers (goal
@@ -76,6 +77,14 @@ enum RollupDimension: string
         }
 
         return $value instanceof \BackedEnum ? (string) $value->value : (string) $value;
+    }
+
+    /**
+     * The stored value of a scroll depth row of a path: the milestone, a space and the path, cut to the value column.
+     */
+    public static function pathScrollValue(int|string $percent, string $path): string
+    {
+        return mb_substr($percent.' '.$path, 0, 512);
     }
 
     /**
@@ -133,6 +142,7 @@ enum RollupDimension: string
             self::Download => 'Download',
             self::FileExtension => 'File extension',
             self::Viewport => 'Viewport',
+            self::PathScroll => 'Scroll depth by path',
         };
     }
 
@@ -146,7 +156,7 @@ enum RollupDimension: string
             self::Path, self::ExitPath => 'blue',
             self::ReferrerType, self::ReferrerHost, self::UtmCampaign, self::UtmSource, self::UtmMedium, self::UtmTerm, self::UtmContent => 'purple',
             self::DeviceType, self::Os, self::Browser, self::Country, self::VisitorType, self::Language, self::Viewport => 'green',
-            self::Event, self::Goal, self::OutboundHost, self::ScrollDepth, self::Download, self::FileExtension => 'orange',
+            self::Event, self::Goal, self::OutboundHost, self::ScrollDepth, self::Download, self::FileExtension, self::PathScroll => 'orange',
             self::Status, self::ErrorPath => 'red',
         };
     }

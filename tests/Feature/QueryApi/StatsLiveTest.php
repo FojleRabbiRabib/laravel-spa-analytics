@@ -358,6 +358,40 @@ class StatsLiveTest extends TestCase
         $this->assertSame(array_map(fn ($step) => $step->users, $stored->funnel($steps)->steps), $liveFunnel);
     }
 
+    public function test_live_path_scroll_rows_have_exact_users_and_follow_the_stored_ones(): void
+    {
+        foreach ([['a', 50], ['a', 50], ['b', 50], ['b', 25]] as [$visitor, $percent]) {
+            AnalyticsEvent::factory()->create(['type' => EventType::ScrollDepth, 'visitor_id' => $visitor, 'name' => null, 'path' => '/pricing', 'scroll_percent' => $percent, 'occurred_at' => Carbon::parse('2026-03-10 10:10:00')]);
+        }
+
+        $live = array_map(fn ($row) => [$row->value, $row->events, $row->users], $this->today()->withLive()->top(RollupDimension::PathScroll));
+
+        Carbon::setTestNow('2026-03-10 13:30:00');
+        $this->rollUp();
+        $stored = array_map(fn ($row) => [$row->value, $row->events, $row->users], $this->today()->withoutLive()->top(RollupDimension::PathScroll));
+
+        $this->assertSame([['50 /pricing', 3, 2], ['25 /pricing', 1, 1]], $live);
+        $this->assertSame($stored, $live);
+    }
+
+    public function test_scroll_depth_of_a_path_with_a_space_keeps_its_exact_users_and_topfor_finds_it(): void
+    {
+        foreach (['a', 'b'] as $visitor) {
+            AnalyticsEvent::factory()->create(['type' => EventType::ScrollDepth, 'visitor_id' => $visitor, 'name' => null, 'path' => '/a b', 'scroll_percent' => 75, 'occurred_at' => Carbon::parse('2026-03-10 10:10:00')]);
+        }
+        AnalyticsEvent::factory()->create(['type' => EventType::ScrollDepth, 'visitor_id' => 'a', 'name' => null, 'path' => '/A b', 'scroll_percent' => 75, 'occurred_at' => Carbon::parse('2026-03-10 10:11:00')]);
+        Carbon::setTestNow('2026-03-10 13:30:00');
+        $this->rollUp();
+
+        $report = $this->today()->withoutLive();
+        $rows = collect($report->top(RollupDimension::PathScroll))->mapWithKeys(fn ($row) => [$row->value => $row->users])->all();
+        $found = $report->topFor(RollupDimension::PathScroll, ['75 /a b', '75 /nothing']);
+
+        $this->assertSame(['75 /a b' => 2, '75 /A b' => 1], $rows);
+        $this->assertSame(['75 /a b'], array_keys($found));
+        $this->assertSame(2, $found['75 /a b']->users);
+    }
+
     public function test_live_is_on_by_default_and_the_config_turns_it_off(): void
     {
         $this->pageView('a', '2026-03-10 12:10:00');

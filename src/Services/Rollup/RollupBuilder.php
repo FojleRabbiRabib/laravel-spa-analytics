@@ -346,6 +346,37 @@ class RollupBuilder
         if ($this->enabled(RollupDimension::Download)) {
             $this->addDownloads($rows, $from, $to);
         }
+
+        if ($this->enabled(RollupDimension::PathScroll)) {
+            $this->addPathScroll($rows, $from, $to);
+        }
+    }
+
+    /**
+     * Scroll depth milestones by path, as "milestone path" values. The plain scroll depth rows and the total events
+     * number are not touched.
+     *
+     * @param  array<string, array<string, int|float>>  $rows
+     */
+    private function addPathScroll(array &$rows, string $from, string $to): void
+    {
+        $groups = AnalyticsDatabase::table('analytics_events')
+            ->where('type', EventType::ScrollDepth)
+            ->where('is_bot', false)
+            ->where('occurred_at', '>=', $from)
+            ->where('occurred_at', '<', $to)
+            ->whereNotNull('path')
+            ->whereNotNull('scroll_percent')
+            ->groupBy('scroll_percent', DB::raw(Sql::exact('path')))
+            ->selectRaw('scroll_percent as percent, '.Sql::exact('path').' as path, count(*) as events, count(distinct '.Sql::exact('visitor_id').') as visitors')
+            ->get();
+
+        foreach ($groups as $group) {
+            $value = RollupDimension::pathScrollValue((int) $group->percent, (string) $group->path);
+
+            $this->set($rows, RollupDimension::PathScroll, $value, 'events', (int) $group->events);
+            $this->set($rows, RollupDimension::PathScroll, $value, 'visitors', (int) $group->visitors);
+        }
     }
 
     /**

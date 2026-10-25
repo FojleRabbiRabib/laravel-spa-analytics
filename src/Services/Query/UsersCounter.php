@@ -93,6 +93,10 @@ class UsersCounter
             foreach ($this->downloadUsers($values, $exactFrom, $plan->effectiveTo) as $value => $users) {
                 $found[$value]['users'] += $users;
             }
+        } elseif ($exactFrom->lessThan($plan->effectiveTo) && $dimension->is(RollupDimension::PathScroll)) {
+            foreach ($this->pathScrollUsers($values, $exactFrom, $plan->effectiveTo) as $value => $users) {
+                $found[$value]['users'] += $users;
+            }
         } elseif ($exactFrom->lessThan($plan->effectiveTo)) {
             [$query, $column, $visitor] = $this->source($dimension, $exactFrom, $plan->effectiveTo);
             $integer = $dimension->is(RollupDimension::ScrollDepth) || $dimension->is(RollupDimension::Status);
@@ -186,6 +190,46 @@ class UsersCounter
 
         foreach ($rows as $row) {
             $value = RollupDimension::errorPathValue((int) $row->status, (string) $row->path);
+
+            if (in_array($value, $values, true)) {
+                $users[$value] = (int) $row->users;
+            }
+        }
+
+        return $users;
+    }
+
+    /**
+     * Distinct people for scroll depth values of a path, which are a milestone and a path, so the rows are matched on
+     * both parts.
+     *
+     * @param  array<int, string>  $values
+     * @return array<string, int>
+     */
+    private function pathScrollUsers(array $values, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $percents = $paths = [];
+
+        foreach ($values as $value) {
+            [$percent, $path] = array_pad(explode(' ', $value, 2), 2, '');
+            $percents[] = (int) $percent;
+            $paths[] = $path;
+        }
+
+        $query = $this->events(EventType::ScrollDepth, $from, $to)->whereIn('e.scroll_percent', array_values(array_unique($percents)));
+
+        $this->narrow($query, 'e.path', $paths);
+
+        $rows = $query
+            ->whereRaw(Sql::exact('e.path').' in ('.implode(', ', array_fill(0, count($paths), '?')).')', $paths)
+            ->groupBy('e.scroll_percent', DB::raw(Sql::exact('e.path')))
+            ->selectRaw('e.scroll_percent as percent, '.Sql::exact('e.path').' as path, count(distinct '.Sql::exact('e.visitor_id').') as users')
+            ->get();
+
+        $users = [];
+
+        foreach ($rows as $row) {
+            $value = RollupDimension::pathScrollValue((int) $row->percent, (string) $row->path);
 
             if (in_array($value, $values, true)) {
                 $users[$value] = (int) $row->users;

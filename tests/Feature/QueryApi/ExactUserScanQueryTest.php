@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Feature\QueryApi;
 
+use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupDimension;
 use FojleRabbiRabib\LaravelSpaAnalytics\Facades\Stats;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
@@ -81,6 +82,14 @@ class ExactUserScanQueryTest extends TestCase
 
         $this->assertSame(2, $this->comparisons($this->queriesOfTop(RollupDimension::ErrorPath)[0], 'e.path'));
         $this->assertSame(2, $this->comparisons($this->queriesOfTop(RollupDimension::Download)[0], 'e.target_path'));
+    }
+
+    public function test_the_users_of_scroll_depth_by_path_are_narrowed_the_same_way(): void
+    {
+        AnalyticsEvent::factory()->create(['type' => EventType::ScrollDepth, 'visitor_id' => 'v1', 'name' => null, 'path' => '/pricing', 'scroll_percent' => 50, 'occurred_at' => Carbon::parse('2026-03-08 10:00:00')]);
+        $this->rollUp();
+
+        $this->assertSame(2, $this->comparisons($this->queriesOfTop(RollupDimension::PathScroll)[0], 'e.path'));
     }
 
     public function test_the_exact_numbers_do_not_change(): void

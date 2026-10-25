@@ -625,7 +625,15 @@ backfill history with `--period=day` and let the schedule keep the hours fresh.
 Dimensions: `total`, `path`, `exit_path`, `referrer_type`, `referrer_host`, `utm_campaign`,
 `utm_source`, `utm_medium`, `utm_term`, `utm_content`, `device_type`, `os`, `browser`, `country`, `visitor_type` (`new` or `returning`),
 `event` (custom event names), `goal`, `outbound_host` (target hosts of outbound
-clicks), `scroll_depth` (the 25, 50, 75 and 100 milestones), `download` (files
+clicks), `scroll_depth` (the 25, 50, 75 and 100 milestones), `path_scroll` (the
+same milestones by page, stored as `50 /pricing`: the events and the distinct
+visitors who reached that depth on that path, up to four rows per scrolled path in
+each bucket; it ranks by events in `Stats::top()` with exact per-row users, and
+`rollups.disabled_dimensions` can turn it off; its rows carry events and visitors,
+no page views or sessions; the share of a page's visitors who scrolled that far is
+about the row's `users` divided by the `users` of `topFor(Path, ['/pricing'])`,
+approximate because a scroll event is not tied to a page view in the range, so
+at the edges of a range it can exceed 100 per cent), `download` (files
 that were downloaded: the path of a file on the site, or `host/path` for a file
 elsewhere), `file_extension` (`pdf`, `zip` and the other configured extensions),
 `viewport` (the size class of the
@@ -729,7 +737,7 @@ Stats::realtime();                           // Realtime
 |---|---|
 | `summary()` | `pageViews`, `users`, `usersExact`, `newUsers`, `returningUsers`, `sessions`, `bounces`, `bounceRate`, `avgSessionDuration`, `events`, `goalCompletions`, `revenue`, `conversionRate`, `through`, `incomplete`, `engagedSeconds`, `avgEngagementPerUser`, `avgEngagementPerSession` |
 | `timeseries(Hour or Day)` | One point per bucket of the range, empty buckets as zeros |
-| `top(dimension, limit)` | The best values of a dimension: paths, languages, statuses and error paths by page views, events, goals, outbound hosts, scroll depth, downloads and file extensions by events, everything else by sessions. Use the entry-path sessions of `path` rows and the last page of `exit_path` rows for landing and exit pages. Throws an `InvalidArgumentException` for `total` and for a dimension in `rollups.disabled_dimensions` |
+| `top(dimension, limit)` | The best values of a dimension: paths, languages, statuses and error paths by page views, events, goals, outbound hosts, scroll depth (also by path), downloads and file extensions by events, everything else by sessions. Use the entry-path sessions of `path` rows and the last page of `exit_path` rows for landing and exit pages. Throws an `InvalidArgumentException` for `total` and for a dimension in `rollups.disabled_dimensions` |
 | `goals()` | Each goal with completions, revenue, users and conversion rate |
 | `funnel(steps)` | Users per step with the rate from the previous and from the first step, the overall conversion, `coveredFrom`, `complete` and `through` |
 | `realtime()` | Visitors with a page view in the last `stats.realtime_minutes` (default 5) and the page each of them viewed last, read from the raw events |
