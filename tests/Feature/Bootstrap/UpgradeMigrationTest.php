@@ -88,7 +88,7 @@ class UpgradeMigrationTest extends TestCase
             $table->string('path', 512);
             $table->unsignedSmallInteger('status');
             $table->string('referrer_host')->nullable();
-            $table->enum('referrer_type', ['direct', 'search', 'social', 'referral', 'campaign'])->default('direct');
+            $table->enum('referrer_type', ['direct', 'search', 'social', 'referral'])->default('direct');
             $table->string('utm_source')->nullable();
             $table->string('utm_medium')->nullable();
             $table->string('utm_campaign')->nullable();
