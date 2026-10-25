@@ -154,6 +154,36 @@ class CollectEndpointTest extends TestCase
         $this->assertSame(['/pricing', '/docs'], AnalyticsEvent::query()->orderBy('id')->pluck('path')->all());
     }
 
+    public function test_a_client_page_view_is_kept_when_the_server_skipped_the_prefetch_request(): void
+    {
+        $this->withCredentials()->withCookie('spa_analytics_vid', self::VISITOR)
+            ->withHeaders(['Accept' => 'text/html', 'Purpose' => 'prefetch', 'User-Agent' => 'Mozilla/5.0 (X11; Linux) Firefox/121.0'])
+            ->get('/pricing')->assertOk();
+
+        $this->assertSame(0, AnalyticsEvent::query()->count());
+
+        $this->collect([['kind' => 'pageview', 'path' => '/pricing']])->assertNoContent();
+
+        $event = AnalyticsEvent::query()->sole();
+
+        $this->assertSame('/pricing', $event->path);
+        $this->assertNull($event->status);
+    }
+
+    public function test_an_inertia_visit_and_the_client_page_view_of_it_are_one_page_view(): void
+    {
+        $this->withCredentials()->withCookie('spa_analytics_vid', self::VISITOR)
+            ->withHeaders(['X-Inertia' => 'true', 'User-Agent' => 'Mozilla/5.0 (X11; Linux) Firefox/121.0'])
+            ->get('/pricing')->assertOk();
+
+        $this->collect([['kind' => 'pageview', 'path' => '/pricing']])->assertNoContent();
+
+        $event = AnalyticsEvent::query()->sole();
+
+        $this->assertSame('/pricing', $event->path);
+        $this->assertSame(200, $event->status);
+    }
+
     public function test_bot_user_agents_are_flagged(): void
     {
         $this->collect([['kind' => 'pageview', 'path' => '/docs']], ['User-Agent' => 'Mozilla/5.0 (compatible; Googlebot/2.1)'])->assertNoContent();

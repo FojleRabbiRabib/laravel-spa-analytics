@@ -1,7 +1,6 @@
 import { buildApi, replayQueued } from './api';
 import { downloadTarget } from './download';
 import { createEngagementTracker } from './engagement';
-import { isInertiaPage } from './inertia';
 import { watchNavigation } from './navigation';
 import { outboundTarget } from './outbound';
 import { createQueue } from './queue';
@@ -14,8 +13,9 @@ import { viewportWidth } from './viewport';
  * view has been written before it arrives), transitions of a single-page app, file downloads, outbound clicks, scroll
  * depth, the time the visitor actively spends on each page (sent when the page is left or hidden) and the
  * `window.spaAnalytics` API. The first page view of a load is recorded by the server, so it is not sent
- * here, and Inertia visits are left to the server for the same reason. A click on a link to a file is a download and
- * not an outbound click, even when the file is on another site.
+ * here. Every later transition is sent, Inertia visits included: the server ignores a client page view of a path it
+ * just recorded, and a visit served from Inertia's prefetch cache reaches the server not at all. A click on a link to
+ * a file is a download and not an outbound click, even when the file is on another site.
  */
 export const startEvents = (collectUrl: string, downloadExtensions: readonly string[] = []): void => {
     const queue = createQueue({
@@ -54,9 +54,7 @@ export const startEvents = (collectUrl: string, downloadExtensions: readonly str
             engagement.reset(Date.now());
             scroll.reset();
 
-            if (!isInertiaPage(document)) {
-                queue.push({ kind: 'pageview', path: to, referrer: `${window.location.origin}${from}` }, true);
-            }
+            queue.push({ kind: 'pageview', path: to, referrer: `${window.location.origin}${from}` }, true);
         },
     );
 

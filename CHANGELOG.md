@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Re-publish the script after upgrading (`php artisan vendor:publish --tag=spa-analytics-assets --force`); there is no migration and no new config.
+
+### Fixed
+
+- Page views were missed when an Inertia visit was served from the prefetch cache (`<Link prefetch>`): the server ignores the `Purpose: prefetch` request, and the click sends no request, while the browser script skipped every transition on an Inertia page. The script now reports every single-page transition, Inertia pages included, and the server keeps ignoring a client page view of a path it recorded within the last five seconds, so a normal Inertia visit is still counted once. The back and forward buttons on Inertia pages, silently lost before, are counted too. Limits: a response slower than five seconds can count one visit twice, and a `replaceState` visit served from the cache is still not counted.
+
 ## [0.7.0] - 2026-10-09
 
 Two new migrations, a new browser script, a new config key and new fields on `Summary` and `TopRow`. After upgrading, publish the migrations again and migrate, and re-publish the script (`php artisan vendor:publish --tag=spa-analytics-assets --force`). There is no history to backfill. If you published the config file, add `'disabled_dimensions' => []` to its `rollups` array (without the key nothing is disabled).
