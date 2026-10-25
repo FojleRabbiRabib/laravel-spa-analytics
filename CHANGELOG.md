@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Re-publish the script after upgrading (`php artisan vendor:publish --tag=spa-analytics-assets --force`); there is no migration and no new config.
+Re-publish the script after upgrading (`php artisan vendor:publish --tag=spa-analytics-assets --force`), and publish the migrations again and migrate (see Changed); there is no new config.
+
+### Changed
+
+- The migrations are folded: the five `create_*` migrations hold the final columns, and the seven `update_*` migrations of earlier versions are replaced by one `update_analytics_tables_rev_2`, which brings the tables of any version from 0.1.0 up to the current shape and does nothing on a fresh install (every change is guarded). Publish the migrations again and migrate; you can upgrade from any version straight to this one.
+
+### Added
+
+- The seven old `update_analytics_*` files that earlier versions published into your app are deleted automatically, once the new `update_analytics_tables_rev_2` is published: right before `migrate`, `migrate:fresh` or `migrate:refresh` collects the pending migrations (not with `--pretend`), and after a publish of the package tags. Only exact file names are deleted, in your `database/migrations` folder and paths outside `vendor/`; the `migrations` table is never touched, so a file restored from git is still skipped as already run. `php artisan spa-analytics:clean-migrations` runs the same cleanup on demand, and `php artisan about` shows how many old files are left.
 
 ### Fixed
 

@@ -26,6 +26,7 @@ return new class extends Migration
             $table->unsignedBigInteger('duration_seconds')->default(0);
             $table->unsignedInteger('events')->default(0);
             $table->decimal('revenue', 14, 2)->default(0);
+            $table->unsignedBigInteger('engaged_seconds')->default(0);
 
             $table->unique(['period', 'bucket_start', 'dimension', 'value_hash'], 'analytics_rollups_bucket_unique');
             $table->index(['dimension', 'period', 'bucket_start']);

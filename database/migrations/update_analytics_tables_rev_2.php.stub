@@ -1,0 +1,115 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * Brings the tables of any earlier version (0.1.0 and later) to the current shape. Every change is guarded by what
+     * the table already has, so on a fresh install, where the create migrations hold the final columns, this is a no-op.
+     * Rename this file whenever the database changes again, so installs that ran it run the new one too.
+     */
+    public function up(): void
+    {
+        $this->events();
+        $this->sessions();
+        $this->rollups();
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * Nothing is dropped: the create migrations own these columns, and they are removed with their tables.
+     */
+    public function down(): void {}
+
+    private function events(): void
+    {
+        if (! Schema::hasTable('analytics_events')) {
+            return;
+        }
+
+        // The columns are widened first and name is added last: name is the marker for this step, so if an engine
+        // without transactional DDL stops half way, running again repeats the harmless widening and finishes.
+        if (! Schema::hasColumn('analytics_events', 'name')) {
+            if (DB::getDriverName() === 'pgsql') {
+                $table = DB::connection()->getTablePrefix().'analytics_events';
+
+                DB::statement('alter table "'.$table.'" drop constraint if exists "'.$table.'_type_check"');
+            }
+
+            Schema::table('analytics_events', function (Blueprint $table) {
+                $table->string('type', 32)->default('page_view')->change();
+                $table->string('path', 512)->nullable()->change();
+                $table->unsignedSmallInteger('status')->nullable()->change();
+            });
+
+            Schema::table('analytics_events', function (Blueprint $table) {
+                $table->string('name', 128)->nullable()->after('type');
+                $table->decimal('value', 12, 2)->nullable()->after('properties');
+            });
+        }
+
+        $this->addColumns('analytics_events', [
+            'target_host' => fn (Blueprint $table) => $table->string('target_host', 255)->nullable(),
+            'target_path' => fn (Blueprint $table) => $table->string('target_path', 512)->nullable(),
+            'scroll_percent' => fn (Blueprint $table) => $table->unsignedTinyInteger('scroll_percent')->nullable(),
+            'file_extension' => fn (Blueprint $table) => $table->string('file_extension', 16)->nullable(),
+            'engaged_seconds' => fn (Blueprint $table) => $table->unsignedSmallInteger('engaged_seconds')->nullable(),
+        ]);
+
+        if (! Schema::hasIndex('analytics_events', ['name', 'occurred_at'])) {
+            Schema::table('analytics_events', fn (Blueprint $table) => $table->index(['name', 'occurred_at']));
+        }
+    }
+
+    private function sessions(): void
+    {
+        if (! Schema::hasTable('analytics_sessions')) {
+            return;
+        }
+
+        $this->addColumns('analytics_sessions', [
+            'device_type' => fn (Blueprint $table) => $table->string('device_type', 16)->nullable(),
+            'os' => fn (Blueprint $table) => $table->string('os', 32)->nullable(),
+            'browser' => fn (Blueprint $table) => $table->string('browser', 32)->nullable(),
+            'browser_version' => fn (Blueprint $table) => $table->string('browser_version', 16)->nullable(),
+            'country' => fn (Blueprint $table) => $table->char('country', 2)->nullable(),
+            'viewport' => fn (Blueprint $table) => $table->string('viewport', 8)->nullable(),
+        ]);
+
+        foreach ([['started_at', 'country'], ['started_at', 'device_type']] as $columns) {
+            if (! Schema::hasIndex('analytics_sessions', $columns)) {
+                Schema::table('analytics_sessions', fn (Blueprint $table) => $table->index($columns));
+            }
+        }
+    }
+
+    private function rollups(): void
+    {
+        if (! Schema::hasTable('analytics_rollups')) {
+            return;
+        }
+
+        $this->addColumns('analytics_rollups', [
+            'engaged_seconds' => fn (Blueprint $table) => $table->unsignedBigInteger('engaged_seconds')->default(0),
+        ]);
+    }
+
+    /**
+     * @param  array<string, callable(Blueprint): mixed>  $columns
+     */
+    private function addColumns(string $table, array $columns): void
+    {
+        foreach ($columns as $name => $definition) {
+            if (! Schema::hasColumn($table, $name)) {
+                Schema::table($table, $definition);
+            }
+        }
+    }
+};

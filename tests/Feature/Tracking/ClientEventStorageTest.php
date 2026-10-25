@@ -13,7 +13,6 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\EventWriter;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
 use Illuminate\Support\Defer\DeferredCallbackCollection;
-use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 class ClientEventStorageTest extends TestCase
@@ -131,19 +130,6 @@ class ClientEventStorageTest extends TestCase
         $this->assertSame('zip', $event->file_extension);
     }
 
-    public function test_the_downloads_migration_adds_the_column_and_drops_it_again(): void
-    {
-        $migration = include __DIR__.'/../../../database/migrations/update_analytics_events_table_for_downloads.php.stub';
-
-        $migration->down();
-
-        $this->assertFalse(Schema::hasColumn('analytics_events', 'file_extension'));
-
-        $migration->up();
-
-        $this->assertTrue(Schema::hasColumn('analytics_events', 'file_extension'));
-    }
-
     #[DataProvider('writeModes')]
     public function test_engaged_seconds_survive_every_write_mode(string $mode): void
     {
@@ -166,37 +152,6 @@ class ClientEventStorageTest extends TestCase
 
         $this->assertSame(EventType::Engagement, $event->type);
         $this->assertSame(75, $event->engaged_seconds);
-    }
-
-    public function test_the_engagement_migrations_add_their_columns_and_drop_them_again(): void
-    {
-        $events = include __DIR__.'/../../../database/migrations/update_analytics_events_table_for_engagement.php.stub';
-        $rollups = include __DIR__.'/../../../database/migrations/update_analytics_rollups_table_for_engagement.php.stub';
-
-        $events->down();
-        $rollups->down();
-
-        $this->assertFalse(Schema::hasColumn('analytics_events', 'engaged_seconds'));
-        $this->assertFalse(Schema::hasColumn('analytics_rollups', 'engaged_seconds'));
-
-        $events->up();
-        $rollups->up();
-
-        $this->assertTrue(Schema::hasColumn('analytics_events', 'engaged_seconds'));
-        $this->assertTrue(Schema::hasColumn('analytics_rollups', 'engaged_seconds'));
-    }
-
-    public function test_the_viewport_migration_adds_the_column_and_drops_it_again(): void
-    {
-        $migration = include __DIR__.'/../../../database/migrations/update_analytics_sessions_table_for_viewport.php.stub';
-
-        $migration->down();
-
-        $this->assertFalse(Schema::hasColumn('analytics_sessions', 'viewport'));
-
-        $migration->up();
-
-        $this->assertTrue(Schema::hasColumn('analytics_sessions', 'viewport'));
     }
 
     public function test_the_new_fields_survive_to_array_and_from_array(): void
@@ -222,18 +177,5 @@ class ClientEventStorageTest extends TestCase
 
         $this->assertSame('clicked', $event->name);
         $this->assertNull($event->target_host);
-    }
-
-    public function test_the_migration_adds_the_columns_and_drops_them_again(): void
-    {
-        $migration = include __DIR__.'/../../../database/migrations/update_analytics_events_table_for_client_events.php.stub';
-
-        $migration->down();
-
-        $this->assertFalse(Schema::hasColumn('analytics_events', 'target_host'));
-
-        $migration->up();
-
-        $this->assertTrue(Schema::hasColumns('analytics_events', ['target_host', 'target_path', 'scroll_percent']));
     }
 }

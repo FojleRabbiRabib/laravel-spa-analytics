@@ -50,17 +50,6 @@ class SessionAudienceTest extends TestCase
         $this->assertTrue(Schema::hasColumns('analytics_sessions', ['device_type', 'os', 'browser', 'browser_version', 'country']));
     }
 
-    public function test_down_removes_the_audience_columns_and_keeps_sessions(): void
-    {
-        AnalyticsSession::factory()->create();
-
-        (include __DIR__.'/../../../database/migrations/update_analytics_sessions_table_for_audience.php.stub')->down();
-
-        $this->assertFalse(Schema::hasColumn('analytics_sessions', 'country'));
-        $this->assertFalse(Schema::hasColumn('analytics_sessions', 'device_type'));
-        $this->assertSame(1, AnalyticsSession::query()->count());
-    }
-
     public function test_a_new_session_takes_the_audience_of_its_first_page_view(): void
     {
         app(DatabaseEventStore::class)->store($this->pageView($this->audience()));

@@ -27,6 +27,7 @@ abstract class TestCase extends Orchestra
         'analytics_visitor_links',
         'cache',
         'cache_locks',
+        'migrations',
     ];
 
     /**

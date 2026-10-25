@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FojleRabbiRabib\LaravelSpaAnalytics;
 
+use FojleRabbiRabib\LaravelSpaAnalytics\Console\CleanMigrationsCommand;
 use FojleRabbiRabib\LaravelSpaAnalytics\Console\PruneCommand;
 use FojleRabbiRabib\LaravelSpaAnalytics\Console\RollupCommand;
 use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\BotDetector;
@@ -13,7 +14,9 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\GeoLocator;
 use FojleRabbiRabib\LaravelSpaAnalytics\Events\VisitorIdentified;
 use FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware\CapturePageView;
 use FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware\ResolveVisitorIdentity;
+use FojleRabbiRabib\LaravelSpaAnalytics\Listeners\CleanOldMigrations;
 use FojleRabbiRabib\LaravelSpaAnalytics\Listeners\StoreVisitorFingerprint;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Migrations\OldPatchMigrations;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\AnalyticsTracker;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\DatabaseEventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\HeaderGeoLocator;
@@ -21,9 +24,11 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\PatternBotDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\PatternDeviceDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\ReferrerClassifier;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Foundation\Console\AboutCommand;
+use Illuminate\Foundation\Events\VendorTagPublished;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Blade;
@@ -46,20 +51,14 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
             ->hasConfigFile('spa-analytics')
             ->hasViews('laravel-spa-analytics')
             ->hasRoute('web')
-            ->hasCommands([RollupCommand::class, PruneCommand::class])
+            ->hasCommands([RollupCommand::class, PruneCommand::class, CleanMigrationsCommand::class])
             ->hasMigrations([
                 'create_analytics_events_table',
                 'create_analytics_visitor_fingerprints_table',
                 'create_analytics_sessions_table',
                 'create_analytics_visitor_links_table',
-                'update_analytics_events_table_for_custom_events',
-                'update_analytics_sessions_table_for_audience',
                 'create_analytics_rollups_table',
-                'update_analytics_events_table_for_client_events',
-                'update_analytics_events_table_for_downloads',
-                'update_analytics_sessions_table_for_viewport',
-                'update_analytics_events_table_for_engagement',
-                'update_analytics_rollups_table_for_engagement',
+                'update_analytics_tables_rev_2',
             ])
             ->hasInstallCommand(function (InstallCommand $command): void {
                 $command
@@ -85,6 +84,7 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
         ));
         $this->app->bind(EventStore::class, DatabaseEventStore::class);
         $this->app->singleton(AnalyticsTracker::class);
+        $this->app->bind(OldPatchMigrations::class, fn ($app): OldPatchMigrations => new OldPatchMigrations($app['migrator']));
         $this->app->bind(ReferrerClassifier::class, fn (): ReferrerClassifier => new ReferrerClassifier(
             (array) config('spa-analytics.tracking.search_hosts'),
             (array) config('spa-analytics.tracking.social_hosts'),
@@ -108,7 +108,13 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
             'Write mode' => (string) config('spa-analytics.tracking.write_mode'),
             'Session timeout' => config('spa-analytics.sessions.timeout_minutes').' minutes',
             'Re-linking' => config('spa-analytics.identity.relink') ? 'ON' : 'OFF',
+            'Old migration files' => ($old = count($this->app->make(OldPatchMigrations::class)->published())) === 0
+                ? 'none'
+                : "{$old} (removed at the next migrate)",
         ]);
+
+        Event::listen(CommandStarting::class, [CleanOldMigrations::class, 'whenCommandStarts']);
+        Event::listen(VendorTagPublished::class, [CleanOldMigrations::class, 'whenPublished']);
 
         RateLimiter::for('spa-analytics-identity', fn (Request $request): array => $this->limits($request, 'identity'));
         RateLimiter::for('spa-analytics-collect', fn (Request $request): array => $this->limits($request, 'collect'));

@@ -82,7 +82,7 @@ uses one). It renders nothing when `SPA_ANALYTICS_ENABLED=false`.
 
 ### Upgrading
 
-Every release that adds migrations works the same way: publish again, then
+Every release that changes the database works the same way: publish again, then
 migrate. Migration files you already have are left alone and only the new ones
 are added.
 
@@ -91,8 +91,35 @@ php artisan vendor:publish --tag="spa-analytics-migrations"
 php artisan migrate
 ```
 
-**From 0.6.x**: engagement time. Publish the migrations again and migrate (two
-new migrations add a nullable `engaged_seconds` column to `analytics_events` and
+The package ships one `create_*` migration per table, holding the final columns,
+and one `update_analytics_tables_rev_*` migration that brings the tables of any
+earlier version (0.1.0 and later) to the current shape. Every change in it is
+guarded by what the table already has, so it does nothing on a fresh install, and
+you can upgrade from any version straight to the latest. The update migration is
+renamed whenever the database changes again, so it runs for installs that ran the
+earlier one.
+
+Versions up to 0.7.0 published seven separate `update_analytics_*` files that the
+new update migration replaces. The package removes them for you: once the current
+update migration is published, they are deleted automatically right before
+`php artisan migrate`, `migrate:fresh` or `migrate:refresh` collects the pending
+migrations (a line tells you what was deleted), and after
+`vendor:publish --tag="spa-analytics-migrations"`. Only those exact file names are
+deleted, only in your `database/migrations` folder and other paths outside
+`vendor/`, and the `migrations` table is never touched, so a file that comes back
+from git is still skipped as already run and a rollback stays safe (Laravel skips
+a migration whose file is missing). This matters after
+`vendor:publish --tag="spa-analytics-migrations" --force`, which overwrites your
+create migrations with the new ones: the old update files would then fail on a
+fresh database. `php artisan spa-analytics:clean-migrations` runs the same
+cleanup on demand, and `php artisan about` shows how many old files are left.
+
+To go back to 0.7.x, do not publish the migrations again: the schema is identical,
+and publishing under 0.7.x would add the seven old files with new timestamps, which
+fail with "duplicate column" on a database that already has the columns.
+
+**From 0.6.x**: engagement time. Publish the migrations again and migrate (one
+new migration adds a nullable `engaged_seconds` column to `analytics_events` and
 an `engaged_seconds` column to `analytics_rollups`) and re-publish the script
 with `php artisan vendor:publish --tag="spa-analytics-assets" --force`; an old
 cached `client.js` keeps working but sends no engagement time. The numbers start
