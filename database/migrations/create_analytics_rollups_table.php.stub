@@ -1,12 +1,21 @@
 <?php
 
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupDimension;
+use FojleRabbiRabib\LaravelSpaAnalytics\Support\AnalyticsDatabase;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * The connection set in spa-analytics.database.connection; null runs on the default connection.
+     */
+    public function getConnection(): ?string
+    {
+        return AnalyticsDatabase::name();
+    }
+
     /**
      * Run the migrations.
      */

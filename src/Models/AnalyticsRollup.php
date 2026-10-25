@@ -8,6 +8,7 @@ use Carbon\CarbonInterface;
 use FojleRabbiRabib\LaravelSpaAnalytics\Database\Factories\AnalyticsRollupFactory;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupDimension;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupPeriod;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\Concerns\UsesAnalyticsConnection;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -32,6 +33,7 @@ use Illuminate\Database\Eloquent\Model;
 class AnalyticsRollup extends Model
 {
     use HasFactory;
+    use UsesAnalyticsConnection;
 
     protected $table = 'analytics_rollups';
 

@@ -7,7 +7,7 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Query;
 use Carbon\CarbonImmutable;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\Realtime;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
-use Illuminate\Support\Facades\DB;
+use FojleRabbiRabib\LaravelSpaAnalytics\Support\AnalyticsDatabase;
 
 class RealtimeReader
 {
@@ -23,7 +23,7 @@ class RealtimeReader
         $latest = [];
         $pageViews = 0;
 
-        $events = DB::table('analytics_events')
+        $events = AnalyticsDatabase::table('analytics_events')
             ->where('type', EventType::PageView)
             ->where('is_bot', false)
             ->where('occurred_at', '>', $now->subMinutes($minutes)->toDateTimeString())

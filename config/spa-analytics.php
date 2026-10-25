@@ -29,6 +29,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Database
+    |--------------------------------------------------------------------------
+    |
+    | The database connection the package tables live on, models, queries,
+    | transactions and migrations included. Null uses the application's default
+    | connection. Set it before the first migrate: changing it later moves no
+    | data. The migrations table itself stays on the default connection.
+    |
+    */
+
+    'database' => [
+        'connection' => env('SPA_ANALYTICS_DB_CONNECTION'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Identity
     |--------------------------------------------------------------------------
     |

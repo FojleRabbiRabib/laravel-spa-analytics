@@ -9,6 +9,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Database\Factories\AnalyticsSessionFacto
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\DeviceType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ViewportSize;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\Concerns\UsesAnalyticsConnection;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -44,6 +45,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class AnalyticsSession extends Model
 {
     use HasFactory;
+    use UsesAnalyticsConnection;
 
     protected $table = 'analytics_sessions';
 

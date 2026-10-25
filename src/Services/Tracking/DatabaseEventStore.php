@@ -8,8 +8,8 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\CustomEventData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
+use FojleRabbiRabib\LaravelSpaAnalytics\Support\AnalyticsDatabase;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
 class DatabaseEventStore implements EventStore
 {
@@ -41,7 +41,7 @@ class DatabaseEventStore implements EventStore
                         return false;
                     }
 
-                    DB::transaction(function () use ($data, $visitorId): void {
+                    AnalyticsDatabase::connection()->transaction(function () use ($data, $visitorId): void {
                         $data = $data->withVisitorId($visitorId);
                         $sessionId = $data instanceof CustomEventData
                             ? $this->sessions->findActive($data->visitorId, $data->occurredAt)?->id

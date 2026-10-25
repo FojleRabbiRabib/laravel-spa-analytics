@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Models;
 
 use FojleRabbiRabib\LaravelSpaAnalytics\Database\Factories\VisitorLinkFactory;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\Concerns\UsesAnalyticsConnection;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 class VisitorLink extends Model
 {
     use HasFactory;
+    use UsesAnalyticsConnection;
 
     protected $table = 'analytics_visitor_links';
 

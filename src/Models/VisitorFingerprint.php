@@ -6,6 +6,7 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Models;
 
 use Carbon\CarbonInterface;
 use FojleRabbiRabib\LaravelSpaAnalytics\Database\Factories\VisitorFingerprintFactory;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\Concerns\UsesAnalyticsConnection;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -25,6 +26,7 @@ use Illuminate\Database\Eloquent\Model;
 class VisitorFingerprint extends Model
 {
     use HasFactory;
+    use UsesAnalyticsConnection;
 
     protected $table = 'analytics_visitor_fingerprints';
 

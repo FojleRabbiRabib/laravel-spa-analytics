@@ -15,6 +15,7 @@ Re-publish the script after upgrading (`php artisan vendor:publish --tag=spa-ana
 
 ### Added
 
+- `spa-analytics.database.connection` (`SPA_ANALYTICS_DB_CONNECTION`, default `null`) puts the package tables on their own database connection. The models, every raw query, the three transactions (event store, re-linking, rollups), the `binary` check for MySQL and MariaDB, and the migrations follow it; Laravel's `migrations` table stays on the default connection. Nothing changes while it is `null`. To use the key (a published config file works without it, since the default fills in), also re-publish the migrations with `--force` (the connection is named in the migration files). It moves no data: set it before the first migrate (see the README for `migrate:fresh` and transactions).
 - The seven old `update_analytics_*` files that earlier versions published into your app are deleted automatically, once the new `update_analytics_tables_rev_2` is published: right before `migrate`, `migrate:fresh` or `migrate:refresh` collects the pending migrations (not with `--pretend`), and after a publish of the package tags. Only exact file names are deleted, in your `database/migrations` folder and paths outside `vendor/`; the `migrations` table is never touched, so a file restored from git is still skipped as already run. `php artisan spa-analytics:clean-migrations` runs the same cleanup on demand, and `php artisan about` shows how many old files are left.
 
 ### Fixed

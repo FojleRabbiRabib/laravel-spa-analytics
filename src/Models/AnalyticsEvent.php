@@ -8,6 +8,7 @@ use Carbon\CarbonInterface;
 use FojleRabbiRabib\LaravelSpaAnalytics\Database\Factories\AnalyticsEventFactory;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\Concerns\UsesAnalyticsConnection;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class AnalyticsEvent extends Model
 {
     use HasFactory;
+    use UsesAnalyticsConnection;
 
     protected $table = 'analytics_events';
 

@@ -10,6 +10,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\RangePlan;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupDimension;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupPeriod;
+use FojleRabbiRabib\LaravelSpaAnalytics\Support\AnalyticsDatabase;
 use FojleRabbiRabib\LaravelSpaAnalytics\Support\Sql;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
@@ -239,7 +240,7 @@ class UsersCounter
     private function source(RollupDimension $dimension, CarbonImmutable $from, CarbonImmutable $to): array
     {
         if ($dimension->is(RollupDimension::ExitPath)) {
-            $sessions = DB::table('analytics_sessions as s')
+            $sessions = AnalyticsDatabase::table('analytics_sessions as s')
                 ->where('s.is_bot', false)
                 ->where('s.started_at', '>=', $from->toDateTimeString())
                 ->where('s.started_at', '<', $to->toDateTimeString());
@@ -282,7 +283,7 @@ class UsersCounter
      */
     private function rawFloor(): ?CarbonImmutable
     {
-        $oldest = DB::table('analytics_events')->min('occurred_at');
+        $oldest = AnalyticsDatabase::table('analytics_events')->min('occurred_at');
 
         return $oldest === null ? null : RollupPeriod::Day->start(CarbonImmutable::parse((string) $oldest, (string) config('app.timezone')));
     }
@@ -294,7 +295,7 @@ class UsersCounter
 
     private function events(EventType $type, CarbonImmutable $from, CarbonImmutable $to): Builder
     {
-        return DB::table('analytics_events as e')
+        return AnalyticsDatabase::table('analytics_events as e')
             ->where('e.type', $type)
             ->where('e.is_bot', false)
             ->where('e.occurred_at', '>=', $from->toDateTimeString())

@@ -9,9 +9,9 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\FunnelStep;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\RangePlan;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\FunnelStepType;
+use FojleRabbiRabib\LaravelSpaAnalytics\Support\AnalyticsDatabase;
 use FojleRabbiRabib\LaravelSpaAnalytics\Support\Sql;
 use Illuminate\Database\Query\Builder;
-use Illuminate\Support\Facades\DB;
 
 class FunnelCounter
 {
@@ -42,7 +42,7 @@ class FunnelCounter
             return $counts;
         }
 
-        $matching = fn (): Builder => DB::table('analytics_events')
+        $matching = fn (): Builder => AnalyticsDatabase::table('analytics_events')
             ->where('is_bot', false)
             ->where('occurred_at', '>=', $from->toDateTimeString())
             ->where('occurred_at', '<', $plan->effectiveTo->toDateTimeString())

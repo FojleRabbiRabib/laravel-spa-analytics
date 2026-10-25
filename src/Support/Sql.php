@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Support;
 
-use Illuminate\Support\Facades\DB;
-
 final class Sql
 {
     /**
@@ -14,7 +12,7 @@ final class Sql
      */
     public static function exact(string $column): string
     {
-        return in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)
+        return in_array(AnalyticsDatabase::connection()->getDriverName(), ['mysql', 'mariadb'], true)
             ? 'binary '.$column
             : $column;
     }

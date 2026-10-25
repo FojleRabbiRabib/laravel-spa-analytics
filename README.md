@@ -207,6 +207,7 @@ All keys live in `config/spa-analytics.php`.
 |---|---|---|
 | `enabled` | `true` | Master switch (`SPA_ANALYTICS_ENABLED`) |
 | `retention_days` | `null` | Days of raw events and sessions to keep; `null`, empty, `0` or a non-number keeps everything (`SPA_ANALYTICS_RETENTION_DAYS`) |
+| `database.connection` | `null` | Connection the package tables live on; `null` uses the default connection (`SPA_ANALYTICS_DB_CONNECTION`). Set it before the first migrate |
 | `collect.rate_limit_per_minute` | `120` | Per-visitor (cookie) limit on the collect endpoint |
 | `collect.rate_limit_per_ip_per_minute` | `1200` | Per-address ceiling on the collect endpoint |
 | `collect.download_extensions` | `pdf`, `zip`, `docx`, `xlsx`, `csv`, `mp3`, `mp4` and others | File extensions the browser script reports as downloads (see the config file for the full list); a link with the `download` attribute counts too |
@@ -542,6 +543,41 @@ Only these seams are swappable. Re-linking, the session model scopes and the
 visitor link lookup read and write the package's own tables directly, so a store
 that writes elsewhere gets no rows in `analytics_sessions` and re-linking finds
 nothing to move.
+
+### A separate database
+
+To keep the analytics tables on their own database, add a connection to
+`config/database.php` and name it in `config/spa-analytics.php` (or set
+`SPA_ANALYTICS_DB_CONNECTION`) before the first `php artisan migrate`:
+
+```php
+'database' => ['connection' => 'analytics'],
+```
+
+The models, every query and transaction of the package and its migrations then use
+that connection, while Laravel's own `migrations` table stays on the default one.
+Notes:
+
+- It moves no data. Changing the key on a running app leaves the old tables where
+  they are; copy them yourself.
+- `php artisan migrate:fresh` wipes only the default database. Run
+  `php artisan db:wipe --database=analytics` first, or the create migrations fail
+  with "table already exists".
+- A transaction cannot span two databases. The package keeps all of its own work on
+  its connection, so do not wrap `Analytics::track()` and your own writes in one
+  transaction and expect them to commit together.
+- The migrations name the connection themselves, and a copy you published earlier
+  does not: re-publish them with
+  `php artisan vendor:publish --tag="spa-analytics-migrations" --force` before you
+  build a new database. Because they name it, `migrate --database=x` does not move
+  them.
+- Tests in your app that use `RefreshDatabase` or `DatabaseTransactions` only
+  reset the default connection; add the analytics connection to
+  `$connectionsToTransact` or its rows stay between tests.
+- A subclass of a package model that sets its own `$connection` keeps it for that
+  model only; the package's own queries still use the configured connection.
+- The cache lock the package takes per visitor uses your cache store, not this
+  connection.
 
 ## Rollups and retention
 

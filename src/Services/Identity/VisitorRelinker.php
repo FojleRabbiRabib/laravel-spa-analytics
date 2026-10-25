@@ -12,8 +12,8 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\VisitorFingerprint;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\VisitorLink;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\SessionMerger;
+use FojleRabbiRabib\LaravelSpaAnalytics\Support\AnalyticsDatabase;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
 class VisitorRelinker
 {
@@ -61,7 +61,7 @@ class VisitorRelinker
                     return $existing;
                 }
 
-                DB::transaction(function () use ($identity, $adopted): void {
+                AnalyticsDatabase::connection()->transaction(function () use ($identity, $adopted): void {
                     $moved = AnalyticsSession::query()->where('visitor_id', $identity->id)->pluck('id')->all();
 
                     AnalyticsEvent::query()->where('visitor_id', $identity->id)->update(['visitor_id' => $adopted]);

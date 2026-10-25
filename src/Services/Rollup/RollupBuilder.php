@@ -10,6 +10,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupDimension;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupPeriod;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsRollup;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
+use FojleRabbiRabib\LaravelSpaAnalytics\Support\AnalyticsDatabase;
 use FojleRabbiRabib\LaravelSpaAnalytics\Support\Sql;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
@@ -40,7 +41,7 @@ class RollupBuilder
         $start = $period->start($start);
         $rows = $this->rows($start->toDateTimeString(), $period->end($start)->toDateTimeString());
 
-        DB::transaction(function () use ($period, $start, $rows): void {
+        AnalyticsDatabase::connection()->transaction(function () use ($period, $start, $rows): void {
             AnalyticsRollup::query()
                 ->where('period', $period)
                 ->where('bucket_start', $start->toDateTimeString())
@@ -104,7 +105,7 @@ class RollupBuilder
      */
     private function addEngagement(array &$rows, string $from, string $to): void
     {
-        $groups = DB::table('analytics_events')
+        $groups = AnalyticsDatabase::table('analytics_events')
             ->where('type', EventType::Engagement)
             ->where('is_bot', false)
             ->where('occurred_at', '>=', $from)
@@ -163,7 +164,7 @@ class RollupBuilder
      */
     private function addPageViews(array &$rows, string $from, string $to): void
     {
-        $base = fn () => DB::table('analytics_events as e')
+        $base = fn () => AnalyticsDatabase::table('analytics_events as e')
             ->where('e.type', EventType::PageView)
             ->where('e.is_bot', false)
             ->where('e.occurred_at', '>=', $from)
@@ -285,7 +286,7 @@ class RollupBuilder
      */
     private function addNamedEvents(array &$rows, string $from, string $to): void
     {
-        $events = DB::table('analytics_events')
+        $events = AnalyticsDatabase::table('analytics_events')
             ->whereIn('type', [EventType::Custom, EventType::Goal])
             ->where('is_bot', false)
             ->where('occurred_at', '>=', $from)
@@ -336,7 +337,7 @@ class RollupBuilder
      */
     private function addDownloads(array &$rows, string $from, string $to): void
     {
-        $groups = DB::table('analytics_events')
+        $groups = AnalyticsDatabase::table('analytics_events')
             ->where('type', EventType::FileDownload)
             ->where('is_bot', false)
             ->where('occurred_at', '>=', $from)
@@ -364,7 +365,7 @@ class RollupBuilder
     {
         $expression = $text ? Sql::exact($column) : $column;
 
-        $groups = DB::table('analytics_events')
+        $groups = AnalyticsDatabase::table('analytics_events')
             ->where('type', $type)
             ->where('is_bot', false)
             ->where('occurred_at', '>=', $from)
