@@ -224,6 +224,8 @@ All keys live in `config/spa-analytics.php`.
 | `rollups.lookback_hours` | `3` | Recent hours each scheduled rollup recomputes |
 | `rollups.disabled_dimensions` | `[]` | Rollup dimensions to stop building (for example `utm_term`, `download`); `total`, `goal` and `visitor_type` cannot be disabled. See [Turning dimensions off](#turning-dimensions-off) |
 | `stats.realtime_minutes` | `5` | Window of `Stats::realtime()` |
+| `stats.live` | `true` | Reports include the hours not rolled up yet (today so far), from the raw events; `false` gives stored numbers only unless `withLive()` is called (`SPA_ANALYTICS_STATS_LIVE`) |
+| `stats.live_max_hours` | `24` | The most hours before the running hour that live part may include; when the rollup is further behind, the live part is left out and the report is `incomplete` |
 | `identity.register_middleware` | `true` | Append the identity middleware to the `web` group |
 | `identity.cookie_name` | `spa_analytics_vid` | Visitor cookie name |
 | `identity.cookie_lifetime_days` | `365` | Cookie lifetime, refreshed on every response |
@@ -738,10 +740,26 @@ How the numbers are built:
   day rollups where a whole day fits and hour rollups at the edges. Rates with
   nothing to divide by are `0.0`. `lastDays(n)` is the `n` complete days before
   today.
-- **Completed hours only:** counts and users stop at `through`, the end of the
-  last completed rolled-up hour, so today's chart lags by up to an hour. Use
-  `realtime()` for the live window. `incomplete` is true when an hour inside the
-  range has no rollup row yet (run `spa-analytics:rollup --since=...`).
+- **Today so far (live):** like GA4, a report includes today. The stored rollups
+  cover completed hours; the hours after the last rolled-up one, up to now, are
+  worked out from the raw events each time you ask, in memory, without storing
+  anything, so a visitor who browses a fresh site shows up within minutes. Every
+  method (`summary`, `timeseries`, `top`, `goals`, `funnel`) includes it, and
+  `through` is then the end of what was read: now, or the end of the range if that is earlier. The live numbers are provisional:
+  an open session's duration and bounce status settle when the hourly rollup
+  runs, and they equal the stored numbers once it has. `withoutLive()` gives the
+  stored numbers only (`through` is the end of the last rolled-up hour);
+  `stats.live` set to `false` makes that the default and `withLive()` adds the
+  live part to one report. `lastDays(n)` still ends at the start of today. The
+  live part is the running hour plus at most `stats.live_max_hours` (24) earlier
+  hours; before any rollup has run it starts at the hour of the oldest raw
+  event. If more would have to be read (the rollup is behind by more), none of it
+  is: counts, users and funnels all stop at the stored end and `incomplete` is
+  true (run the rollup, or raise the setting). It is
+  read once per report instance and costs about 25 queries per live hour, so keep
+  a dashboard's reports in one variable. `incomplete` is also true when an
+  hour inside the range has no rollup row yet (run `spa-analytics:rollup
+  --since=...`). Use `realtime()` for who is on the site right now.
 - **Users** are distinct people over the whole range (like GA4 "Users"), never a
   sum of daily counts. They are counted from the raw events with
   `count(distinct ...)`, which gets slower as the range and traffic grow, and

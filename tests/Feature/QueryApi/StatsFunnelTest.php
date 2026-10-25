@@ -127,7 +127,7 @@ class StatsFunnelTest extends TestCase
         $this->rollUp();
         $this->goal('human', '2026-03-10 12:10:00', 'signup');
 
-        $funnel = Stats::between(Carbon::parse('2026-03-08'), Carbon::parse('2026-03-11'))->funnel([FunnelStep::path('/a'), FunnelStep::goal('signup')]);
+        $funnel = Stats::between(Carbon::parse('2026-03-08'), Carbon::parse('2026-03-11'))->withoutLive()->funnel([FunnelStep::path('/a'), FunnelStep::goal('signup')]);
 
         $this->assertSame([1, 0], array_map(fn ($step) => $step->users, $funnel->steps));
     }

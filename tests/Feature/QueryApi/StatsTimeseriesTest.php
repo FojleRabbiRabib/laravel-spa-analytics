@@ -81,11 +81,11 @@ class StatsTimeseriesTest extends TestCase
 
     public function test_the_series_stops_at_the_last_rolled_up_hour_and_is_empty_without_rollups(): void
     {
-        $this->assertSame([], Stats::between(Carbon::parse('2026-03-08'), Carbon::parse('2026-03-09'))->timeseries());
+        $this->assertSame([], Stats::between(Carbon::parse('2026-03-08'), Carbon::parse('2026-03-09'))->withoutLive()->timeseries());
 
         $this->rollUp();
 
-        $points = Stats::between(Carbon::parse('2026-03-10 10:00:00'), Carbon::parse('2026-03-11 00:00:00'))->timeseries(RollupPeriod::Hour);
+        $points = Stats::between(Carbon::parse('2026-03-10 10:00:00'), Carbon::parse('2026-03-11 00:00:00'))->withoutLive()->timeseries(RollupPeriod::Hour);
 
         $this->assertSame('2026-03-10 11:00:00', end($points)->start->toDateTimeString());
     }

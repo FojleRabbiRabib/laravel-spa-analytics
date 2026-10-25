@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Stats reports include today so far, like GA4. The stored rollups cover completed hours; the hours after the last rolled-up one, up to now, are worked out from the raw events when you call a method, in memory and without storing anything, and added to the stored numbers in `summary()`, `timeseries()`, `top()`, `goals()` and `funnel()`. A visitor on a fresh site, before any rollup has run, shows up within minutes (the case in issue #4). `through` is then the end of what was read: now, or the end of the range if that is earlier. The live numbers are provisional until the hourly rollup runs and equal the stored ones afterwards. New `withLive()` and `withoutLive()` on the report, and config `stats.live` (default `true`; `false` returns the stored numbers by default) and `stats.live_max_hours` (default `24`: the most hours before the running hour that the raw part may include; when the rollup is further behind, none of the live part is read, so counts, users and funnels agree, and `incomplete` is true). `lastDays()` still ends at the start of today. If you published the config file, add `'live' => true` and `'live_max_hours' => 24` to its `stats` array (without them the live part is off and the cap is one hour).
+
+### Changed
+
+- Reports now include the running hour by default, so the numbers of `Stats::between()` that reach today change until the next rollup. Set `stats.live` to `false` (or call `withoutLive()`) for the old behaviour. `StatsReport` and `StatsService` take a new `RollupBuilder` argument (and `StatsReport` a `live` flag); the container resolves it, so only code that builds them by hand is affected. `RollupBuilder` has a new `preview()` that returns the rows of a period without storing them.
+
 ## [0.8.0] - 2026-10-25
 
 Folded migrations, a fixed browser script and one new optional config key. After upgrading, publish the migrations again and migrate, and re-publish the script (`php artisan vendor:publish --tag=spa-analytics-assets --force`). If you published the package views, copy `src="{{ $scriptUrl }}"` into your `client-script.blade.php`. The old `update_analytics_*` migration files in your app are deleted for you. You can upgrade from any version straight to this one.

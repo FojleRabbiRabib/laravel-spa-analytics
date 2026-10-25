@@ -75,6 +75,24 @@ class RollupBuilder
         });
     }
 
+    /**
+     * The rows a bucket would get, worked out from the raw events and sessions without storing anything: no lock, no
+     * transaction, no delete or insert. Dimensions turned off with rollups.disabled_dimensions are left out, as they
+     * are when a bucket is stored. Used for the part of the range that has not been rolled up yet.
+     *
+     * @return array<string, array{page_views: int, visitors: int, sessions: int, bounces: int, duration_seconds: int, events: int, revenue: float, engaged_seconds: int}>
+     */
+    public function preview(CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $this->disabled = $this->settings->disabled();
+
+        return array_filter(
+            $this->rows($from->toDateTimeString(), $to->toDateTimeString()),
+            fn (string $key): bool => $this->enabled(RollupDimension::parseKey($key)[0]),
+            ARRAY_FILTER_USE_KEY,
+        );
+    }
+
     private function enabled(RollupDimension $dimension): bool
     {
         return ! in_array($dimension, $this->disabled, true);

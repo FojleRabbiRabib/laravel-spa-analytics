@@ -147,7 +147,7 @@ class StatsSummaryTest extends TestCase
         Carbon::setTestNow('2026-03-10 12:30:00');
         $this->visit('late', ['2026-03-10 12:10:00']);
 
-        $summary = Stats::between($this->at('2026-03-10 00:00:00'), $this->at('2026-03-11 00:00:00'))->summary();
+        $summary = Stats::between($this->at('2026-03-10 00:00:00'), $this->at('2026-03-11 00:00:00'))->withoutLive()->summary();
 
         $this->assertSame(1, $summary->pageViews);
         $this->assertSame(1, $summary->users);
@@ -162,7 +162,7 @@ class StatsSummaryTest extends TestCase
         Carbon::setTestNow('2026-03-10 11:50:00');
         $this->visit('late', ['2026-03-10 11:45:00']);
 
-        $summary = Stats::between($this->at('2026-03-10 00:00:00'), $this->at('2026-03-11 00:00:00'))->summary();
+        $summary = Stats::between($this->at('2026-03-10 00:00:00'), $this->at('2026-03-11 00:00:00'))->withoutLive()->summary();
 
         $this->assertSame(1, $summary->pageViews);
         $this->assertSame(1, $summary->users);

@@ -168,7 +168,14 @@ return [
     | Stats
     |--------------------------------------------------------------------------
     |
-    | The Stats facade reads rollups, so its numbers cover completed hours.
+    | The Stats facade reads rollups, which cover completed hours. With live on
+    | (the default) a report also adds the hours that have not been rolled up
+    | yet, worked out from the raw events when you ask, so "today so far" is
+    | complete within minutes; those numbers are provisional until the hourly
+    | rollup runs. live_max_hours is the most hours before the running hour
+    | that raw part may include; when the rollup is further behind, it is left out
+    | and the report says incomplete. withLive() and withoutLive() decide per
+    | report.
     | Stats::realtime() reads the raw events of the last realtime_minutes
     | instead, for who is on the site right now.
     |
@@ -176,6 +183,8 @@ return [
 
     'stats' => [
         'realtime_minutes' => 5,
+        'live' => env('SPA_ANALYTICS_STATS_LIVE', true),
+        'live_max_hours' => 24,
     ],
 
     /*

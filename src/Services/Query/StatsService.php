@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\Realtime;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Rollup\DimensionSettings;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Rollup\RollupBuilder;
 
 class StatsService
 {
@@ -19,6 +20,7 @@ class StatsService
         private readonly RealtimeReader $realtime,
         private readonly FunnelCounter $funnels,
         private readonly DimensionSettings $settings,
+        private readonly RollupBuilder $builder,
     ) {}
 
     /**
@@ -37,6 +39,8 @@ class StatsService
             $this->users,
             $this->funnels,
             $this->settings,
+            $this->builder,
+            (bool) config('spa-analytics.stats.live'),
         );
     }
 
