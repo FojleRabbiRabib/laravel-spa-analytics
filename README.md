@@ -80,6 +80,21 @@ Add the collector to your root Blade layout, for example just before `</body>`:
 The directive renders one `<script>` tag (with your CSP nonce when the app
 uses one). It renders nothing when `SPA_ANALYTICS_ENABLED=false`.
 
+The script URL ends in `?v=` and a hash of the published `client.js`, so browsers
+can cache it for as long as you like and a re-published script gets a new URL, which
+is fetched at once. The hash is read on every render (the file is a few kilobytes),
+so it follows the file the moment it is published again. A long `Cache-Control` on
+the file is safe when your web server or CDN keys its cache on the full URL,
+including the query string, and the file is deployed before the HTML that points
+to it: a server that renders the new URL while another still serves the old file
+(a rolling deploy), or a CDN that ignores the query string or is synced late, can
+cache the old code under the new URL for as long as your `Cache-Control` allows.
+Pages cached as HTML keep the old URL until they expire. Without a readable published file the plain URL
+is rendered, and nothing is hashed while tracking is disabled. If you published the
+package views, copy the `src="{{ $scriptUrl }}"` of the new `client-script.blade.php`
+into your copy; without it your script URL has no version. To replace the logic,
+bind your own subclass of `ClientScript` in the container.
+
 ### Upgrading
 
 Every release that changes the database works the same way: publish again, then

@@ -19,6 +19,7 @@ Re-publish the script after upgrading (`php artisan vendor:publish --tag=spa-ana
 
 ### Fixed
 
+- A re-published `client.js` could stay in visitors' browsers for a long time, because its URL never changed. The `@spaAnalytics` script URL now ends in `?v=` and a hash of the published file, read on every render, so a re-published script gets a new URL, and the file can be cached for as long as you like when your web server or CDN keys its cache on the query string and the file is deployed before the HTML (see the README). Without a readable published file the URL has no version, and nothing is hashed while tracking is disabled. The service is `ClientScript`, bindable in the container. If you published the package views, copy `src="{{ $scriptUrl }}"` from the new `client-script.blade.php` into your copy.
 - Page views were missed when an Inertia visit was served from the prefetch cache (`<Link prefetch>`): the server ignores the `Purpose: prefetch` request, and the click sends no request, while the browser script skipped every transition on an Inertia page. The script now reports every single-page transition, Inertia pages included, and the server keeps ignoring a client page view of a path it recorded within the last five seconds, so a normal Inertia visit is still counted once. The back and forward buttons on Inertia pages, silently lost before, are counted too. Limits: a response slower than five seconds can count one visit twice, and a `replaceState` visit served from the cache is still not counted.
 
 ## [0.7.0] - 2026-10-09

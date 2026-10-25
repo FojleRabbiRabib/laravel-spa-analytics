@@ -18,6 +18,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Listeners\CleanOldMigrations;
 use FojleRabbiRabib\LaravelSpaAnalytics\Listeners\StoreVisitorFingerprint;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Migrations\OldPatchMigrations;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\AnalyticsTracker;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\ClientScript;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\DatabaseEventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\HeaderGeoLocator;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\PatternBotDetector;
@@ -27,6 +28,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Foundation\Events\VendorTagPublished;
 use Illuminate\Http\Request;
@@ -50,6 +52,7 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
             ->name('laravel-spa-analytics')
             ->hasConfigFile('spa-analytics')
             ->hasViews('laravel-spa-analytics')
+            ->hasViewComposer('laravel-spa-analytics::client-script', fn (View $view) => $view->with('scriptUrl', $this->scriptUrl()))
             ->hasRoute('web')
             ->hasCommands([RollupCommand::class, PruneCommand::class, CleanMigrationsCommand::class])
             ->hasMigrations([
@@ -84,6 +87,7 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
         ));
         $this->app->bind(EventStore::class, DatabaseEventStore::class);
         $this->app->singleton(AnalyticsTracker::class);
+        $this->app->singleton(ClientScript::class);
         $this->app->bind(OldPatchMigrations::class, fn ($app): OldPatchMigrations => new OldPatchMigrations($app['migrator']));
         $this->app->bind(ReferrerClassifier::class, fn (): ReferrerClassifier => new ReferrerClassifier(
             (array) config('spa-analytics.tracking.search_hosts'),
@@ -97,7 +101,7 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
     public function packageBooted(): void
     {
         $this->publishes([
-            __DIR__.'/../resources/dist' => public_path('vendor/laravel-spa-analytics'),
+            __DIR__.'/../resources/dist' => public_path(dirname(ClientScript::PATH)),
         ], 'spa-analytics-assets');
 
         $this->app->make(Router::class)->aliasMiddleware('spa-analytics.identity', ResolveVisitorIdentity::class);
@@ -141,6 +145,15 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
         if (config('spa-analytics.enabled') && config('spa-analytics.tracking.register_middleware')) {
             $this->app->make(Kernel::class)->appendMiddlewareToGroup('web', CapturePageView::class);
         }
+    }
+
+    /**
+     * The versioned URL of the collector script, or an empty string while tracking is off, when the view renders
+     * nothing and the file is not touched.
+     */
+    private function scriptUrl(): string
+    {
+        return config('spa-analytics.enabled') ? $this->app->make(ClientScript::class)->url() : '';
     }
 
     /**
