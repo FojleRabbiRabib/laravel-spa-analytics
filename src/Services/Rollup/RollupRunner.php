@@ -7,7 +7,9 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Rollup;
 use Carbon\CarbonImmutable;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupDimension;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupPeriod;
+use FojleRabbiRabib\LaravelSpaAnalytics\Events\RollupCompleted;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsRollup;
+use Illuminate\Support\Facades\Log;
 
 class RollupRunner
 {
@@ -78,6 +80,12 @@ class RollupRunner
         }
 
         $counts['skippedDays'] = count($skipped);
+
+        try {
+            RollupCompleted::dispatch($counts['hours'], $counts['days'], $counts['skippedDays'], $from, $now);
+        } catch (\Throwable $e) {
+            Log::warning('spa-analytics: rollup listener failed', ['exception' => $e::class, 'code' => $e->getCode()]);
+        }
 
         return $counts;
     }

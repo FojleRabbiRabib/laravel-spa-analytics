@@ -585,6 +585,25 @@ visitor link lookup read and write the package's own tables directly, so a store
 that writes elsewhere gets no rows in `analytics_sessions` and re-linking finds
 nothing to move.
 
+### Hooks
+
+Two events tell your app when data changed. Listen to them like any Laravel
+event (a listener class, `Event::listen`, or `Event::fake()` in your tests).
+
+| Event | When | Payload |
+|---|---|---|
+| `Events\EventRecorded` | After a page view, custom event, goal, outbound click, file download or scroll depth row is committed (not for viewport reports, which write no row), and after the visitor lock is released; in `sync` mode inside your own database transaction it fires before that transaction commits | `$event`: the stored `AnalyticsEvent` |
+| `Events\RollupCompleted` | Once at the end of every rollup run (the scheduled one, the command, or `RollupRunner::run()`); never for live Stats reports | `$hours`, `$days`, `$skippedDays`, `$from`, `$until` |
+
+A listener that throws never costs a row or fails a visitor request or a
+finished rollup: the exception class and code are logged. A slow listener
+slows the request that recorded the event, so queue the work (`ShouldQueue`);
+the event serialises the model for queued listeners, and one that runs after
+the row was pruned or merged away should set `$deleteWhenMissingModels = true`.
+`RollupCompleted` fires while the rollup lock is still held, so a listener must
+not call `spa-analytics:rollup` itself (queue it instead). A custom `EventStore`
+has to dispatch `EventRecorded` itself.
+
 ### A separate database
 
 To keep the analytics tables on their own database, add a connection to
