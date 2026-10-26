@@ -9,6 +9,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\BotDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Identity\VisitorIdentity;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\CustomEventData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
+use FojleRabbiRabib\LaravelSpaAnalytics\Support\Text;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -93,7 +94,7 @@ class AnalyticsTracker
                 path: $request === null ? null : $this->paths->normalize($request->path()),
                 language: $request === null ? null : $this->languages->parse($request),
                 ip: $request?->ip(),
-                userAgent: $userAgent === null ? null : mb_substr($userAgent, 0, 512),
+                userAgent: Text::clean($userAgent, 512),
                 isBot: $userAgent !== null && $this->bots->isBot($userAgent),
                 occurredAt: CarbonImmutable::now(),
             ));

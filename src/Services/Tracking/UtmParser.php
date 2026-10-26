@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking;
 
+use FojleRabbiRabib\LaravelSpaAnalytics\Support\Text;
+
 class UtmParser
 {
     private const KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
@@ -21,10 +23,7 @@ class UtmParser
         $utm = [];
 
         foreach (self::KEYS as $key) {
-            $value = $query[$key] ?? null;
-            $value = is_string($value) ? trim($value) : '';
-
-            $utm[$key] = $value === '' ? null : mb_substr($value, 0, self::MAX_LENGTH);
+            $utm[$key] = Text::clean($query[$key] ?? null, self::MAX_LENGTH);
         }
 
         return $utm;

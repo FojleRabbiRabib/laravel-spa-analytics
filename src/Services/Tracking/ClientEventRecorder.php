@@ -12,6 +12,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ClientEventKind;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ViewportSize;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
+use FojleRabbiRabib\LaravelSpaAnalytics\Support\Text;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -54,7 +55,7 @@ class ClientEventRecorder
             'visitorId' => $visitorId,
             'language' => $this->languages->parse($request),
             'ip' => $request->ip(),
-            'userAgent' => $userAgent === null ? null : mb_substr($userAgent, 0, 512),
+            'userAgent' => Text::clean($userAgent, 512),
             'isBot' => $this->bots->isBot($userAgent),
         ];
         $now = CarbonImmutable::now();
@@ -143,15 +144,15 @@ class ClientEventRecorder
     {
         $parts = parse_url($this->text($event['url'] ?? null) ?? '');
         $scheme = is_array($parts) ? strtolower((string) ($parts['scheme'] ?? '')) : '';
-        $host = is_array($parts) ? strtolower((string) ($parts['host'] ?? '')) : '';
+        $host = is_array($parts) ? Text::host((string) ($parts['host'] ?? '')) : null;
 
-        if (! in_array($scheme, ['http', 'https'], true) || $host === '' || $this->sameSite($host, $request->getHost())) {
+        if (! in_array($scheme, ['http', 'https'], true) || $host === null || $this->sameSite($host, $request->getHost())) {
             return null;
         }
 
         $targetPath = $this->paths->normalize((string) ($parts['path'] ?? '/'));
 
-        return $this->clientEvent(EventType::OutboundClick, $context, $path, $occurredAt, targetHost: mb_substr($host, 0, 255), targetPath: $this->isExcluded($targetPath) ? null : $targetPath);
+        return $this->clientEvent(EventType::OutboundClick, $context, $path, $occurredAt, targetHost: $host, targetPath: $this->isExcluded($targetPath) ? null : $targetPath);
     }
 
     /**
@@ -200,9 +201,9 @@ class ClientEventRecorder
     {
         $parts = parse_url($this->text($event['url'] ?? null) ?? '');
         $scheme = is_array($parts) ? strtolower((string) ($parts['scheme'] ?? '')) : '';
-        $host = is_array($parts) ? strtolower((string) ($parts['host'] ?? '')) : '';
+        $host = is_array($parts) ? Text::host((string) ($parts['host'] ?? '')) : null;
 
-        if (! in_array($scheme, ['http', 'https'], true) || $host === '') {
+        if (! in_array($scheme, ['http', 'https'], true) || $host === null) {
             return null;
         }
 
@@ -216,7 +217,7 @@ class ClientEventRecorder
             $context,
             $path,
             $occurredAt,
-            targetHost: $this->sameSite($host, $request->getHost()) ? null : mb_substr($host, 0, 255),
+            targetHost: $this->sameSite($host, $request->getHost()) ? null : $host,
             targetPath: $this->isExcluded($targetPath) ? null : $targetPath,
             fileExtension: $known ? $extension : null,
         );
@@ -285,11 +286,11 @@ class ClientEventRecorder
     }
 
     /**
-     * A string field cut to 2048 characters, or null when it is missing or not a string.
+     * A string field cleaned and cut to 2048 characters, or null when it is missing, not a string or empty.
      */
     private function text(mixed $value): ?string
     {
-        return is_string($value) ? mb_substr($value, 0, 2048) : null;
+        return Text::clean($value, 2048);
     }
 
     /**
