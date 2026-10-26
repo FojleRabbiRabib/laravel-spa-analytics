@@ -107,17 +107,23 @@ return [
     | Audience
     |--------------------------------------------------------------------------
     |
-    | Device, OS, browser and country are stored on the session from its first
+    | Device, OS, browser, country and region are stored on the session from its first
     | page view. Device, OS and browser come from the user agent. country_header
     | is the request header your CDN or proxy fills with the visitor's country
     | code (CF-IPCountry on Cloudflare, CloudFront-Viewer-Country on
     | CloudFront); null leaves the country empty. Set it only when that header
     | is always overwritten at your edge, otherwise a client can forge it.
+    | region_header is the same for the region: the header holds the part of
+    | the ISO 3166-2 code after the dash (CF-Region-Code on Cloudflare, with
+    | the visitor location headers turned on; CloudFront-Viewer-Country-Region
+    | on CloudFront). The region is stored as the full code, such as US-CA, and
+    | only when the country is known.
     |
     */
 
     'audience' => [
         'country_header' => null,
+        'region_header' => null,
     ],
 
     /*

@@ -65,6 +65,7 @@ class DisabledDimensionsTest extends TestCase
             'os' => 'Linux',
             'browser' => 'Firefox',
             'country' => 'BD',
+            'region' => 'BD-13',
             'viewport' => ViewportSize::Md,
             'is_new_visitor' => true,
         ]);

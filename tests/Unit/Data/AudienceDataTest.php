@@ -19,11 +19,12 @@ class AudienceDataTest extends TestCase
         $this->assertNull($audience->browser);
         $this->assertNull($audience->browserVersion);
         $this->assertNull($audience->country);
+        $this->assertNull($audience->region);
     }
 
     public function test_to_array_is_column_keyed(): void
     {
-        $audience = new AudienceData(DeviceType::Mobile, 'Android', 'Chrome', '121', 'BD');
+        $audience = new AudienceData(DeviceType::Mobile, 'Android', 'Chrome', '121', 'BD', 'BD-13');
 
         $this->assertSame([
             'device_type' => DeviceType::Mobile,
@@ -31,6 +32,7 @@ class AudienceDataTest extends TestCase
             'browser' => 'Chrome',
             'browser_version' => '121',
             'country' => 'BD',
+            'region' => 'BD-13',
         ], $audience->toArray());
     }
 

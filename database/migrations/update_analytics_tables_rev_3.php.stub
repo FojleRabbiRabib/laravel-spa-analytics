@@ -89,10 +89,11 @@ return new class extends Migration
             'browser' => fn (Blueprint $table) => $table->string('browser', 32)->nullable(),
             'browser_version' => fn (Blueprint $table) => $table->string('browser_version', 16)->nullable(),
             'country' => fn (Blueprint $table) => $table->char('country', 2)->nullable(),
+            'region' => fn (Blueprint $table) => $table->string('region', 6)->nullable(),
             'viewport' => fn (Blueprint $table) => $table->string('viewport', 8)->nullable(),
         ]);
 
-        foreach ([['started_at', 'country'], ['started_at', 'device_type']] as $columns) {
+        foreach ([['started_at', 'country'], ['started_at', 'region'], ['started_at', 'device_type']] as $columns) {
             if (! Schema::hasIndex('analytics_sessions', $columns)) {
                 Schema::table('analytics_sessions', fn (Blueprint $table) => $table->index($columns));
             }

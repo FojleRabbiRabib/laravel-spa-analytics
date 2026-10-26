@@ -32,6 +32,7 @@ enum RollupDimension: string
     case FileExtension = 'file_extension';
     case Viewport = 'viewport';
     case PathScroll = 'path_scroll';
+    case Region = 'region';
 
     /**
      * The dimensions that are always built: the total, and the two that Stats reads for its headline numbers (goal
@@ -54,6 +55,7 @@ enum RollupDimension: string
         'os' => self::Os,
         'browser' => self::Browser,
         'country' => self::Country,
+        'region' => self::Region,
         'viewport' => self::Viewport,
     ];
 
@@ -131,6 +133,7 @@ enum RollupDimension: string
             self::Os => 'OS',
             self::Browser => 'Browser',
             self::Country => 'Country',
+            self::Region => 'Region',
             self::VisitorType => 'Visitor type',
             self::Event => 'Event',
             self::Goal => 'Goal',
@@ -155,7 +158,7 @@ enum RollupDimension: string
             self::Total => 'gray',
             self::Path, self::ExitPath => 'blue',
             self::ReferrerType, self::ReferrerHost, self::UtmCampaign, self::UtmSource, self::UtmMedium, self::UtmTerm, self::UtmContent => 'purple',
-            self::DeviceType, self::Os, self::Browser, self::Country, self::VisitorType, self::Language, self::Viewport => 'green',
+            self::DeviceType, self::Os, self::Browser, self::Country, self::Region, self::VisitorType, self::Language, self::Viewport => 'green',
             self::Event, self::Goal, self::OutboundHost, self::ScrollDepth, self::Download, self::FileExtension, self::PathScroll => 'orange',
             self::Status, self::ErrorPath => 'red',
         };

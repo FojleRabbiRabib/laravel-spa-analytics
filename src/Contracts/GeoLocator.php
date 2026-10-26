@@ -6,6 +6,10 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Contracts;
 
 use Illuminate\Http\Request;
 
+/**
+ * @deprecated Bind a GeoLookup instead, which also gives the region. A GeoLocator you have bound keeps working (its
+ *             country is used, with no region) and this contract goes at 1.0.
+ */
 interface GeoLocator
 {
     /**

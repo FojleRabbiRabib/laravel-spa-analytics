@@ -13,7 +13,7 @@ class OldPatchMigrations
      * The update migration that brings any earlier version to the current shape. Rename it, and add the old name to
      * NAMES, whenever the database changes again.
      */
-    public const CURRENT = 'update_analytics_tables_rev_2';
+    public const CURRENT = 'update_analytics_tables_rev_3';
 
     /**
      * Update migrations of earlier versions that the current one replaces: the seven separate files of versions up to
@@ -27,6 +27,7 @@ class OldPatchMigrations
         'update_analytics_sessions_table_for_viewport',
         'update_analytics_events_table_for_engagement',
         'update_analytics_rollups_table_for_engagement',
+        'update_analytics_tables_rev_2',
     ];
 
     public function __construct(private readonly Migrator $migrator) {}

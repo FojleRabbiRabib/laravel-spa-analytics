@@ -39,6 +39,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property ?string $browser
  * @property ?string $browser_version
  * @property ?string $country
+ * @property ?string $region
  * @property ?ViewportSize $viewport
  */
 #[UseFactory(AnalyticsSessionFactory::class)]

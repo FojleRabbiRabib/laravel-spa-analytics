@@ -31,7 +31,7 @@ class ServiceProviderTest extends TestCase
         $this->assertContains('create_analytics_sessions_table.php.stub', $sources);
         $this->assertContains('create_analytics_visitor_links_table.php.stub', $sources);
         $this->assertContains('create_analytics_rollups_table.php.stub', $sources);
-        $this->assertContains('update_analytics_tables_rev_2.php.stub', $sources);
+        $this->assertContains('update_analytics_tables_rev_3.php.stub', $sources);
         $this->assertCount(6, $sources);
     }
 

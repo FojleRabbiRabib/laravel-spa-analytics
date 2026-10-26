@@ -15,7 +15,7 @@ calls, no data sharing.
 
 > **Status: pre-release (0.x).** Shipped: first-party visitor identity, page
 > view and session tracking, opt-in visitor re-linking, custom events and goals
-> from server code, device, OS, browser and country on sessions, and hourly and
+> from server code, device, OS, browser, country and region on sessions, and hourly and
 > daily rollups with a retention prune, the `Stats` query API (summary,
 > timeseries, top lists, goals, funnels and real-time) and the browser client
 > (SPA page views, outbound clicks, file downloads, scroll depth, engagement
@@ -134,7 +134,17 @@ To go back to 0.7.x, do not publish the migrations again: the schema is identica
 and publishing under 0.7.x would add the seven old files with new timestamps, which
 fail with "duplicate column" on a database that already has the columns.
 
-**From 0.8.x**: no migration and no new script. Reports now include today so far
+**From 0.9.x**: one new migration, adding `region` to the sessions table. Publish
+the migrations again and migrate (the update migration is now `rev_3`; the package
+deletes the published `rev_2` file for you). The browser script changed for Inertia
+`replace: true` visits, so re-publish it too. A `GeoLocator` you bound keeps
+working: its country is used, with no region. To get a region, bind a `GeoLookup`
+(see [Audience](#audience)) or set `audience.region_header`. Regions are known only
+for sessions recorded after the upgrade. If you bind your own `EventStore`,
+`AudienceData` has a new trailing `region`.
+
+**From 0.8.x**: do the steps under "From 0.9.x" as well (a migration and a new
+script). On top of that, reports now include today so far
 (set `stats.live` to `false` for the old numbers), and `Stats::compareToPrevious()`,
 the `path_scroll` dimension, the `EventRecorded` and `RollupCompleted` events and
 `identity.register_routes` are new. If you published the package views, copy the
@@ -254,6 +264,7 @@ All keys live in `config/spa-analytics.php`.
 | `tracking.bot_patterns` | see file | Case-insensitive user agent substrings that flag a request as a bot |
 | `tracking.search_hosts` / `tracking.social_hosts` | see file | Case-insensitive host substrings used to classify referrers |
 | `audience.country_header` | `null` | Request header your CDN fills with the visitor's country code (see [Audience](#audience)); `null` leaves the country empty |
+| `audience.region_header` | `null` | Request header your CDN fills with the visitor's region code, the part of the ISO 3166-2 code after the dash; `null` leaves the region empty |
 
 If you set `identity.register_middleware` to `false`, attach the
 `spa-analytics.identity` middleware alias to the routes that need a visitor
@@ -417,7 +428,7 @@ one starts.
 | `referrer_host`, `referrer_type`, `utm_*` | Taken from the session's first page view only |
 | `is_new_visitor` | The visitor had no earlier session |
 | `is_bot` | From the first page view |
-| `device_type`, `os`, `browser`, `browser_version`, `country` | From the first page view (see [Audience](#audience)) |
+| `device_type`, `os`, `browser`, `browser_version`, `country`, `region` | From the first page view (see [Audience](#audience)) |
 
 Session writes take a per-visitor cache lock (`Cache::lock`). In production use
 a cache store shared by all app servers, such as `redis`, `database` or
@@ -434,7 +445,7 @@ AnalyticsSession::query()->notBots()->between($from, $to)->get(); // between() u
 
 ## Audience
 
-Each session stores device type, OS, browser and country, taken from its first
+Each session stores device type, OS, browser, country and region, taken from its first
 page view like the referrer and UTM values. Sessions created before the audience
 migration keep empty values, and merged sessions keep the earliest session's
 values.
@@ -445,6 +456,7 @@ values.
 | `os` | `Windows`, `macOS`, `Linux`, `ChromeOS`, `Android` or `iOS` |
 | `browser`, `browser_version` | Family (`Chrome`, `Edge`, `Firefox`, `Safari`, `Opera`, `Samsung Internet`) and major version only |
 | `country` | Two-letter ISO 3166-1 code in uppercase, or empty |
+| `region` | Full ISO 3166-2 code in uppercase, such as `US-CA`, or empty; only set when the country is known |
 
 The built-in parser has no dependencies and covers the common browsers; bind
 your own `DeviceDetector` for full accuracy (see [Extending](#extending)). iPads
@@ -462,8 +474,43 @@ or proxy sets a country header, name it:
 
 Set it only when that header is always overwritten at your edge; otherwise any
 client can send its own value. Placeholder codes (`XX`, `ZZ`, `T1`, `A1`, `A2`)
-count as unknown. For a local MaxMind database or another source, bind a
-`GeoLocator`.
+count as unknown.
+
+The region works the same way, with its own header. CDNs send only the part after
+the dash, which is ambiguous across countries, so the package joins it with the
+country and stores `US-CA`:
+
+```php
+'audience' => [
+    'country_header' => 'CF-IPCountry',
+    'region_header' => 'CF-Region-Code', // CloudFront: CloudFront-Viewer-Country-Region
+],
+```
+
+On Cloudflare the region header exists only when the "Add visitor location headers"
+managed transform is on. A region without a known country is dropped.
+
+For a local MaxMind database or another source, bind a `GeoLookup`. It returns the
+country and region together, so they always come from the same source:
+
+```php
+use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\GeoLookup;
+use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\GeoLocation;
+
+final class MyGeoLookup implements GeoLookup
+{
+    public function locate(Request $request): GeoLocation
+    {
+        return new GeoLocation('US', 'US-CA'); // null for what you do not know
+    }
+}
+```
+
+A region is stored only as a full code of the lookup's country, in uppercase; any
+other value is dropped. The older `GeoLocator` contract (country only) is deprecated
+and goes at 1.0. A `GeoLocator` you bound keeps working: its country is used and
+there is no region. To wrap or extend the default locator, bind a `GeoLookup`, not a
+`GeoLocator`, or the region is lost.
 
 ## Custom events and goals
 
@@ -571,7 +618,7 @@ are bound in the register phase and yours wins.
 |---|---|---|
 | `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\BotDetector` | `PatternBotDetector` (user agent substrings from config) | Decide whether a request is a bot |
 | `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\DeviceDetector` | `PatternDeviceDetector` (built-in user agent patterns) | Classify device type, OS and browser |
-| `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\GeoLocator` | `HeaderGeoLocator` (reads `audience.country_header`) | Find the visitor's country code |
+| `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\GeoLookup` | `HeaderGeoLocator` (reads `audience.country_header` and `audience.region_header`) | Find the visitor's country and region as one `GeoLocation`. The older `GeoLocator` (country only) is deprecated; one you bound is wrapped and gives no region |
 | `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore` | `DatabaseEventStore` (session plus event rows, under a lock) | Persist a page view or an event (custom event, goal, outbound click, file download or scroll depth). `PageViewData::$status` and `CustomEventData::$name` can be null |
 
 ```php
@@ -583,7 +630,7 @@ public function register(): void
 }
 ```
 
-A throwing `DeviceDetector` or `GeoLocator` only loses its own audience values;
+A throwing `DeviceDetector` or `GeoLookup` only loses its own audience values;
 the page view is still recorded and the exception class and code are logged.
 
 A custom `EventStore` receives `PageViewData` or `CustomEventData`. It may throw; the writer logs the exception class and code
@@ -681,7 +728,7 @@ backfill history with `--period=day` and let the schedule keep the hours fresh.
 | `engaged_seconds` | Seconds of active time reported by the browser; only the `total` row and the `path` rows (by the page the time was spent on) carry it |
 
 Dimensions: `total`, `path`, `exit_path`, `referrer_type`, `referrer_host`, `utm_campaign`,
-`utm_source`, `utm_medium`, `utm_term`, `utm_content`, `device_type`, `os`, `browser`, `country`, `visitor_type` (`new` or `returning`),
+`utm_source`, `utm_medium`, `utm_term`, `utm_content`, `device_type`, `os`, `browser`, `country`, `region`, `visitor_type` (`new` or `returning`),
 `event` (custom event names), `goal`, `outbound_host` (target hosts of outbound
 clicks), `scroll_depth` (the 25, 50, 75 and 100 milestones), `path_scroll` (the
 same milestones by page, stored as `50 /pricing`: the events and the distinct

@@ -14,6 +14,7 @@ final readonly class AudienceData
         public ?string $browser = null,
         public ?string $browserVersion = null,
         public ?string $country = null,
+        public ?string $region = null,
     ) {}
 
     /**
@@ -29,6 +30,7 @@ final readonly class AudienceData
             browser: isset($data['browser']) ? (string) $data['browser'] : null,
             browserVersion: isset($data['browser_version']) ? (string) $data['browser_version'] : null,
             country: isset($data['country']) ? (string) $data['country'] : null,
+            region: isset($data['region']) ? (string) $data['region'] : null,
         );
     }
 
@@ -45,6 +47,7 @@ final readonly class AudienceData
             'browser' => $this->browser,
             'browser_version' => $this->browserVersion,
             'country' => $this->country,
+            'region' => $this->region,
         ];
     }
 }

@@ -27,7 +27,7 @@ class RollupDimensionTest extends TestCase
         $this->assertSame([
             'total', 'path', 'exit_path', 'referrer_type', 'referrer_host', 'utm_campaign', 'device_type',
             'os', 'browser', 'country', 'visitor_type', 'event', 'goal', 'outbound_host', 'scroll_depth',
-            'utm_source', 'utm_medium', 'utm_term', 'utm_content', 'status', 'error_path', 'language', 'download', 'file_extension', 'viewport', 'path_scroll',
+            'utm_source', 'utm_medium', 'utm_term', 'utm_content', 'status', 'error_path', 'language', 'download', 'file_extension', 'viewport', 'path_scroll', 'region',
         ], RollupDimension::values());
         $this->assertSame('Scroll depth by path', RollupDimension::PathScroll->label());
         $this->assertSame('orange', RollupDimension::PathScroll->color());
@@ -43,7 +43,10 @@ class RollupDimensionTest extends TestCase
         $this->assertSame('/files/a.pdf', RollupDimension::downloadValue(null, '/files/a.pdf'));
         $this->assertSame('cdn.test/a.pdf', RollupDimension::downloadValue('cdn.test', '/a.pdf'));
         $this->assertSame(512, mb_strlen(RollupDimension::downloadValue('cdn.test', '/'.str_repeat('x', 600))));
-        $this->assertCount(26, RollupDimension::options());
+        $this->assertCount(27, RollupDimension::options());
+        $this->assertSame('Region', RollupDimension::Region->label());
+        $this->assertSame('green', RollupDimension::Region->color());
+        $this->assertSame('region', RollupDimension::Region->sessionColumn());
         $this->assertSame('Error path', RollupDimension::ErrorPath->label());
         $this->assertSame('red', RollupDimension::Status->color());
         $this->assertNull(RollupDimension::Status->sessionColumn());

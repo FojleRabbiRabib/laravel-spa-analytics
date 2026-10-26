@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Region of the visitor. The new `GeoLookup` contract returns a `GeoLocation` (country and region) in one lookup, so the two always come from the same source. `HeaderGeoLocator` implements it and reads the new `audience.region_header` (for example `CF-Region-Code` on Cloudflare or `CloudFront-Viewer-Country-Region` on CloudFront); the region is stored as the full ISO 3166-2 code, such as `US-CA`, and only when the country is known. Sessions get a `region` column, and `region` is a rollup dimension (`RollupDimension::Region`, so `top(RollupDimension::Region)` and `disabled_dimensions` work). `AudienceData` has a new trailing `region`; a region from any lookup is kept only as a full code of its country, in uppercase. Region is empty for sessions recorded before the upgrade.
+- Migration: `region` on `analytics_sessions`, in the create migration and, guarded, in the update migration, which is now `update_analytics_tables_rev_3`. Publish the migrations again and migrate; the published `rev_2` file is deleted for you.
+
+### Deprecated
+
+- The `GeoLocator` contract (country only). A `GeoLocator` you bound keeps working: it is wrapped, its country is used and there is no region. It goes at 1.0; bind a `GeoLookup` instead.
+
 ### Fixed
 
 - Page views were missed when an Inertia `replace: true` visit was served from the prefetch cache: the visit changes the URL with `replaceState`, which the browser script did not watch. On an Inertia page (recognised by its `data-page` page object) a `replaceState` that changes the pathname is now reported like a `pushState`, and the server's five-second guard still counts a visit that reached the server once. The `replaceState` Inertia makes while it boots, to the `url` of its own page object, is not a visit. On other pages a `replaceState` is still not reported, but the next page view now starts from the path it set, where it used to start from the path before it. A `replaceState` that changes only the query or hash is unchanged. Re-publish the assets after upgrading.

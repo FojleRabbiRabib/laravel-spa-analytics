@@ -11,6 +11,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\BotDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\DeviceDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\GeoLocator;
+use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\GeoLookup;
 use FojleRabbiRabib\LaravelSpaAnalytics\Events\VisitorIdentified;
 use FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware\CapturePageView;
 use FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware\ResolveVisitorIdentity;
@@ -20,6 +21,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Services\Migrations\OldPatchMigrations;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\AnalyticsTracker;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\ClientScript;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\DatabaseEventStore;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\GeoLocatorAdapter;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\HeaderGeoLocator;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\PatternBotDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\PatternDeviceDetector;
@@ -61,7 +63,7 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
                 'create_analytics_sessions_table',
                 'create_analytics_visitor_links_table',
                 'create_analytics_rollups_table',
-                'update_analytics_tables_rev_2',
+                'update_analytics_tables_rev_3',
             ])
             ->hasInstallCommand(function (InstallCommand $command): void {
                 $command
@@ -84,7 +86,14 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
         $this->app->bind(DeviceDetector::class, PatternDeviceDetector::class);
         $this->app->bind(GeoLocator::class, fn (): HeaderGeoLocator => new HeaderGeoLocator(
             config('spa-analytics.audience.country_header'),
+            config('spa-analytics.audience.region_header'),
         ));
+        // A GeoLocator the app bound before GeoLookup existed is wrapped; one that is also a GeoLookup is used as is.
+        $this->app->bind(GeoLookup::class, function ($app): GeoLookup {
+            $locator = $app->make(GeoLocator::class);
+
+            return $locator instanceof GeoLookup ? $locator : new GeoLocatorAdapter($locator);
+        });
         $this->app->bind(EventStore::class, DatabaseEventStore::class);
         $this->app->singleton(AnalyticsTracker::class);
         $this->app->singleton(ClientScript::class);

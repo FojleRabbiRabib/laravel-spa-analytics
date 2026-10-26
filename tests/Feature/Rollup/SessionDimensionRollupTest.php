@@ -43,6 +43,7 @@ class SessionDimensionRollupTest extends TestCase
             'device_type' => DeviceType::Mobile,
             'viewport' => ViewportSize::Md,
             'country' => 'BD',
+            'region' => 'BD-13',
             default => 'sample-'.$column,
         };
     }
