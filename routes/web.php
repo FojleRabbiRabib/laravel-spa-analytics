@@ -6,7 +6,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Http\Controllers\IdentityHandshakeContro
 use FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware\ResolveVisitorIdentity;
 use Illuminate\Support\Facades\Route;
 
-if (! config('spa-analytics.enabled')) {
+if (! config('spa-analytics.enabled') || ! config('spa-analytics.identity.register_routes', true)) {
     return;
 }
 

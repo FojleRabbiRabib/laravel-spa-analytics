@@ -58,11 +58,15 @@ return [
     | identify endpoints; rate_limit_per_ip_per_minute is a higher ceiling per
     | address that stops clients rotating cookies while leaving room for many
     | visitors behind one shared address (mobile carriers, offices).
+    | register_routes false skips the handshake, identify and collect routes
+    | so you can register your own under the same route names (route_prefix is
+    | then ignored); clear the route cache after changing it.
     |
     */
 
     'identity' => [
         'register_middleware' => true,
+        'register_routes' => true,
         'cookie_name' => 'spa_analytics_vid',
         'cookie_lifetime_days' => 365,
         'tls_fingerprint_header' => null,

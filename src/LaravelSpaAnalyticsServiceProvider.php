@@ -112,6 +112,7 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
             'Write mode' => (string) config('spa-analytics.tracking.write_mode'),
             'Session timeout' => config('spa-analytics.sessions.timeout_minutes').' minutes',
             'Re-linking' => config('spa-analytics.identity.relink') ? 'ON' : 'OFF',
+            'Routes' => $this->routesState(),
             'Old migration files' => ($old = count($this->app->make(OldPatchMigrations::class)->published())) === 0
                 ? 'none'
                 : "{$old} (removed at the next migrate)",
@@ -153,7 +154,29 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
      */
     private function scriptUrl(): string
     {
-        return config('spa-analytics.enabled') ? $this->app->make(ClientScript::class)->url() : '';
+        return config('spa-analytics.enabled') && $this->hasEndpoints() ? $this->app->make(ClientScript::class)->url() : '';
+    }
+
+    /**
+     * Whether the three endpoints the browser script posts to are registered, by the package or by the app.
+     */
+    private function hasEndpoints(): bool
+    {
+        return collect(['spa-analytics.identity.handshake', 'spa-analytics.identity.identify', 'spa-analytics.collect'])
+            ->every(fn (string $name): bool => $this->app->make(Router::class)->has($name));
+    }
+
+    /**
+     * Who serves the endpoints: the package, the app's own routes, or nobody (MISSING); OFF while tracking is off.
+     */
+    private function routesState(): string
+    {
+        return match (true) {
+            ! config('spa-analytics.enabled') => 'OFF',
+            ! $this->hasEndpoints() => 'MISSING',
+            (bool) config('spa-analytics.identity.register_routes', true) => 'package',
+            default => 'own',
+        };
     }
 
     /**

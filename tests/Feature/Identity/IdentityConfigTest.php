@@ -14,6 +14,7 @@ class IdentityConfigTest extends TestCase
         $this->assertSame(365, config('spa-analytics.identity.cookie_lifetime_days'));
         $this->assertNull(config('spa-analytics.identity.tls_fingerprint_header'));
         $this->assertTrue(config('spa-analytics.identity.register_middleware'));
+        $this->assertTrue(config('spa-analytics.identity.register_routes'));
         $this->assertSame(60, config('spa-analytics.identity.nonce_ttl_seconds'));
         $this->assertSame('spa-analytics', config('spa-analytics.identity.route_prefix'));
         $this->assertSame(30, config('spa-analytics.identity.rate_limit_per_minute'));

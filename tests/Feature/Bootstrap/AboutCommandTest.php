@@ -45,5 +45,6 @@ class AboutCommandTest extends TestCase
 
         $this->assertSame('DISABLED', $section['tracking']);
         $this->assertSame('OFF', $section['re-linking']);
+        $this->assertSame('OFF', $section['routes']);
     }
 }

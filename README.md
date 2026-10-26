@@ -91,8 +91,9 @@ to it: a server that renders the new URL while another still serves the old file
 cache the old code under the new URL for as long as your `Cache-Control` allows.
 Pages cached as HTML keep the old URL until they expire. Without a readable published file the plain URL
 is rendered, and nothing is hashed while tracking is disabled. If you published the
-package views, copy the `src="{{ $scriptUrl }}"` of the new `client-script.blade.php`
-into your copy; without it your script URL has no version. To replace the logic,
+package views, copy the `@if ($scriptUrl !== '')` and `src="{{ $scriptUrl }}"` of the new
+`client-script.blade.php` into your copy; without them your script URL has no version
+and the page fails while the routes are missing. To replace the logic,
 bind your own subclass of `ClientScript` in the container.
 
 ### Upgrading
@@ -139,7 +140,7 @@ the script with `php artisan vendor:publish --tag="spa-analytics-assets" --force
 (a re-published script now reaches visitors at once, and Inertia visits served
 from the prefetch cache are counted). The seven old `update_analytics_*` files in
 your app are deleted for you. If you published the package views, copy
-`src="{{ $scriptUrl }}"` into your `client-script.blade.php`. To keep the analytics
+`@if ($scriptUrl !== '')` and `src="{{ $scriptUrl }}"` into your `client-script.blade.php`. To keep the analytics
 tables on their own database, see "A separate database" under Extending.
 
 **From 0.6.x**: engagement time. Publish the migrations again and migrate (one
@@ -227,6 +228,7 @@ All keys live in `config/spa-analytics.php`.
 | `stats.live` | `true` | Reports include the hours not rolled up yet (today so far), from the raw events; `false` gives stored numbers only unless `withLive()` is called (`SPA_ANALYTICS_STATS_LIVE`) |
 | `stats.live_max_hours` | `24` | The most hours before the running hour that live part may include; when the rollup is further behind, the live part is left out and the report is `incomplete` |
 | `identity.register_middleware` | `true` | Append the identity middleware to the `web` group |
+| `identity.register_routes` | `true` | Register the handshake, identify and collect routes; `false` lets you register your own (see [Your own routes](#your-own-routes)) |
 | `identity.cookie_name` | `spa_analytics_vid` | Visitor cookie name |
 | `identity.cookie_lifetime_days` | `365` | Cookie lifetime, refreshed on every response |
 | `identity.tls_fingerprint_header` | `null` | Request header your proxy or CDN forwards the JA4 hash in; `null` disables the TLS signal |
@@ -247,6 +249,34 @@ All keys live in `config/spa-analytics.php`.
 If you set `identity.register_middleware` to `false`, attach the
 `spa-analytics.identity` middleware alias to the routes that need a visitor
 identity yourself.
+
+### Your own routes
+
+Set `identity.register_routes` to `false` and register the three endpoints
+yourself, with the same route names (the script tag is built from them):
+
+```php
+use FojleRabbiRabib\LaravelSpaAnalytics\Http\Controllers\CollectEventsController;
+use FojleRabbiRabib\LaravelSpaAnalytics\Http\Controllers\IdentifyVisitorController;
+use FojleRabbiRabib\LaravelSpaAnalytics\Http\Controllers\IdentityHandshakeController;
+use FojleRabbiRabib\LaravelSpaAnalytics\Http\Middleware\ResolveVisitorIdentity;
+use Illuminate\Support\Facades\Route;
+
+Route::middleware(['web', ResolveVisitorIdentity::class, 'throttle:spa-analytics-identity'])
+    ->prefix('stats-in')->name('spa-analytics.identity.')->group(function () {
+        Route::post('hello', IdentityHandshakeController::class)->name('handshake');
+        Route::post('who', IdentifyVisitorController::class)->name('identify');
+    });
+
+Route::middleware(['web', ResolveVisitorIdentity::class, 'throttle:spa-analytics-collect'])
+    ->post('stats-in/send', CollectEventsController::class)->name('spa-analytics.collect');
+```
+
+`identity.route_prefix` is ignored then. Add your prefix to
+`tracking.excluded_paths` (`stats-in/*`) and drop `spa-analytics/*`. While one of
+the three names is missing, `@spaAnalytics` renders nothing and
+`php artisan about` shows `Routes: MISSING`. Clear the route cache after
+changing the flag.
 
 ## Visitor identity
 
