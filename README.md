@@ -134,6 +134,15 @@ To go back to 0.7.x, do not publish the migrations again: the schema is identica
 and publishing under 0.7.x would add the seven old files with new timestamps, which
 fail with "duplicate column" on a database that already has the columns.
 
+**From 0.8.x**: no migration and no new script. Reports now include today so far
+(set `stats.live` to `false` for the old numbers), and `Stats::compareToPrevious()`,
+the `path_scroll` dimension, the `EventRecorded` and `RollupCompleted` events and
+`identity.register_routes` are new. If you published the package views, copy the
+`@if ($scriptUrl !== '')` guard into your `client-script.blade.php`. If you published
+the config file, add `'live' => true` and `'live_max_hours' => 24` to its `stats`
+array, and run `php artisan spa-analytics:rollup --since=YYYY-MM-DD` to fill
+`path_scroll` for past days.
+
 **From 0.7.x**: folded migrations, a fixed browser script and an optional
 `database.connection` key. Publish the migrations again and migrate, and re-publish
 the script with `php artisan vendor:publish --tag="spa-analytics-assets" --force`

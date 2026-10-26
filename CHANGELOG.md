@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-26
+
+Today so far in Stats, period comparison, scroll depth by page, hooks and an optional route switch, with no migration. Reports now include the running hour by default (see Changed). If you published the package views, copy the `@if ($scriptUrl !== '')` guard into your `client-script.blade.php`. Run `spa-analytics:rollup --since=YYYY-MM-DD` to fill `path_scroll` for past days. If you published the config file, add `'live' => true` and `'live_max_hours' => 24` to its `stats` array. You can upgrade from any version straight to this one.
+
 ### Added
 
 - Hooks: `Events\EventRecorded` (the stored `AnalyticsEvent`, dispatched after the package's own commit and the visitor lock release; in `sync` mode inside your own transaction that is before your commit) and `Events\RollupCompleted` (hours, days and skipped days of a run, with its range, dispatched once at the end of `RollupRunner::run()`). A throwing listener is logged by class and code and never costs a row or fails a request or a run. A custom `EventStore` has to dispatch `EventRecorded` itself.
@@ -157,7 +161,8 @@ Reporting only: no migration and no new config. Run `spa-analytics:rollup --sinc
 - `BotDetector` and `EventStore` contracts, bound in the register phase so an app can replace them.
 - Publish tags `spa-analytics-config`, `spa-analytics-migrations` and `spa-analytics-assets`.
 
-[Unreleased]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.6.0...v0.6.1
