@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Page views were missed when an Inertia `replace: true` visit was served from the prefetch cache: the visit changes the URL with `replaceState`, which the browser script did not watch. On an Inertia page (recognised by its `data-page` page object) a `replaceState` that changes the pathname is now reported like a `pushState`, and the server's five-second guard still counts a visit that reached the server once. The `replaceState` Inertia makes while it boots, to the `url` of its own page object, is not a visit. On other pages a `replaceState` is still not reported, but the next page view now starts from the path it set, where it used to start from the path before it. A `replaceState` that changes only the query or hash is unchanged. Re-publish the assets after upgrading.
+
 ## [0.9.0] - 2026-10-26
 
 Today so far in Stats, period comparison, scroll depth by page, hooks and an optional route switch, with no migration. Reports now include the running hour by default (see Changed). If you published the package views, copy the `@if ($scriptUrl !== '')` guard into your `client-script.blade.php`. Run `spa-analytics:rollup --since=YYYY-MM-DD` to fill `path_scroll` for past days. If you published the config file, add `'live' => true` and `'live_max_hours' => 24` to its `stats` array. You can upgrade from any version straight to this one.

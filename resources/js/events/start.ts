@@ -1,6 +1,7 @@
 import { buildApi, replayQueued } from './api';
 import { downloadTarget } from './download';
 import { createEngagementTracker } from './engagement';
+import { inertiaPagePath, isInertiaPage } from './inertia';
 import { watchNavigation } from './navigation';
 import { outboundTarget } from './outbound';
 import { createQueue } from './queue';
@@ -14,7 +15,8 @@ import { viewportWidth } from './viewport';
  * depth, the time the visitor actively spends on each page (sent when the page is left or hidden) and the
  * `window.spaAnalytics` API. The first page view of a load is recorded by the server, so it is not sent
  * here. Every later transition is sent, Inertia visits included: the server ignores a client page view of a path it
- * just recorded, and a visit served from Inertia's prefetch cache reaches the server not at all. A click on a link to
+ * just recorded, and a visit served from Inertia's prefetch cache reaches the server not at all. A `replaceState`
+ * that changes the pathname counts too, but only on an Inertia page. A click on a link to
  * a file is a download and not an outbound click, even when the file is on another site.
  */
 export const startEvents = (collectUrl: string, downloadExtensions: readonly string[] = []): void => {
@@ -43,13 +45,28 @@ export const startEvents = (collectUrl: string, downloadExtensions: readonly str
         }
     };
 
+    // Asked at load as well as when a replace changes the pathname: an app may strip the page object after it boots.
+    let inertia = isInertiaPage(document);
+
+    // Inertia's own boot replaces the state with the page object's url: not a visit, and the server has the page view.
+    // Read lazily: the script may run before the root element is parsed.
+    let bootPath = inertiaPagePath(document);
+    let navigated = false;
+
     watchNavigation(
         {
             history: window.history,
             location: window.location,
             onPopState: (listener) => window.addEventListener('popstate', listener),
+            countsReplace: () => {
+                inertia = inertia || isInertiaPage(document);
+                bootPath ??= inertiaPagePath(document);
+
+                return inertia && (navigated || window.location.pathname !== bootPath);
+            },
         },
         (from, to) => {
+            navigated = true;
             reportEngagement(from);
             engagement.reset(Date.now());
             scroll.reset();
