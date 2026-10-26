@@ -6,7 +6,6 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Feature\Rollup;
 
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupDimension;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupPeriod;
-use FojleRabbiRabib\LaravelSpaAnalytics\Facades\Stats;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsRollup;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
@@ -68,14 +67,16 @@ class RollupCommandTest extends TestCase
         Carbon::setTestNow('2026-03-10 23:20:00');
         $this->pageView('2026-03-10 23:10:00');
         $this->artisan('spa-analytics:rollup')->assertExitCode(0);
+        $this->assertNotContains('2026-03-10 23:00:00', $this->buckets(RollupPeriod::Hour));
+        $this->assertNotContains('2026-03-10 00:00:00', $this->buckets(RollupPeriod::Day));
 
         Carbon::setTestNow('2026-03-11 03:20:00');
         $this->pageView('2026-03-10 23:50:00');
         $this->artisan('spa-analytics:rollup')->assertExitCode(0);
 
-        $this->assertNotContains('2026-03-10 23:00:00', $this->buckets(RollupPeriod::Hour));
-        $this->assertNotContains('2026-03-10 00:00:00', $this->buckets(RollupPeriod::Day));
-        $this->assertTrue(Stats::between(Carbon::parse('2026-03-10'), Carbon::parse('2026-03-11'))->summary()->incomplete);
+        $this->assertContains('2026-03-10 23:00:00', $this->buckets(RollupPeriod::Hour));
+        $this->assertSame(['2026-03-10 00:00:00'], $this->buckets(RollupPeriod::Day));
+        $this->assertSame(2, AnalyticsRollup::query()->where('period', RollupPeriod::Day)->where('dimension', RollupDimension::Total)->value('page_views'));
     }
 
     public function test_a_lookback_of_zero_still_builds_the_hour_that_just_ended(): void

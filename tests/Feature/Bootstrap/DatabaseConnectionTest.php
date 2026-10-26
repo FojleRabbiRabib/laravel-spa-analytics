@@ -193,6 +193,13 @@ class DatabaseConnectionTest extends TestCase
             'bucket_start' => Carbon::parse('2026-03-05'),
             'dimension' => RollupDimension::Total,
             'value' => '',
+            'page_views' => 1,
+        ]);
+        AnalyticsRollup::factory()->create([
+            'period' => RollupPeriod::Day,
+            'bucket_start' => Carbon::parse('2026-03-06'),
+            'dimension' => RollupDimension::Total,
+            'value' => '',
         ]);
         AnalyticsEvent::factory()->create(['visitor_id' => 'a', 'occurred_at' => Carbon::parse('2026-03-05 10:00:00')]);
         AnalyticsSession::factory()->create(['visitor_id' => 'a', 'started_at' => Carbon::parse('2026-03-05 10:00:00'), 'last_seen_at' => Carbon::parse('2026-03-05 10:30:00')]);
@@ -201,7 +208,7 @@ class DatabaseConnectionTest extends TestCase
 
         $this->assertSame(0, $this->analytics('analytics_events'));
         $this->assertSame(0, $this->analytics('analytics_sessions'));
-        $this->assertSame(1, $this->analytics('analytics_rollups'));
+        $this->assertSame(2, $this->analytics('analytics_rollups'));
     }
 
     public function test_the_exact_comparison_follows_the_driver_of_the_configured_connection(): void

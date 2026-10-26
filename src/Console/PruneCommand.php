@@ -7,6 +7,7 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Console;
 use Carbon\CarbonImmutable;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Rollup\RetentionPruner;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 
 class PruneCommand extends Command
 {
@@ -31,8 +32,12 @@ class PruneCommand extends Command
 
         if ($result['blockedDay'] !== null) {
             $day = $result['blockedDay']->toDateString();
+            $why = $result['blockedReason'] === 'behind' ? 'has raw events its rollup did not count' : 'has no rollup yet';
 
-            $this->components->warn("Day {$day} has no rollup yet, so it and everything after it was kept. Run: php artisan spa-analytics:rollup --since={$day}");
+            $this->components->warn("Day {$day} {$why}, so it and everything after it was kept. Run: php artisan spa-analytics:rollup --since={$day}");
+            Log::warning('spa-analytics: prune blocked', ['day' => $day, 'reason' => $result['blockedReason']]);
+
+            return self::FAILURE;
         }
 
         return self::SUCCESS;
