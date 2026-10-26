@@ -139,7 +139,8 @@ the migrations again and migrate (the update migration is now `rev_3`; the packa
 deletes the published `rev_2` file for you). The browser script changed for Inertia
 `replace: true` visits, so re-publish it too. A `GeoLocator` you bound keeps
 working: its country is used, with no region. To get a region, bind a `GeoLookup`
-(see [Audience](#audience)) or set `audience.region_header`. Regions are known only
+(see [Audience](#audience)), set `audience.region_header`, or point
+`audience.maxmind_database` at a local MaxMind database. Regions are known only
 for sessions recorded after the upgrade. If you bind your own `EventStore`,
 `AudienceData` has a new trailing `region`.
 
@@ -265,6 +266,7 @@ All keys live in `config/spa-analytics.php`.
 | `tracking.search_hosts` / `tracking.social_hosts` | see file | Case-insensitive host substrings used to classify referrers |
 | `audience.country_header` | `null` | Request header your CDN fills with the visitor's country code (see [Audience](#audience)); `null` leaves the country empty |
 | `audience.region_header` | `null` | Request header your CDN fills with the visitor's region code, the part of the ISO 3166-2 code after the dash; `null` leaves the region empty |
+| `audience.maxmind_database` | `null` | Path to a local MaxMind `.mmdb` file (needs `maxmind-db/reader`); when set, it replaces both headers |
 
 If you set `identity.register_middleware` to `false`, attach the
 `spa-analytics.identity` middleware alias to the routes that need a visitor
@@ -490,8 +492,30 @@ country and stores `US-CA`:
 On Cloudflare the region header exists only when the "Add visitor location headers"
 managed transform is on. A region without a known country is dropped.
 
-For a local MaxMind database or another source, bind a `GeoLookup`. It returns the
-country and region together, so they always come from the same source:
+Without a CDN, read a local MaxMind GeoLite2 or GeoIP2 database. Install the reader
+and point the config at the `.mmdb` file (City gives the region, Country gives only
+the country):
+
+```bash
+composer require maxmind-db/reader
+```
+
+```php
+'audience' => ['maxmind_database' => storage_path('app/geoip/GeoLite2-City.mmdb')],
+```
+
+When it is set, the database is the only source: both headers and a `GeoLocator` you
+bound are ignored (a `GeoLookup` you bound still wins). Use an IPv6-capable file, as
+the official GeoLite2 and GeoIP2 files are.
+The visitor's address is read in memory for the lookup and never stored or sent
+anywhere. Download and refresh the file with MaxMind's `geoipupdate` (the GeoLite2
+license is yours to accept; the package ships no database). Behind a proxy or CDN,
+configure Laravel's `TrustProxies`, or every visitor resolves to the proxy's
+location. Private and local addresses give no country. A missing or invalid file
+only loses the country and region, and is logged by class name.
+
+To use another source, bind a `GeoLookup`. It returns the country and region
+together, so they always come from the same source:
 
 ```php
 use FojleRabbiRabib\LaravelSpaAnalytics\Contracts\GeoLookup;
@@ -618,7 +642,7 @@ are bound in the register phase and yours wins.
 |---|---|---|
 | `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\BotDetector` | `PatternBotDetector` (user agent substrings from config) | Decide whether a request is a bot |
 | `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\DeviceDetector` | `PatternDeviceDetector` (built-in user agent patterns) | Classify device type, OS and browser |
-| `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\GeoLookup` | `HeaderGeoLocator` (reads `audience.country_header` and `audience.region_header`) | Find the visitor's country and region as one `GeoLocation`. The older `GeoLocator` (country only) is deprecated; one you bound is wrapped and gives no region |
+| `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\GeoLookup` | `HeaderGeoLocator` (reads `audience.country_header` and `audience.region_header`); `MaxMindGeoLookup` when `audience.maxmind_database` is set | Find the visitor's country and region as one `GeoLocation`. The older `GeoLocator` (country only) is deprecated; one you bound is wrapped and gives no region |
 | `FojleRabbiRabib\LaravelSpaAnalytics\Contracts\EventStore` | `DatabaseEventStore` (session plus event rows, under a lock) | Persist a page view or an event (custom event, goal, outbound click, file download or scroll depth). `PageViewData::$status` and `CustomEventData::$name` can be null |
 
 ```php

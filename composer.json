@@ -26,8 +26,12 @@
     "require-dev": {
         "larastan/larastan": "^3.0",
         "laravel/pint": "^1.18",
+        "maxmind-db/reader": "^1.14",
         "orchestra/testbench": "^11.0",
         "phpunit/phpunit": "^11.0"
+    },
+    "suggest": {
+        "maxmind-db/reader": "Required to read a local MaxMind GeoLite2 database for the visitor's country and region (audience.maxmind_database)."
     },
     "autoload": {
         "psr-4": {

@@ -118,12 +118,18 @@ return [
     | the visitor location headers turned on; CloudFront-Viewer-Country-Region
     | on CloudFront). The region is stored as the full code, such as US-CA, and
     | only when the country is known.
+    | maxmind_database is the path to a local MaxMind GeoLite2 or GeoIP2 .mmdb
+    | file (City for the region, Country for the country only). When set, it is
+    | the only source and both headers are ignored. It needs the
+    | maxmind-db/reader package; the address is read in memory and never stored.
+    | Behind a proxy or CDN, configure TrustProxies so the real address is used.
     |
     */
 
     'audience' => [
         'country_header' => null,
         'region_header' => null,
+        'maxmind_database' => null,
     ],
 
     /*

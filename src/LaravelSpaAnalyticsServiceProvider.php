@@ -23,6 +23,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\ClientScript;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\DatabaseEventStore;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\GeoLocatorAdapter;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\HeaderGeoLocator;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\MaxMindGeoLookup;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\PatternBotDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\PatternDeviceDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\ReferrerClassifier;
@@ -88,8 +89,18 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
             config('spa-analytics.audience.country_header'),
             config('spa-analytics.audience.region_header'),
         ));
-        // A GeoLocator the app bound before GeoLookup existed is wrapped; one that is also a GeoLookup is used as is.
+        $this->app->singleton(MaxMindGeoLookup::class, fn (): MaxMindGeoLookup => new MaxMindGeoLookup(
+            (string) config('spa-analytics.audience.maxmind_database'),
+        ));
+        // A configured MaxMind database is the only source. A GeoLocator the app bound before GeoLookup existed is
+        // wrapped; one that is also a GeoLookup is used as is.
         $this->app->bind(GeoLookup::class, function ($app): GeoLookup {
+            $database = config('spa-analytics.audience.maxmind_database');
+
+            if (is_string($database) && $database !== '') {
+                return $app->make(MaxMindGeoLookup::class);
+            }
+
             $locator = $app->make(GeoLocator::class);
 
             return $locator instanceof GeoLookup ? $locator : new GeoLocatorAdapter($locator);
