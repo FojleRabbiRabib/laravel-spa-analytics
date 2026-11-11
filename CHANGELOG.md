@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- An excluded path written with non-ASCII letters (for example a localised `zürücksetzen/*` route) did not stop the browser script's events, because the browser reports the percent-encoded path while `excluded_paths` was matched against it as is. The server side already matched the decoded path; the collect endpoint now decodes the reported path for the check too, and the stored path stays as reported.
 - The visitor id is stored in lower case. A UUID is valid in any letter case, so a cookie sent as `ABC...` and as `abc...` got two rate limit allowances and two session locks while a case-insensitive database column read them as one visitor. The cookie, the rate limit keys and `Analytics::for()` now share one normalised form.
 - Session updates are safe across workers that do not share a cache lock. The session row is locked for the write transaction (`lockForUpdate`), and a deadlock between two writers, or in a re-link, is tried up to three times instead of losing the event. Limit: a visitor with no session yet has no row to lock, so two first page views at the same moment still rely on the cache lock; use a shared cache store (database or redis).
 - `php artisan about` has a `Cache locks` line that says whether the default cache store shares its locks between processes (`array` and `null` do not, `file` reaches one server only).

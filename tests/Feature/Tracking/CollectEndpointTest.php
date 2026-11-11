@@ -129,6 +129,31 @@ class CollectEndpointTest extends TestCase
         $this->assertNull($event->target_path);
     }
 
+    public function test_an_excluded_path_written_with_non_ascii_letters_matches_the_percent_encoded_path_the_browser_reports(): void
+    {
+        config()->set('spa-analytics.tracking.excluded_paths', ['zürücksetzen/*']);
+
+        $this->collect([
+            ['kind' => 'pageview', 'path' => '/z%C3%BCr%C3%BCcksetzen/abc123'],
+            ['kind' => 'pageview', 'path' => '/zürücksetzen/abc123'],
+            ['kind' => 'outbound', 'path' => '/pricing', 'url' => 'https://example.org/z%C3%BCr%C3%BCcksetzen/abc123'],
+        ])->assertNoContent();
+
+        $event = AnalyticsEvent::query()->sole();
+
+        $this->assertSame('example.org', $event->target_host);
+        $this->assertNull($event->target_path);
+    }
+
+    public function test_a_path_next_to_an_excluded_one_is_kept_and_stored_as_the_browser_reported_it(): void
+    {
+        config()->set('spa-analytics.tracking.excluded_paths', ['zürücksetzen/*']);
+
+        $this->collect([['kind' => 'pageview', 'path' => '/z%C3%BCr%C3%BCcksetzen-info']])->assertNoContent();
+
+        $this->assertSame('/z%C3%BCr%C3%BCcksetzen-info', AnalyticsEvent::query()->sole()->path);
+    }
+
     public function test_the_time_is_the_request_time_minus_the_reported_age_and_the_batch_keeps_its_order(): void
     {
         $this->collect([
