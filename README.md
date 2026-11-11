@@ -949,7 +949,7 @@ How the numbers are built:
   sum of daily counts. They are counted from the raw events with
   `count(distinct ...)`, which gets slower as the range and traffic grow, and
   for `top()` and `goals()` only for the rows returned. Days whose raw rows were
-  pruned fall back to the sum of daily uniques, which counts someone who came on
+  pruned (every day before the prune marker, even if a late raw row exists on it) fall back to the sum of daily uniques, which counts someone who came on
   two days twice; then `usersExact` is `false`.
 - **Conversion rate** is the visitors who completed any goal and also viewed a
   page in the range, divided by users, at most 1. A goal's own rate counts the
@@ -985,7 +985,7 @@ is recorded after its controller has fired its goal; a goal fired during
 `/thank-you` therefore follows that page view, while one fired a full second
 earlier does not. Event and goal steps with the same
 name are different steps, and matching is case-exact. Funnels read raw events,
-which rollups cannot replace: days whose raw rows were pruned are not counted,
+which rollups cannot replace: days whose raw rows were pruned (every day before the prune marker, even if a late raw row sits on one) are not counted,
 `coveredFrom` says where counting starts and `complete` is `false` then. Like
 long-range users, a funnel scans every matching raw event in the range, and
 Laravel notes that `cursor()` still lets PDO buffer the raw result, so memory

@@ -10,6 +10,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Data\Query\RangePlan;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupDimension;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupPeriod;
+use FojleRabbiRabib\LaravelSpaAnalytics\Services\Rollup\PruneMarker;
 use FojleRabbiRabib\LaravelSpaAnalytics\Support\AnalyticsDatabase;
 use FojleRabbiRabib\LaravelSpaAnalytics\Support\Sql;
 use Illuminate\Database\Query\Builder;
@@ -17,7 +18,10 @@ use Illuminate\Support\Facades\DB;
 
 class UsersCounter
 {
-    public function __construct(private readonly RollupReader $reader) {}
+    public function __construct(
+        private readonly RollupReader $reader,
+        private readonly PruneMarker $marker = new PruneMarker,
+    ) {}
 
     /**
      * Distinct people over the range, never a sum across buckets.
@@ -323,13 +327,21 @@ class UsersCounter
     }
 
     /**
-     * The start of the day of the oldest raw event, or null when there are none.
+     * The start of the day of the oldest raw event, or null when there are none. Days before the prune marker count as
+     * pruned even when a late row sits on one, so the floor is never earlier than the marker.
      */
     private function rawFloor(): ?CarbonImmutable
     {
         $oldest = AnalyticsDatabase::table('analytics_events')->min('occurred_at');
 
-        return $oldest === null ? null : RollupPeriod::Day->start(CarbonImmutable::parse((string) $oldest, (string) config('app.timezone')));
+        if ($oldest === null) {
+            return null;
+        }
+
+        $floor = RollupPeriod::Day->start(CarbonImmutable::parse((string) $oldest, (string) config('app.timezone')));
+        $marked = $this->marker->get();
+
+        return $marked !== null && $marked->greaterThan($floor) ? $marked : $floor;
     }
 
     private function pageViews(CarbonImmutable $from, CarbonImmutable $to): Builder

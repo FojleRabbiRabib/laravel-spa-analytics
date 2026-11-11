@@ -18,7 +18,7 @@ class PruneMarker
     {
         $value = AnalyticsState::query()->whereKey(AnalyticsState::PRUNED_THROUGH)->value('value');
 
-        return is_string($value) ? CarbonImmutable::parse($value) : null;
+        return is_string($value) ? CarbonImmutable::parse($value, (string) config('app.timezone')) : null;
     }
 
     /**
@@ -45,7 +45,7 @@ class PruneMarker
                 return;
             }
 
-            if (CarbonImmutable::parse($row->value)->lessThan($through)) {
+            if (CarbonImmutable::parse($row->value, (string) config('app.timezone'))->lessThan($through)) {
                 $row->update(['value' => $through->toDateTimeString()]);
             }
         });
