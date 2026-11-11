@@ -114,7 +114,7 @@ class OldPatchMigrations
         foreach ($this->migrator->paths() as $path) {
             $real = realpath($path);
 
-            if ($real === false || ($vendor !== '' && str_starts_with($real.DIRECTORY_SEPARATOR, $vendor.DIRECTORY_SEPARATOR))) {
+            if ($real === false || ! is_dir($real) || ($vendor !== '' && str_starts_with($real.DIRECTORY_SEPARATOR, $vendor.DIRECTORY_SEPARATOR))) {
                 continue;
             }
 

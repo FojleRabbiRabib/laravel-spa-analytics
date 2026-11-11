@@ -115,6 +115,24 @@ class CleanMigrationsCommandTest extends TestCase
         $this->assertSame(['2026_01_01_000000_update_analytics_events_table_for_custom_events'], app(OldPatchMigrations::class)->delete());
     }
 
+    public function test_a_migration_path_that_is_a_single_file_does_not_stop_the_cleanup(): void
+    {
+        $this->publishCurrentMigration();
+        $old = $this->harmlessFile('update_analytics_events_table_for_custom_events');
+        $base = (string) tempnam(sys_get_temp_dir(), 'spa-single-');
+        $single = $base.'.php';
+        file_put_contents($single, '<?php return new class extends \Illuminate\Database\Migrations\Migration {};');
+        app('migrator')->path($single);
+
+        try {
+            $this->assertSame(['2026_01_01_000000_update_analytics_events_table_for_custom_events'], app(OldPatchMigrations::class)->delete());
+            $this->assertFileDoesNotExist($old);
+        } finally {
+            @unlink($single);
+            @unlink($base);
+        }
+    }
+
     public function test_a_symlinked_old_file_loses_the_link_and_never_its_target(): void
     {
         $this->publishCurrentMigration();
