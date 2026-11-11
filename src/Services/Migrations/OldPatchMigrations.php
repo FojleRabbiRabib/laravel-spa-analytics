@@ -86,11 +86,15 @@ class OldPatchMigrations
         $found = [];
 
         foreach ($this->directories() as $directory) {
-            foreach (File::glob($directory.'/*.php') as $file) {
-                $name = basename($file, '.php');
+            foreach (File::files($directory) as $file) {
+                if ($file->getExtension() !== 'php') {
+                    continue;
+                }
+
+                $name = $file->getBasename('.php');
 
                 if (preg_match('/^\d{4}_\d{2}_\d{2}_\d{6}_(.+)$/', $name, $match) === 1 && in_array($match[1], $names, true)) {
-                    $found[(string) realpath($file)] = $name;
+                    $found[$file->getPathname()] = $name;
                 }
             }
         }

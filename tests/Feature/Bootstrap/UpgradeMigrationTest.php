@@ -186,6 +186,19 @@ class UpgradeMigrationTest extends TestCase
         $this->assertSame($upgraded, $this->shape());
     }
 
+    public function test_an_update_that_stopped_after_adding_the_name_column_is_finished_by_running_it_again(): void
+    {
+        $fresh = $this->shape();
+
+        $this->downgradeTo(5);
+        $this->upgrade(5);
+        Schema::table('analytics_events', fn (Blueprint $table) => $table->dropColumn('value'));
+
+        $this->migration('update_analytics_tables_rev_5')->up();
+
+        $this->assertSame($fresh, $this->shape());
+    }
+
     #[DataProvider('releases')]
     public function test_the_upgrade_keeps_existing_page_views(int $level): void
     {
