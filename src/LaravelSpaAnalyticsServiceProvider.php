@@ -27,6 +27,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\MaxMindGeoLookup;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\PatternBotDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\PatternDeviceDetector;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\ReferrerClassifier;
+use FojleRabbiRabib\LaravelSpaAnalytics\Support\VisitorId;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Console\Scheduling\Schedule;
@@ -39,7 +40,6 @@ use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Str;
 use Spatie\LaravelPackageTools\Commands\InstallCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -64,7 +64,7 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
                 'create_analytics_sessions_table',
                 'create_analytics_visitor_links_table',
                 'create_analytics_rollups_table',
-                'update_analytics_tables_rev_3',
+                'update_analytics_tables_rev_4',
             ])
             ->hasInstallCommand(function (InstallCommand $command): void {
                 $command
@@ -133,6 +133,7 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
             'Session timeout' => config('spa-analytics.sessions.timeout_minutes').' minutes',
             'Re-linking' => config('spa-analytics.identity.relink') ? 'ON' : 'OFF',
             'Routes' => $this->routesState(),
+            'Cache locks' => $this->cacheLocksState(),
             'Old migration files' => ($old = count($this->app->make(OldPatchMigrations::class)->published())) === 0
                 ? 'none'
                 : "{$old} (removed at the next migrate)",
@@ -200,6 +201,21 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
     }
 
     /**
+     * How far the session locks reach with the default cache store. Two requests of one visitor are only kept apart
+     * by a lock every worker can see, so a store that does not share its locks lets them both write.
+     */
+    private function cacheLocksState(): string
+    {
+        $driver = (string) config('cache.stores.'.config('cache.default').'.driver');
+
+        return match ($driver) {
+            'array', 'null' => "this process only ({$driver}): use a shared store such as database or redis",
+            'file', 'apc' => "one server only ({$driver})",
+            default => "shared ({$driver})",
+        };
+    }
+
+    /**
      * The throttle limits of a package endpoint group: one per visitor cookie and a higher one per address.
      *
      * @return array<int, Limit>
@@ -207,14 +223,14 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
     private function limits(Request $request, string $group): array
     {
         $secret = (string) config('app.key');
-        $visitorId = $request->cookie((string) config('spa-analytics.identity.cookie_name'));
+        $visitorId = VisitorId::normalize($request->cookie((string) config('spa-analytics.identity.cookie_name')));
 
         $limits = [
             Limit::perMinute((int) config('spa-analytics.'.$group.'.rate_limit_per_ip_per_minute'))
                 ->by('ip:'.hash_hmac('sha256', (string) $request->ip(), $secret)),
         ];
 
-        if (is_string($visitorId) && Str::isUuid($visitorId)) {
+        if ($visitorId !== null) {
             array_unshift($limits, Limit::perMinute((int) config('spa-analytics.'.$group.'.rate_limit_per_minute'))
                 ->by('visitor:'.hash_hmac('sha256', $visitorId, $secret)));
         }

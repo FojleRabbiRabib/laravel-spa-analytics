@@ -36,6 +36,7 @@ class SessionMerger
             ->where('started_at', '<=', $to)
             ->orderBy('started_at')
             ->orderBy('id')
+            ->lockForUpdate()
             ->get();
 
         $chain = [];

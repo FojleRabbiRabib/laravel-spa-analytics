@@ -25,6 +25,7 @@ return new class extends Migration
         Schema::create('analytics_events', function (Blueprint $table) {
             $table->id();
             $table->string('type', 32)->default(EventType::default());
+            $table->string('event_id', 26)->nullable()->unique();
             $table->string('name', 128)->nullable();
             $table->string('visitor_id', 36);
             $table->unsignedBigInteger('session_id')->nullable();

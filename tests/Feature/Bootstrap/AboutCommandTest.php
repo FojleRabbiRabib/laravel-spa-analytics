@@ -7,6 +7,7 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Feature\Bootstrap;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 class AboutCommandTest extends TestCase
 {
@@ -35,6 +36,29 @@ class AboutCommandTest extends TestCase
         $this->assertSame('queue', $section['write_mode']);
         $this->assertSame('45 minutes', $section['session_timeout']);
         $this->assertSame('ON', $section['re-linking']);
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function cacheDrivers(): array
+    {
+        return [
+            'array' => ['array', 'this process only'],
+            'null' => ['null', 'this process only'],
+            'file' => ['file', 'one server only'],
+            'database' => ['database', 'shared'],
+            'redis' => ['redis', 'shared'],
+        ];
+    }
+
+    #[DataProvider('cacheDrivers')]
+    public function test_the_about_command_says_how_far_the_cache_locks_reach(string $driver, string $reach): void
+    {
+        config()->set('cache.default', 'probe');
+        config()->set('cache.stores.probe', ['driver' => $driver]);
+
+        $this->assertStringContainsString($reach, $this->section()['cache_locks']);
     }
 
     public function test_the_about_command_reports_disabled_tracking(): void

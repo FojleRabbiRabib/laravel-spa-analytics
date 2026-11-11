@@ -17,6 +17,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Services\Identity\VisitorRelinker;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\SessionMerger;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
 use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
@@ -72,6 +73,25 @@ class VisitorRelinkerTest extends TestCase
         $session = AnalyticsSession::query()->sole();
         $this->assertSame('old', $session->visitor_id);
         $this->assertFalse($session->is_new_visitor);
+    }
+
+    public function test_a_deadlock_while_relinking_is_retried_and_history_moves_once(): void
+    {
+        $this->known('old');
+        AnalyticsEvent::factory()->count(2)->create(['visitor_id' => 'new']);
+        $deadlocks = 1;
+        VisitorLink::creating(function () use (&$deadlocks): void {
+            if ($deadlocks-- > 0) {
+                throw new QueryException('testing', 'insert', [], new \PDOException('Deadlock found when trying to get lock; try restarting transaction'));
+            }
+        });
+
+        $this->assertSame('old', $this->relink());
+
+        $this->assertSame(2, AnalyticsEvent::query()->where('visitor_id', 'old')->count());
+        $this->assertSame(1, VisitorLink::query()->where('visitor_id', 'new')->count());
+
+        VisitorLink::flushEventListeners();
     }
 
     public function test_a_link_is_recorded_and_older_links_are_repointed(): void

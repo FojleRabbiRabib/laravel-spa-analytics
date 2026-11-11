@@ -13,7 +13,10 @@ class SessionTracker
     /**
      * Continue the visitor's session or open a new one for this page view.
      *
-     * The caller must hold the "session:{visitor_id}" cache lock and a transaction around this call.
+     * The caller must hold the "session:{visitor_id}" cache lock and a transaction around this call. The session row
+     * is also locked for the transaction, so two workers that do not share a cache lock still update it one at a
+     * time. With no session yet there is no row to lock: two first page views at the same moment depend on the cache
+     * lock alone.
      */
     public function attach(PageViewData $data): AnalyticsSession
     {
@@ -22,6 +25,7 @@ class SessionTracker
         $latest = AnalyticsSession::query()
             ->where('visitor_id', $data->visitorId)
             ->orderByDesc('last_seen_at')
+            ->lockForUpdate()
             ->first();
 
         if ($latest !== null && $this->inWindow($latest, $data->occurredAt, $timeout)) {

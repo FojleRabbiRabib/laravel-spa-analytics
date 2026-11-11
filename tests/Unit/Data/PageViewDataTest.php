@@ -103,6 +103,20 @@ class PageViewDataTest extends TestCase
         $this->assertEquals($audience, PageViewData::fromArray($payload)->audience);
     }
 
+    public function test_the_event_id_is_unset_by_default_and_travels_through_the_payload_and_copies(): void
+    {
+        $data = PageViewData::fromArray($this->attributes());
+
+        $this->assertNull($data->eventId);
+        $this->assertNull($data->toArray()['event_id']);
+
+        $identified = $data->withEventId('01JEXAMPLE0000000000000000');
+
+        $this->assertNull($data->eventId);
+        $this->assertSame('01JEXAMPLE0000000000000000', PageViewData::fromArray($identified->toPayload())->eventId);
+        $this->assertSame('01JEXAMPLE0000000000000000', $identified->withVisitorId('other')->eventId);
+    }
+
     public function test_with_visitor_id_keeps_the_audience(): void
     {
         $audience = new AudienceData(DeviceType::Desktop, 'Linux', 'Firefox', '121', 'DE');

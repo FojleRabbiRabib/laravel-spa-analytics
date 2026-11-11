@@ -27,6 +27,7 @@ final readonly class PageViewData
         public bool $isBot,
         public CarbonImmutable $occurredAt,
         public AudienceData $audience = new AudienceData,
+        public ?string $eventId = null,
     ) {}
 
     /**
@@ -59,6 +60,7 @@ final readonly class PageViewData
             isBot: (bool) $data['is_bot'],
             occurredAt: CarbonImmutable::parse($data['occurred_at']),
             audience: AudienceData::fromArray($data),
+            eventId: isset($data['event_id']) ? (string) $data['event_id'] : null,
         );
     }
 
@@ -81,6 +83,30 @@ final readonly class PageViewData
             $this->isBot,
             $this->occurredAt,
             $this->audience,
+            $this->eventId,
+        );
+    }
+
+    /**
+     * Return a copy carrying the id that makes storing this page view idempotent across queue retries.
+     */
+    public function withEventId(string $eventId): self
+    {
+        return new self(
+            $this->type,
+            $this->visitorId,
+            $this->path,
+            $this->status,
+            $this->referrerHost,
+            $this->referrerType,
+            $this->utm,
+            $this->language,
+            $this->ip,
+            $this->userAgent,
+            $this->isBot,
+            $this->occurredAt,
+            $this->audience,
+            $eventId,
         );
     }
 
@@ -103,6 +129,7 @@ final readonly class PageViewData
     {
         return [
             'type' => $this->type,
+            'event_id' => $this->eventId,
             'visitor_id' => $this->visitorId,
             'path' => $this->path,
             'status' => $this->status,
