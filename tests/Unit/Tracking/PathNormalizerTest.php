@@ -22,6 +22,13 @@ class PathNormalizerTest extends TestCase
         $this->assertSame('/', (new PathNormalizer)->normalize('?x=1'));
     }
 
+    public function test_control_characters_and_invalid_bytes_are_removed_without_cutting_the_path_short(): void
+    {
+        $this->assertSame('/ab/c', (new PathNormalizer)->normalize("/a\0b/c"));
+        $this->assertSame('/caf?/menu', (new PathNormalizer)->normalize("/caf\xe9/menu"));
+        $this->assertSame('/caf?', (new PathNormalizer)->normalize("/caf\xe9?x=1"));
+    }
+
     public function test_it_caps_the_length(): void
     {
         $this->assertSame(512, mb_strlen((new PathNormalizer)->normalize('/'.str_repeat('a', 2000))));

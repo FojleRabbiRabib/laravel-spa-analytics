@@ -17,20 +17,22 @@ class RetentionPruner
     public function __construct(
         private readonly int $chunkSize = 1000,
         private readonly RetentionPolicy $retention = new RetentionPolicy,
+        private readonly RollupVerifier $verifier = new RollupVerifier,
     ) {}
 
     /**
      * Delete raw events and sessions older than the retention cutoff, but only for days that were rolled up.
      *
-     * Pruning stops at the first day without a daily total rollup, so nothing is deleted before it was counted.
-     * Sessions go by their last activity, so a session still running at the cutoff is kept.
+     * Pruning stops at the first day without a daily total rollup, or whose rollup counted fewer page views or
+     * events than its raw rows hold (late writes), so nothing is deleted before it was counted. Sessions go by
+     * their last activity, so a session still running at the cutoff is kept.
      *
-     * @return array{events: int, sessions: int, retention: bool, blockedDay: ?CarbonImmutable}
+     * @return array{events: int, sessions: int, retention: bool, blockedDay: ?CarbonImmutable, blockedReason: ?string}
      */
     public function prune(CarbonImmutable $now): array
     {
         $cutoff = $this->retention->cutoff($now);
-        $result = ['events' => 0, 'sessions' => 0, 'retention' => $cutoff !== null, 'blockedDay' => null];
+        $result = ['events' => 0, 'sessions' => 0, 'retention' => $cutoff !== null, 'blockedDay' => null, 'blockedReason' => null];
 
         if ($cutoff === null) {
             return $result;
@@ -56,6 +58,14 @@ class RetentionPruner
         while ($through->lessThan($cutoff)) {
             if (! $rolled->has($through->toDateTimeString())) {
                 $result['blockedDay'] = $through;
+                $result['blockedReason'] = 'missing';
+
+                break;
+            }
+
+            if ($this->verifier->isBehind($through)) {
+                $result['blockedDay'] = $through;
+                $result['blockedReason'] = 'behind';
 
                 break;
             }

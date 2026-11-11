@@ -83,10 +83,16 @@ class RollupCommand extends Command
         }
 
         if ($result['skippedDays'] > 0) {
-            $this->components->warn("{$result['skippedDays']} days before the retention cutoff ({$result['cutoff']?->toDateString()}) already have rollups and were left as they are.");
+            $this->components->warn("{$result['skippedDays']} days already have rollups that count more than their remaining raw rows (pruned days) and were left as they are.");
         }
 
         $this->components->info("Rolled up {$result['hours']} hourly and {$result['days']} daily buckets.");
+
+        if ($result['failed'] > 0) {
+            $this->components->error("{$result['failed']} buckets failed to build; see the log. The others were built.");
+
+            return self::FAILURE;
+        }
 
         return self::SUCCESS;
     }

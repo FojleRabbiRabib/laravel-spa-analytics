@@ -178,6 +178,21 @@ class RollupBuilder
     }
 
     /**
+     * Add a group to a row whose value was cut to the value column, where different raw values can end up in one row.
+     * The counts add up; the visitors of the row are those of its largest group, since the groups cannot be told apart.
+     *
+     * @param  array<string, array<string, int|float>>  $rows
+     */
+    private function merge(array &$rows, RollupDimension $dimension, string $value, string $metric, int $amount, int $visitors): void
+    {
+        $this->add($rows, $dimension, $value);
+
+        $key = $dimension->key($value);
+        $rows[$key][$metric] += $amount;
+        $rows[$key]['visitors'] = max($rows[$key]['visitors'], $visitors);
+    }
+
+    /**
      * @param  array<string, array<string, int|float>>  $rows
      */
     private function addPageViews(array &$rows, string $from, string $to): void
@@ -228,8 +243,7 @@ class RollupBuilder
             foreach ($errors as $group) {
                 $value = RollupDimension::errorPathValue((int) $group->status, (string) $group->path);
 
-                $this->set($rows, RollupDimension::ErrorPath, $value, 'page_views', (int) $group->page_views);
-                $this->set($rows, RollupDimension::ErrorPath, $value, 'visitors', (int) $group->visitors);
+                $this->merge($rows, RollupDimension::ErrorPath, $value, 'page_views', (int) $group->page_views, (int) $group->visitors);
             }
         }
 
@@ -374,8 +388,7 @@ class RollupBuilder
         foreach ($groups as $group) {
             $value = RollupDimension::pathScrollValue((int) $group->percent, (string) $group->path);
 
-            $this->set($rows, RollupDimension::PathScroll, $value, 'events', (int) $group->events);
-            $this->set($rows, RollupDimension::PathScroll, $value, 'visitors', (int) $group->visitors);
+            $this->merge($rows, RollupDimension::PathScroll, $value, 'events', (int) $group->events, (int) $group->visitors);
         }
     }
 
@@ -399,8 +412,7 @@ class RollupBuilder
         foreach ($groups as $group) {
             $value = RollupDimension::downloadValue($group->host, (string) $group->path);
 
-            $this->set($rows, RollupDimension::Download, $value, 'events', (int) $group->events);
-            $this->set($rows, RollupDimension::Download, $value, 'visitors', (int) $group->visitors);
+            $this->merge($rows, RollupDimension::Download, $value, 'events', (int) $group->events, (int) $group->visitors);
         }
     }
 

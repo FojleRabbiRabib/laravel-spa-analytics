@@ -6,6 +6,7 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking;
 
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\Referrer;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
+use FojleRabbiRabib\LaravelSpaAnalytics\Support\Text;
 
 class ReferrerClassifier
 {
@@ -19,7 +20,7 @@ class ReferrerClassifier
     ) {}
 
     /**
-     * Classify a Referer header; missing, unparsable and same-site referrers are direct.
+     * Classify a Referer header; missing, unparsable, invalid-host and same-site referrers are direct.
      */
     public function classify(?string $referer, string $ownHost): Referrer
     {
@@ -29,9 +30,9 @@ class ReferrerClassifier
             return new Referrer(null, ReferrerType::Direct);
         }
 
-        $host = $this->withoutWww($host);
+        $host = Text::host($this->withoutWww($host));
 
-        if ($host === $this->withoutWww($ownHost)) {
+        if ($host === null || $host === $this->withoutWww($ownHost)) {
             return new Referrer(null, ReferrerType::Direct);
         }
 

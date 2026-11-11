@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking;
 
+use FojleRabbiRabib\LaravelSpaAnalytics\Support\Text;
+
 class EventSanitizer
 {
     private const MAX_PROPERTIES = 20;
@@ -49,12 +51,14 @@ class EventSanitizer
                 break;
             }
 
-            if (! is_string($key) || $key === '' || mb_strlen($key) > self::MAX_KEY_LENGTH) {
+            $key = is_string($key) ? Text::strip($key) : '';
+
+            if ($key === '' || mb_strlen($key) > self::MAX_KEY_LENGTH) {
                 continue;
             }
 
             if (is_string($value)) {
-                $clean[$key] = mb_substr($value, 0, self::MAX_STRING_LENGTH);
+                $clean[$key] = mb_substr(Text::strip($value), 0, self::MAX_STRING_LENGTH);
             } elseif (is_int($value) || is_bool($value) || $value === null || (is_float($value) && is_finite($value))) {
                 $clean[$key] = $value;
             }

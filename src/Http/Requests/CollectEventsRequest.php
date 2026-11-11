@@ -13,6 +13,8 @@ class CollectEventsRequest extends FormRequest
 {
     public const MAX_EVENTS = 20;
 
+    public const MAX_BYTES = 65536;
+
     /**
      * The endpoint is public like the page it reports from; the visitor cookie and the throttle guard it.
      */
@@ -62,7 +64,16 @@ class CollectEventsRequest extends FormRequest
         return [];
     }
 
-    protected function prepareForValidation(): void {}
+    /**
+     * Refuse a body over 64 KB with 413 before it is validated or recorded. The web server limit is what stops a huge
+     * body from being read at all. A chunked request sends no length, so its body is measured.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ((int) $this->header('Content-Length') > self::MAX_BYTES || strlen($this->getContent()) > self::MAX_BYTES) {
+            abort(413);
+        }
+    }
 
     public function validateResolved(): void
     {

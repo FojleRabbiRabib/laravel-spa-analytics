@@ -31,6 +31,7 @@ class PruneCommandTest extends TestCase
             'bucket_start' => Carbon::parse($day),
             'dimension' => RollupDimension::Total,
             'value' => '',
+            'page_views' => 99,
         ]);
     }
 
@@ -100,7 +101,7 @@ class PruneCommandTest extends TestCase
 
         $this->artisan('spa-analytics:prune')
             ->expectsOutputToContain('spa-analytics:rollup --since=2026-03-05')
-            ->assertExitCode(0);
+            ->assertExitCode(1);
 
         $this->assertSame(1, AnalyticsEvent::query()->count());
         $this->assertSame(1, AnalyticsSession::query()->count());
@@ -110,7 +111,7 @@ class PruneCommandTest extends TestCase
     {
         $this->pageView('2026-03-05 10:00:00');
 
-        $this->artisan('spa-analytics:prune')->assertExitCode(0);
+        $this->artisan('spa-analytics:prune')->assertExitCode(1);
         $this->assertSame(1, AnalyticsEvent::query()->count());
 
         $this->artisan('spa-analytics:rollup', ['--since' => '2026-03-05', '--period' => 'day'])->assertExitCode(0);
@@ -128,7 +129,7 @@ class PruneCommandTest extends TestCase
         $this->pageView('2026-03-05 10:00:00');
         $this->pageView('2026-03-06 10:00:00');
 
-        $this->artisan('spa-analytics:prune')->expectsOutputToContain('2026-03-05')->assertExitCode(0);
+        $this->artisan('spa-analytics:prune')->expectsOutputToContain('2026-03-05')->assertExitCode(1);
 
         $this->assertSame(2, AnalyticsEvent::query()->count());
         $this->assertSame(0, AnalyticsEvent::query()->whereDate('occurred_at', '2026-03-04')->count());
@@ -171,6 +172,7 @@ class PruneCommandTest extends TestCase
             'value' => '',
             'page_views' => 42,
         ]);
+        $this->rolledDay('2026-03-06');
         $this->pageView('2026-03-05 10:00:00');
         $this->artisan('spa-analytics:prune')->assertExitCode(0);
 

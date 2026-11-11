@@ -164,7 +164,10 @@ return [
     | schedule on, the package registers the rollup hourly and the prune daily
     | in the Laravel scheduler; turn it off to schedule them yourself.
     | lookback_hours is how many recent hours each run recomputes, so late
-    | queued writes and still-open sessions are picked up.
+    | queued writes and still-open sessions are picked up. A scheduled run
+    | also builds the days of the last seven that were missed, or whose raw
+    | page views or events exceed what was counted; spa-analytics:prune keeps
+    | such a day and exits with a failure until it is rebuilt.
     | disabled_dimensions lists dimensions to stop building, to keep the
     | rollup table small (for example 'utm_term', 'utm_content', 'download').
     | Stats::top() refuses a disabled dimension, and rows already stored for it
