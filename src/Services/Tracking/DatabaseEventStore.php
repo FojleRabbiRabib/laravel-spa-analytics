@@ -16,6 +16,12 @@ use Illuminate\Support\Facades\Log;
 
 class DatabaseEventStore implements EventStore
 {
+    /**
+     * Tries of the write transaction: the row locks on sessions can end one of two transactions in a deadlock, which
+     * the database reports as a retryable error.
+     */
+    private const ATTEMPTS = 3;
+
     public function __construct(
         private readonly VisitorLinkResolver $links,
         private readonly SessionTracker $sessions,
@@ -59,7 +65,7 @@ class DatabaseEventStore implements EventStore
                                 : $this->sessions->attach($data)->id;
 
                             return AnalyticsEvent::query()->create([...$data->toArray(), 'session_id' => $sessionId]);
-                        });
+                        }, self::ATTEMPTS);
                     } catch (UniqueConstraintViolationException $e) {
                         // Two workers raced past the check without a shared lock; the unique index let one in and the
                         // transaction took the other one's session change back.

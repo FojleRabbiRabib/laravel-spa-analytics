@@ -51,6 +51,17 @@ class ResolveVisitorIdentityTest extends TestCase
             ->assertJsonPath('source', IdentitySource::Cookie->value);
     }
 
+    public function test_an_upper_case_cookie_is_the_same_visitor_in_lower_case(): void
+    {
+        $uuid = (string) Str::uuid();
+
+        $response = $this->withCookie(self::COOKIE, strtoupper($uuid))->get('/probe');
+
+        $response->assertOk()
+            ->assertJsonPath('id', $uuid)
+            ->assertJsonPath('source', IdentitySource::Cookie->value);
+    }
+
     public function test_invalid_cookie_is_replaced(): void
     {
         $response = $this->withCookie(self::COOKIE, 'not-a-uuid')->get('/probe');

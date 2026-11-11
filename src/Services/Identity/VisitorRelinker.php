@@ -74,7 +74,7 @@ class VisitorRelinker
 
                     VisitorLink::query()->create(['visitor_id' => $identity->id, 'linked_to' => $adopted, 'created_at' => now()]);
                     VisitorLink::query()->where('linked_to', $identity->id)->update(['linked_to' => $adopted]);
-                });
+                }, 3);
 
                 $fresh = true;
 

@@ -90,6 +90,15 @@ class IdentityRateLimitTest extends TestCase
         $this->assertNotSame($limits[0]->key, $limits[1]->key);
     }
 
+    public function test_letter_case_variants_of_one_cookie_share_one_allowance(): void
+    {
+        $this->limits(2, 100);
+
+        $this->handshakeAs('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')->assertOk();
+        $this->handshakeAs('AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA')->assertOk();
+        $this->handshakeAs('Aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')->assertStatus(429);
+    }
+
     public function test_a_caller_without_a_valid_cookie_gets_only_the_address_ceiling(): void
     {
         $request = Request::create('/spa-analytics/handshake', 'POST');

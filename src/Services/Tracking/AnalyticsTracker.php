@@ -10,9 +10,9 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Data\Identity\VisitorIdentity;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\CustomEventData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\EventType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Support\Text;
+use FojleRabbiRabib\LaravelSpaAnalytics\Support\VisitorId;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class AnalyticsTracker
 {
@@ -61,7 +61,7 @@ class AnalyticsTracker
     {
         $scoped = clone $this;
         $scoped->scoped = true;
-        $scoped->visitorId = $visitorId !== null && Str::isUuid($visitorId) ? $visitorId : null;
+        $scoped->visitorId = VisitorId::normalize($visitorId);
 
         return $scoped;
     }

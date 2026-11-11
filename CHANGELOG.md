@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The visitor id is stored in lower case. A UUID is valid in any letter case, so a cookie sent as `ABC...` and as `abc...` got two rate limit allowances and two session locks while a case-insensitive database column read them as one visitor. The cookie, the rate limit keys and `Analytics::for()` now share one normalised form.
+- Session updates are safe across workers that do not share a cache lock. The session row is locked for the write transaction (`lockForUpdate`), and a deadlock between two writers, or in a re-link, is tried up to three times instead of losing the event. Limit: a visitor with no session yet has no row to lock, so two first page views at the same moment still rely on the cache lock; use a shared cache store (database or redis).
+- `php artisan about` has a `Cache locks` line that says whether the default cache store shares its locks between processes (`array` and `null` do not, `file` reaches one server only).
 - Page views were missed when an Inertia `replace: true` visit was served from the prefetch cache: the visit changes the URL with `replaceState`, which the browser script did not watch. On an Inertia page (recognised by its `data-page` page object) a `replaceState` that changes the pathname is now reported like a `pushState`, and the server's five-second guard still counts a visit that reached the server once. The `replaceState` Inertia makes while it boots, to the `url` of its own page object, is not a visit. On other pages a `replaceState` is still not reported, but the next page view now starts from the path it set, where it used to start from the path before it. A `replaceState` that changes only the query or hash is unchanged. Re-publish the assets after upgrading.
 
 ## [0.9.0] - 2026-10-26
