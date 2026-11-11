@@ -29,6 +29,13 @@ use Illuminate\Support\Facades\Queue;
 
 class QueueSafetyTest extends TestCase
 {
+    protected function tearDown(): void
+    {
+        AnalyticsEvent::flushEventListeners();
+
+        parent::tearDown();
+    }
+
     private function pageView(): PageViewData
     {
         return new PageViewData(
