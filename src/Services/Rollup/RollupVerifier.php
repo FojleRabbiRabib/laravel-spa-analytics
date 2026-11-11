@@ -13,14 +13,20 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Support\AnalyticsDatabase;
 
 class RollupVerifier
 {
+    public function __construct(private readonly PruneMarker $marker = new PruneMarker) {}
+
     /**
      * Whether the raw rows of a day that has a daily rollup hold more page views or more custom events and goals than
      * the rollup counted, for example because queued writes landed after the day was built. A day without a rollup
      * is not behind, it is missing. Only these two counts are compared, so a late outbound, scroll or download row
-     * alone does not show.
+     * alone does not show. A day the prune marker covers is never behind: its raw rows were deleted on purpose.
      */
     public function isBehind(CarbonImmutable $day): bool
     {
+        if ($this->marker->covers($day)) {
+            return false;
+        }
+
         $stored = $this->stored($day);
 
         if ($stored === null) {
@@ -35,10 +41,15 @@ class RollupVerifier
     /**
      * Whether the raw rows of a day that has a daily rollup hold fewer page views or events than the rollup counted,
      * or no events at all. That is a day whose raw rows were pruned (or deleted), and rebuilding it would replace
-     * good numbers with smaller ones, so it is left alone even when a late write left a few raw rows behind.
+     * good numbers with smaller ones, so it is left alone even when a late write left a few raw rows behind. A day
+     * before the prune marker always counts, with or without a rollup row, because its raw rows were deleted.
      */
     public function isShrinking(CarbonImmutable $day): bool
     {
+        if ($this->marker->covers($day)) {
+            return true;
+        }
+
         $stored = $this->stored($day);
 
         if ($stored === null) {

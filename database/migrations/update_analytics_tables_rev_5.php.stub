@@ -28,6 +28,7 @@ return new class extends Migration
         $this->events();
         $this->sessions();
         $this->rollups();
+        $this->state();
     }
 
     /**
@@ -114,6 +115,18 @@ return new class extends Migration
         $this->addColumns('analytics_rollups', [
             'engaged_seconds' => fn (Blueprint $table) => $table->unsignedBigInteger('engaged_seconds')->default(0),
         ]);
+    }
+
+    private function state(): void
+    {
+        if (Schema::hasTable('analytics_state')) {
+            return;
+        }
+
+        Schema::create('analytics_state', function (Blueprint $table) {
+            $table->string('name', 64)->primary();
+            $table->string('value', 255);
+        });
     }
 
     /**

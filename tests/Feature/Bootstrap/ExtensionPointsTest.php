@@ -10,6 +10,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Console\RollupCommand;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsRollup;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsState;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\VisitorFingerprint;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\VisitorLink;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
@@ -34,11 +35,13 @@ class ExtensionPointsTest extends TestCase
             'session' => [new AnalyticsSession, 'analytics_sessions'],
             'fingerprint' => [new VisitorFingerprint, 'analytics_visitor_fingerprints'],
             'link' => [new VisitorLink, 'analytics_visitor_links'],
+            'state' => [new AnalyticsState, 'analytics_state'],
             'event subclass' => [new class extends AnalyticsEvent {}, 'analytics_events'],
             'rollup subclass' => [new class extends AnalyticsRollup {}, 'analytics_rollups'],
             'session subclass' => [new class extends AnalyticsSession {}, 'analytics_sessions'],
             'fingerprint subclass' => [new class extends VisitorFingerprint {}, 'analytics_visitor_fingerprints'],
             'link subclass' => [new class extends VisitorLink {}, 'analytics_visitor_links'],
+            'state subclass' => [new class extends AnalyticsState {}, 'analytics_state'],
         ];
     }
 

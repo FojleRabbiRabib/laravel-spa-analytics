@@ -13,7 +13,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 
 class UpgradeMigrationTest extends TestCase
 {
-    private const TABLES = ['analytics_events', 'analytics_sessions', 'analytics_rollups', 'analytics_visitor_fingerprints', 'analytics_visitor_links'];
+    private const TABLES = ['analytics_events', 'analytics_sessions', 'analytics_rollups', 'analytics_state', 'analytics_visitor_fingerprints', 'analytics_visitor_links'];
 
     private function migration(string $name): Migration
     {
@@ -50,6 +50,9 @@ class UpgradeMigrationTest extends TestCase
      */
     private function downgradeTo(int $level): void
     {
+        // Every earlier release lacks the state table.
+        Schema::drop('analytics_state');
+
         // Every earlier release lacks the event id.
         Schema::table('analytics_events', fn (Blueprint $table) => $table->dropUnique(['event_id']));
         Schema::table('analytics_events', fn (Blueprint $table) => $table->dropColumn('event_id'));
@@ -133,7 +136,7 @@ class UpgradeMigrationTest extends TestCase
             $this->migration('create_analytics_rollups_table')->up();
         }
 
-        $this->migration('update_analytics_tables_rev_4')->up();
+        $this->migration('update_analytics_tables_rev_5')->up();
     }
 
     /**
@@ -155,7 +158,7 @@ class UpgradeMigrationTest extends TestCase
     {
         $fresh = $this->shape();
 
-        $this->migration('update_analytics_tables_rev_4')->up();
+        $this->migration('update_analytics_tables_rev_5')->up();
 
         $this->assertSame($fresh, $this->shape());
     }
@@ -178,7 +181,7 @@ class UpgradeMigrationTest extends TestCase
         $this->upgrade($level);
         $upgraded = $this->shape();
 
-        $this->migration('update_analytics_tables_rev_4')->up();
+        $this->migration('update_analytics_tables_rev_5')->up();
 
         $this->assertSame($upgraded, $this->shape());
     }
@@ -203,7 +206,7 @@ class UpgradeMigrationTest extends TestCase
     {
         $fresh = $this->shape();
 
-        $this->migration('update_analytics_tables_rev_4')->down();
+        $this->migration('update_analytics_tables_rev_5')->down();
 
         $this->assertSame($fresh, $this->shape());
     }

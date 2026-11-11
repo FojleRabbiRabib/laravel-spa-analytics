@@ -96,7 +96,8 @@ class RollupRunner
 
     /**
      * Rebuild the ended days of the last seven that the lookback does not reach and that have no daily rollup or
-     * fewer counted page views or events than their raw rows, together with their hours.
+     * fewer counted page views or events than their raw rows, together with their hours. A day whose raw rows were
+     * pruned is left alone, a late row on it included.
      *
      * @param  array<int, RollupPeriod>  $periods
      * @param  array{hours: int, days: int, skippedDays: int, healedDays: int, failed: int, rawFrom: ?CarbonImmutable}  $counts
@@ -113,6 +114,10 @@ class RollupRunner
         $rolled = $this->rolledDays($first, $lookbackDay);
 
         for ($day = $first; $day->lessThan($lookbackDay) && RollupPeriod::Day->end($day)->lessThanOrEqualTo($now); $day = RollupPeriod::Day->end($day)) {
+            if ($this->verifier->isShrinking($day)) {
+                continue;
+            }
+
             if (isset($rolled[$day->toDateTimeString()]) && ! $this->verifier->isBehind($day)) {
                 continue;
             }

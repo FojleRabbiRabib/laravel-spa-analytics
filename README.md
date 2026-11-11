@@ -134,9 +134,10 @@ To go back to 0.7.x, do not publish the migrations again: the schema is identica
 and publishing under 0.7.x would add the seven old files with new timestamps, which
 fail with "duplicate column" on a database that already has the columns.
 
-**From 0.9.x**: one new migration, adding `region` to the sessions table. Publish
-the migrations again and migrate (the update migration is now `rev_4`; the package
-deletes the published `rev_2` and `rev_3` files for you). The browser script changed for Inertia
+**From 0.9.x**: new migrations, adding `region` to the sessions table, `event_id` to
+the events table and the `analytics_state` table. Publish
+the migrations again and migrate (the update migration is now `rev_5`; the package
+deletes the published `rev_2`, `rev_3` and `rev_4` files for you). The browser script changed for Inertia
 `replace: true` visits, so re-publish it too. A `GeoLocator` you bound keeps
 working: its country is used, with no region. To get a region, bind a `GeoLookup`
 (see [Audience](#audience)), set `audience.region_header`, or point
@@ -828,6 +829,11 @@ visitor links are never pruned. Before the cutoff, the rollup command only
 fills days that have no daily rollup yet (their raw rows are still all there, so
 this is how you unblock the prune), and leaves days that already have one alone,
 so a backfill cannot overwrite them with zeros.
+
+The prune records how far it went in the `analytics_state` table. A day before
+that moment is never rebuilt from raw rows (not by the scheduled run, its seven
+day heal or `rollup --since`), and any raw row that still turns up for such a
+day, such as a queued write that landed late, is deleted by the next prune.
 
 Things to know: lengthening `retention_days` later does not bring pruned days
 back; after pruning, a returning visitor whose old sessions are gone is
