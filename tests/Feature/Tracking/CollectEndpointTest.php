@@ -9,13 +9,15 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ReferrerType;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\ViewportSize;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
+use FojleRabbiRabib\LaravelSpaAnalytics\Tests\Support\EnforcesCsrf;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
-use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Carbon;
 use Illuminate\Testing\TestResponse;
 
 class CollectEndpointTest extends TestCase
 {
+    use EnforcesCsrf;
+
     private const VISITOR = '11111111-1111-4111-8111-111111111111';
 
     protected function setUp(): void
@@ -281,13 +283,13 @@ class CollectEndpointTest extends TestCase
         $this->assertSame(0, AnalyticsEvent::query()->count());
     }
 
-    public function test_the_endpoint_is_csrf_protected_and_throttled_with_its_own_limiter(): void
+    public function test_a_post_without_a_csrf_token_is_rejected_and_stores_nothing(): void
     {
-        $route = app('router')->getRoutes()->getByName('spa-analytics.collect');
-        $middleware = app('router')->gatherRouteMiddleware($route);
+        $this->enforceCsrf();
 
-        $this->assertContains(PreventRequestForgery::class, $middleware);
-        $this->assertContains('Illuminate\Routing\Middleware\ThrottleRequests:spa-analytics-collect', $middleware);
+        $this->collect([['kind' => 'pageview', 'path' => '/a']])->assertStatus(419);
+
+        $this->assertSame(0, AnalyticsEvent::query()->count());
     }
 
     public function test_a_visitor_over_the_limit_is_throttled(): void

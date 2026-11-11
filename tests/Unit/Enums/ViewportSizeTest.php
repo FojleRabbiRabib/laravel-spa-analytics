@@ -38,7 +38,7 @@ class ViewportSizeTest extends TestCase
         $this->assertSame($expected, ViewportSize::fromWidth($width));
     }
 
-    public function test_helpers(): void
+    public function test_is_label_color_values_options_coerce_and_default_describe_the_cases(): void
     {
         $this->assertTrue(ViewportSize::Md->is(ViewportSize::Md));
         $this->assertFalse(ViewportSize::Md->is(ViewportSize::Lg));

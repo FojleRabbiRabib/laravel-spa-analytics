@@ -10,7 +10,7 @@ use PHPUnit\Framework\TestCase;
 
 class FunnelStepTypeTest extends TestCase
 {
-    public function test_helpers(): void
+    public function test_is_label_color_values_default_and_options_describe_the_cases(): void
     {
         $this->assertTrue(FunnelStepType::Goal->is(FunnelStepType::Goal));
         $this->assertFalse(FunnelStepType::Goal->is(FunnelStepType::Event));

@@ -9,7 +9,7 @@ use PHPUnit\Framework\TestCase;
 
 class RollupDimensionTest extends TestCase
 {
-    public function test_helpers(): void
+    public function test_is_label_color_and_default_describe_the_cases(): void
     {
         $this->assertTrue(RollupDimension::Total->is(RollupDimension::Total));
         $this->assertFalse(RollupDimension::Total->is(RollupDimension::Path));
@@ -29,37 +29,57 @@ class RollupDimensionTest extends TestCase
             'os', 'browser', 'country', 'visitor_type', 'event', 'goal', 'outbound_host', 'scroll_depth',
             'utm_source', 'utm_medium', 'utm_term', 'utm_content', 'status', 'error_path', 'language', 'download', 'file_extension', 'viewport', 'path_scroll', 'region',
         ], RollupDimension::values());
-        $this->assertSame('Scroll depth by path', RollupDimension::PathScroll->label());
-        $this->assertSame('orange', RollupDimension::PathScroll->color());
-        $this->assertNull(RollupDimension::PathScroll->sessionColumn());
-        $this->assertSame('50 /a b', RollupDimension::pathScrollValue(50, '/a b'));
-        $this->assertSame(512, mb_strlen(RollupDimension::pathScrollValue(100, str_repeat('x', 600))));
-        $this->assertSame('Viewport', RollupDimension::Viewport->label());
-        $this->assertSame('viewport', RollupDimension::Viewport->sessionColumn());
-        $this->assertSame('green', RollupDimension::Language->color());
-        $this->assertSame('Language', RollupDimension::Language->label());
-        $this->assertSame('File extension', RollupDimension::FileExtension->label());
-        $this->assertSame('orange', RollupDimension::Download->color());
-        $this->assertSame('/files/a.pdf', RollupDimension::downloadValue(null, '/files/a.pdf'));
-        $this->assertSame('cdn.test/a.pdf', RollupDimension::downloadValue('cdn.test', '/a.pdf'));
-        $this->assertSame(512, mb_strlen(RollupDimension::downloadValue('cdn.test', '/'.str_repeat('x', 600))));
+    }
+
+    public function test_options_list_every_dimension_in_order(): void
+    {
         $this->assertCount(27, RollupDimension::options());
+        $this->assertSame(['value' => 'path', 'label' => 'Path'], RollupDimension::options()[1]);
+        $this->assertSame(['value' => 'exit_path', 'label' => 'Exit path'], RollupDimension::options()[2]);
+    }
+
+    public function test_labels_and_colors_of_the_audience_and_campaign_dimensions(): void
+    {
+        $this->assertSame('Language', RollupDimension::Language->label());
+        $this->assertSame('green', RollupDimension::Language->color());
         $this->assertSame('Region', RollupDimension::Region->label());
         $this->assertSame('green', RollupDimension::Region->color());
-        $this->assertSame('region', RollupDimension::Region->sessionColumn());
-        $this->assertSame('Error path', RollupDimension::ErrorPath->label());
-        $this->assertSame('red', RollupDimension::Status->color());
-        $this->assertNull(RollupDimension::Status->sessionColumn());
-        $this->assertSame('404 /a b', RollupDimension::errorPathValue(404, '/a b'));
-        $this->assertSame(512, mb_strlen(RollupDimension::errorPathValue(500, str_repeat('x', 600))));
+        $this->assertSame('Viewport', RollupDimension::Viewport->label());
         $this->assertSame('UTM source', RollupDimension::UtmSource->label());
         $this->assertSame('UTM content', RollupDimension::UtmContent->label());
         $this->assertSame('purple', RollupDimension::UtmMedium->color());
-        $this->assertSame('utm_term', RollupDimension::UtmTerm->sessionColumn());
-        $this->assertSame('Outbound host', RollupDimension::OutboundHost->label());
+    }
+
+    public function test_labels_and_colors_of_the_interaction_dimensions(): void
+    {
+        $this->assertSame('Scroll depth by path', RollupDimension::PathScroll->label());
+        $this->assertSame('orange', RollupDimension::PathScroll->color());
         $this->assertSame('Scroll depth', RollupDimension::ScrollDepth->label());
+        $this->assertSame('Outbound host', RollupDimension::OutboundHost->label());
         $this->assertSame('orange', RollupDimension::OutboundHost->color());
-        $this->assertSame(['value' => 'exit_path', 'label' => 'Exit path'], RollupDimension::options()[2]);
-        $this->assertSame(['value' => 'path', 'label' => 'Path'], RollupDimension::options()[1]);
+        $this->assertSame('File extension', RollupDimension::FileExtension->label());
+        $this->assertSame('orange', RollupDimension::Download->color());
+        $this->assertSame('Error path', RollupDimension::ErrorPath->label());
+        $this->assertSame('red', RollupDimension::Status->color());
+    }
+
+    public function test_only_the_session_dimensions_name_a_session_column(): void
+    {
+        $this->assertSame('viewport', RollupDimension::Viewport->sessionColumn());
+        $this->assertSame('region', RollupDimension::Region->sessionColumn());
+        $this->assertSame('utm_term', RollupDimension::UtmTerm->sessionColumn());
+        $this->assertNull(RollupDimension::PathScroll->sessionColumn());
+        $this->assertNull(RollupDimension::Status->sessionColumn());
+    }
+
+    public function test_composite_values_are_joined_and_capped_at_512_characters(): void
+    {
+        $this->assertSame('50 /a b', RollupDimension::pathScrollValue(50, '/a b'));
+        $this->assertSame('404 /a b', RollupDimension::errorPathValue(404, '/a b'));
+        $this->assertSame('/files/a.pdf', RollupDimension::downloadValue(null, '/files/a.pdf'));
+        $this->assertSame('cdn.test/a.pdf', RollupDimension::downloadValue('cdn.test', '/a.pdf'));
+        $this->assertSame(512, mb_strlen(RollupDimension::pathScrollValue(100, str_repeat('x', 600))));
+        $this->assertSame(512, mb_strlen(RollupDimension::errorPathValue(500, str_repeat('x', 600))));
+        $this->assertSame(512, mb_strlen(RollupDimension::downloadValue('cdn.test', '/'.str_repeat('x', 600))));
     }
 }

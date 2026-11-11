@@ -16,6 +16,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\SessionTracker;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking\VisitorLinkResolver;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
 use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -71,12 +72,9 @@ class DatabaseEventStoreTest extends TestCase
     {
         Schema::drop('analytics_events');
 
-        try {
-            app(DatabaseEventStore::class)->store($this->pageView());
-            $this->fail('Expected the insert to fail.');
-        } catch (\Throwable) {
-            $this->assertSame(0, AnalyticsSession::query()->count());
-        }
+        $this->assertThrows(fn () => app(DatabaseEventStore::class)->store($this->pageView()), QueryException::class);
+
+        $this->assertSame(0, AnalyticsSession::query()->count());
     }
 
     public function test_the_lock_is_held_until_the_event_is_inserted(): void

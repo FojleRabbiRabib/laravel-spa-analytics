@@ -13,7 +13,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
 use Illuminate\Support\Facades\Log;
 use MaxMind\Db\Reader;
 
-class MaxMindGeoLookupFeatureTest extends TestCase
+class MaxMindGeoCaptureTest extends TestCase
 {
     protected function defineEnvironment($app): void
     {
