@@ -11,8 +11,8 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Support\Text;
 class ReferrerClassifier
 {
     /**
-     * @param  array<int, string>  $searchHosts  Case-insensitive host substrings.
-     * @param  array<int, string>  $socialHosts  Case-insensitive host substrings.
+     * @param  array<int, string>  $searchHosts  Case-insensitive domain patterns, see matches().
+     * @param  array<int, string>  $socialHosts  Case-insensitive domain patterns, see matches().
      */
     public function __construct(
         private readonly array $searchHosts,
@@ -44,12 +44,17 @@ class ReferrerClassifier
     }
 
     /**
+     * A pattern matches from the start of the host or after a dot. One that ends in a dot (`google.`) matches any
+     * suffix after it; any other (`x.com`) must also end at the host or at a dot, so `fedex.com` and `t.com` never match.
+     *
      * @param  array<int, string>  $needles
      */
     private function matches(string $host, array $needles): bool
     {
         foreach ($needles as $needle) {
-            if (str_contains($host, strtolower($needle))) {
+            $needle = strtolower($needle);
+
+            if ($needle !== '' && preg_match('/(?:^|\.)'.preg_quote($needle, '/').(str_ends_with($needle, '.') ? '' : '(?:\.|$)').'/', $host) === 1) {
                 return true;
             }
         }

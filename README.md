@@ -264,7 +264,7 @@ All keys live in `config/spa-analytics.php`.
 | `tracking.connection` / `tracking.queue` | `null` | Queue connection and queue name used by `queue` mode |
 | `tracking.excluded_paths` | `up`, `spa-analytics/*`, `reset-password/*`, `password/reset/*` | `request()->is()` patterns that are never recorded, also applied to the paths the browser script reports; add any other URL that carries a secret |
 | `tracking.bot_patterns` | see file | Case-insensitive user agent substrings that flag a request as a bot |
-| `tracking.search_hosts` / `tracking.social_hosts` | see file | Case-insensitive host substrings used to classify referrers |
+| `tracking.search_hosts` / `tracking.social_hosts` | see file | Case-insensitive domain patterns used to classify referrers. A pattern matches the host or a subdomain of it, from a dot or the start of the host: `x.com` matches `x.com` and `mobile.x.com` but not `fedex.com`, and `google.` matches `google.com`, `mail.google.co.uk` but not `notgoogle.com` |
 | `audience.country_header` | `null` | Request header your CDN fills with the visitor's country code (see [Audience](#audience)); `null` leaves the country empty |
 | `audience.region_header` | `null` | Request header your CDN fills with the visitor's region code, the part of the ISO 3166-2 code after the dash; `null` leaves the region empty |
 | `audience.maxmind_database` | `null` | Path to a local MaxMind `.mmdb` file (needs `maxmind-db/reader`); when set, it replaces both headers |
