@@ -127,11 +127,19 @@ class StatsReport
 
         $days = $period->is(RollupPeriod::Day) ? $this->reader->totalsBetween(RollupPeriod::Day, RollupPeriod::Day->start($plan->from), $storedTo) : [];
         $points = [];
+        $seen = [];
 
         for ($start = $period->start($plan->from); $start->lessThan($plan->effectiveTo); $start = $period->end($start)) {
             $end = $period->end($start);
             $whole = $start->greaterThanOrEqualTo($plan->from) && $end->lessThanOrEqualTo($plan->effectiveTo);
             $key = $start->toDateTimeString();
+
+            // The repeated hour of a daylight saving fall-back has one stored row, so it is one point.
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
 
             if ($period->is(RollupPeriod::Hour)) {
                 $metrics = $hours[$key] ?? null;

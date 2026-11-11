@@ -43,7 +43,8 @@ class RollupReader
         $hours = array_values(array_filter($buckets, fn (PlannedBucket $bucket): bool => $bucket->period->is(RollupPeriod::Hour)));
         $presentHours = $this->existing(RollupPeriod::Hour, $hours);
 
-        $incomplete = count($presentHours) < count($hours);
+        // The repeated hour of a daylight saving fall-back has the same local start twice and one rollup row.
+        $incomplete = count($presentHours) < count(array_unique(array_map(fn (PlannedBucket $bucket): string => $bucket->start->toDateTimeString(), $hours)));
 
         return ['buckets' => $buckets, 'incomplete' => $incomplete];
     }
