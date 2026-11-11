@@ -55,7 +55,7 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
             ->name('laravel-spa-analytics')
             ->hasConfigFile('spa-analytics')
             ->hasViews('laravel-spa-analytics')
-            ->hasViewComposer('laravel-spa-analytics::client-script', fn (View $view) => $view->with('scriptUrl', $this->scriptUrl()))
+            ->hasViewComposer('laravel-spa-analytics::client-script', fn (View $view) => $view->with('scriptUrl', $this->scriptUrl())->with('nonce', $this->scriptNonce()))
             ->hasRoute('web')
             ->hasCommands([RollupCommand::class, PruneCommand::class, CleanMigrationsCommand::class])
             ->hasMigrations([
@@ -177,6 +177,14 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
     private function scriptUrl(): string
     {
         return config('spa-analytics.enabled') && $this->hasEndpoints() ? $this->app->make(ClientScript::class)->url() : '';
+    }
+
+    /**
+     * The CSP nonce for the script tag, from the bound script service.
+     */
+    private function scriptNonce(): ?string
+    {
+        return config('spa-analytics.enabled') && $this->hasEndpoints() ? $this->app->make(ClientScript::class)->nonce() : null;
     }
 
     /**

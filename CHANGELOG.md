@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `WriteEvent` is encrypted (`ShouldBeEncrypted`), retries 5 times with a 5, 30, 120 and 300 second backoff and a 30 second timeout, and logs its final failure with the exception class and code only. Exception text kept by Laravel in `failed_jobs` is not covered by the encryption. Run the worker with a `--timeout` a few seconds below the connection's `retry_after`.
 - Optional MaxMind GeoLite2 and GeoIP2 support. Set `audience.maxmind_database` to a local `.mmdb` file and `MaxMindGeoLookup` reads the country and region from the request address, in memory only, with no request to any service; the database is then the only source and the headers are ignored. It needs `maxmind-db/reader` (a suggested package, not required). A Country database gives no region; private addresses give nothing; a missing or invalid file throws `GeoDatabaseUnavailable`, which only loses the geo values.
 
+- `ClientScript::nonce()`: the CSP nonce of the script tag is read from the bound `ClientScript`, which takes it from Laravel's `Vite::cspNonce()` by default. An app that uses another CSP package binds a subclass and overrides `nonce()`. The view `client-script.blade.php` renders the `$nonce` it receives; a copy you published keeps working with the Vite nonce.
+
 ### Deprecated
 
 - The `GeoLocator` contract (country only). A `GeoLocator` you bound keeps working: it is wrapped, its country is used and there is no region. It goes at 1.0; bind a `GeoLookup` instead.

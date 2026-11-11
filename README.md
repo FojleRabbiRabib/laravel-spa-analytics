@@ -78,7 +78,9 @@ Add the collector to your root Blade layout, for example just before `</body>`:
 ```
 
 The directive renders one `<script>` tag (with your CSP nonce when the app
-uses one). It renders nothing when `SPA_ANALYTICS_ENABLED=false`.
+uses one: the one of Laravel's `Vite::useCspNonce()`, or, from another CSP package, the value
+returned by `nonce()` of your own `ClientScript` subclass, see below). It renders nothing when
+`SPA_ANALYTICS_ENABLED=false`.
 
 The script URL ends in `?v=` and a hash of the published `client.js`, so browsers
 can cache it for as long as you like and a re-published script gets a new URL, which
