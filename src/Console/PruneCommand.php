@@ -7,6 +7,7 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Console;
 use Carbon\CarbonImmutable;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Rollup\RetentionPruner;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class PruneCommand extends Command
@@ -20,7 +21,19 @@ class PruneCommand extends Command
      */
     public function handle(RetentionPruner $pruner): int
     {
-        $result = $pruner->prune(CarbonImmutable::now());
+        $lock = Cache::lock('spa-analytics:rollup', 3600);
+
+        if (! $lock->get()) {
+            $this->components->warn('A rollup is running; prune skipped. It runs again on the next schedule.');
+
+            return self::SUCCESS;
+        }
+
+        try {
+            $result = $pruner->prune(CarbonImmutable::now());
+        } finally {
+            $lock->release();
+        }
 
         if (! $result['retention']) {
             $this->components->info('Retention is off (retention_days is not a positive number); nothing to prune.');

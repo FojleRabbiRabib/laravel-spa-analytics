@@ -9,9 +9,11 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Enums\RollupPeriod;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsRollup;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsSession;
+use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsState;
 use FojleRabbiRabib\LaravelSpaAnalytics\Services\Rollup\RetentionPruner;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 class PruneCommandTest extends TestCase
@@ -179,6 +181,45 @@ class PruneCommandTest extends TestCase
         $this->artisan('spa-analytics:rollup', ['--since' => '2026-03-05'])->assertExitCode(0);
 
         $this->assertSame(42, AnalyticsRollup::query()->where('period', RollupPeriod::Day)->where('bucket_start', '2026-03-05 00:00:00')->value('page_views'));
+    }
+
+    public function test_a_prune_that_overlaps_a_rollup_is_skipped_and_deletes_nothing(): void
+    {
+        $this->rolledDay('2026-03-05');
+        $this->rolledDay('2026-03-06');
+        $this->pageView('2026-03-05 10:00:00');
+        Cache::lock('spa-analytics:rollup', 60)->get();
+
+        $this->artisan('spa-analytics:prune')
+            ->expectsOutputToContain('rollup is running')
+            ->assertExitCode(0);
+
+        $this->assertSame(1, AnalyticsEvent::query()->count());
+        $this->assertNull(AnalyticsState::query()->find(AnalyticsState::PRUNED_THROUGH));
+    }
+
+    public function test_the_rollup_lock_is_released_after_a_prune(): void
+    {
+        $this->rolledDay('2026-03-05');
+        $this->rolledDay('2026-03-06');
+        $this->pageView('2026-03-05 10:00:00');
+
+        $this->artisan('spa-analytics:prune')->assertExitCode(0);
+
+        $lock = Cache::lock('spa-analytics:rollup', 60);
+        $this->assertTrue($lock->get());
+        $lock->release();
+    }
+
+    public function test_the_lock_is_released_after_a_blocked_prune(): void
+    {
+        $this->pageView('2026-03-05 10:00:00');
+
+        $this->artisan('spa-analytics:prune')->assertExitCode(1);
+
+        $lock = Cache::lock('spa-analytics:rollup', 60);
+        $this->assertTrue($lock->get());
+        $lock->release();
     }
 
     public function test_an_empty_database_is_fine(): void

@@ -830,6 +830,8 @@ fills days that have no daily rollup yet (their raw rows are still all there, so
 this is how you unblock the prune), and leaves days that already have one alone,
 so a backfill cannot overwrite them with zeros.
 
+The prune takes the same cache lock as the rollup, so it never deletes rows a rollup is reading: while a rollup runs, the prune skips that run and the next schedule tries again.
+
 The prune records how far it went in the `analytics_state` table. A day before
 that moment is never rebuilt from raw rows (not by the scheduled run, its seven
 day heal or `rollup --since`), and any raw row that still turns up for such a
