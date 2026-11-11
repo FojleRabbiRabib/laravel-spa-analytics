@@ -135,8 +135,8 @@ and publishing under 0.7.x would add the seven old files with new timestamps, wh
 fail with "duplicate column" on a database that already has the columns.
 
 **From 0.9.x**: one new migration, adding `region` to the sessions table. Publish
-the migrations again and migrate (the update migration is now `rev_3`; the package
-deletes the published `rev_2` file for you). The browser script changed for Inertia
+the migrations again and migrate (the update migration is now `rev_4`; the package
+deletes the published `rev_2` and `rev_3` files for you). The browser script changed for Inertia
 `replace: true` visits, so re-publish it too. A `GeoLocator` you bound keeps
 working: its country is used, with no region. To get a region, bind a `GeoLookup`
 (see [Audience](#audience)), set `audience.region_header`, or point

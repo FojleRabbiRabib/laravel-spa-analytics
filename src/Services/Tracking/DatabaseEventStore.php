@@ -10,6 +10,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Events\EventRecorded;
 use FojleRabbiRabib\LaravelSpaAnalytics\Models\AnalyticsEvent;
 use FojleRabbiRabib\LaravelSpaAnalytics\Support\AnalyticsDatabase;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -44,21 +45,39 @@ class DatabaseEventStore implements EventStore
                         return false;
                     }
 
-                    $event = AnalyticsDatabase::connection()->transaction(function () use ($data, $visitorId): AnalyticsEvent {
-                        $data = $data->withVisitorId($visitorId);
-                        $sessionId = $data instanceof CustomEventData
-                            ? $this->sessions->findActive($data->visitorId, $data->occurredAt)?->id
-                            : $this->sessions->attach($data)->id;
+                    try {
+                        $event = AnalyticsDatabase::connection()->transaction(function () use ($data, $visitorId): ?AnalyticsEvent {
+                            // A queue delivers at least once: an id that is already stored means this run is a replay,
+                            // and it must not touch the session again.
+                            if ($data->eventId !== null && AnalyticsEvent::query()->where('event_id', $data->eventId)->exists()) {
+                                return null;
+                            }
 
-                        return AnalyticsEvent::query()->create([...$data->toArray(), 'session_id' => $sessionId]);
-                    });
+                            $data = $data->withVisitorId($visitorId);
+                            $sessionId = $data instanceof CustomEventData
+                                ? $this->sessions->findActive($data->visitorId, $data->occurredAt)?->id
+                                : $this->sessions->attach($data)->id;
+
+                            return AnalyticsEvent::query()->create([...$data->toArray(), 'session_id' => $sessionId]);
+                        });
+                    } catch (UniqueConstraintViolationException $e) {
+                        // Two workers raced past the check without a shared lock; the unique index let one in and the
+                        // transaction took the other one's session change back.
+                        if ($data->eventId === null) {
+                            throw $e;
+                        }
+
+                        $event = null;
+                    }
 
                     return true;
                 },
             );
 
             if ($stored) {
-                $this->announce($event);
+                if ($event !== null) {
+                    $this->announce($event);
+                }
 
                 return;
             }

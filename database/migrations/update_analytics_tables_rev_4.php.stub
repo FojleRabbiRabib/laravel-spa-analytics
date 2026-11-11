@@ -65,6 +65,7 @@ return new class extends Migration
         }
 
         $this->addColumns('analytics_events', [
+            'event_id' => fn (Blueprint $table) => $table->string('event_id', 26)->nullable(),
             'target_host' => fn (Blueprint $table) => $table->string('target_host', 255)->nullable(),
             'target_path' => fn (Blueprint $table) => $table->string('target_path', 512)->nullable(),
             'scroll_percent' => fn (Blueprint $table) => $table->unsignedTinyInteger('scroll_percent')->nullable(),
@@ -74,6 +75,10 @@ return new class extends Migration
 
         if (! Schema::hasIndex('analytics_events', ['name', 'occurred_at'])) {
             Schema::table('analytics_events', fn (Blueprint $table) => $table->index(['name', 'occurred_at']));
+        }
+
+        if (! Schema::hasIndex('analytics_events', ['event_id'], 'unique')) {
+            Schema::table('analytics_events', fn (Blueprint $table) => $table->unique('event_id'));
         }
     }
 

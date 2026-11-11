@@ -40,6 +40,20 @@ class CustomEventDataTest extends TestCase
         $this->assertNull($array['status']);
     }
 
+    public function test_the_event_id_is_unset_by_default_and_travels_through_the_array_and_copies(): void
+    {
+        $data = $this->data();
+
+        $this->assertNull($data->eventId);
+        $this->assertNull($data->toArray()['event_id']);
+
+        $identified = $data->withEventId('01JEXAMPLE0000000000000000');
+
+        $this->assertNull($data->eventId);
+        $this->assertSame('01JEXAMPLE0000000000000000', CustomEventData::fromArray($identified->toArray())->eventId);
+        $this->assertSame('01JEXAMPLE0000000000000000', $identified->withVisitorId('other')->eventId);
+    }
+
     public function test_empty_properties_become_null(): void
     {
         $data = new CustomEventData(EventType::Custom, 'v', 'clicked', null, [], null, null, null, null, false, CarbonImmutable::now());

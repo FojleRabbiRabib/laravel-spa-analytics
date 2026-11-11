@@ -10,6 +10,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Data\Tracking\PageViewData;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\WriteMode;
 use FojleRabbiRabib\LaravelSpaAnalytics\Jobs\WriteEvent;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class EventWriter
 {
@@ -17,10 +18,14 @@ class EventWriter
 
     /**
      * Store the page view or custom event using the configured write mode.
+     *
+     * The event gets its id here, once, so a queued job that runs again after a failure or a lost acknowledgement
+     * carries the same id and the store can recognise it.
      */
     public function write(PageViewData|CustomEventData $data): void
     {
         $mode = WriteMode::tryFrom((string) config('spa-analytics.tracking.write_mode')) ?? WriteMode::default();
+        $data = $data->eventId === null ? $data->withEventId((string) Str::ulid()) : $data;
 
         match ($mode) {
             WriteMode::Sync => $this->safely($data),

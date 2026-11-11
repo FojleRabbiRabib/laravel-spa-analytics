@@ -77,7 +77,7 @@ class DatabaseConnectionMigrateTest extends TestCase
     {
         $this->migrate();
         Schema::connection('analytics')->table('analytics_events', fn ($table) => $table->dropColumn('engaged_seconds'));
-        DB::connection('testing')->table('migrations')->where('migration', 'like', '%update_analytics_tables_rev_3')->delete();
+        DB::connection('testing')->table('migrations')->where('migration', 'like', '%update_analytics_tables_rev_4')->delete();
 
         $this->artisan('migrate')->assertExitCode(0);
 

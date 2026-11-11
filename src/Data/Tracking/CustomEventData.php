@@ -29,6 +29,7 @@ final readonly class CustomEventData
         public ?int $scrollPercent = null,
         public ?string $fileExtension = null,
         public ?int $engagedSeconds = null,
+        public ?string $eventId = null,
     ) {
         if ($type->is(EventType::PageView)) {
             throw new \InvalidArgumentException('A custom event cannot use the page view type.');
@@ -57,6 +58,7 @@ final readonly class CustomEventData
             scrollPercent: isset($data['scroll_percent']) ? (int) $data['scroll_percent'] : null,
             fileExtension: isset($data['file_extension']) ? (string) $data['file_extension'] : null,
             engagedSeconds: isset($data['engaged_seconds']) ? (int) $data['engaged_seconds'] : null,
+            eventId: isset($data['event_id']) ? (string) $data['event_id'] : null,
         );
     }
 
@@ -82,6 +84,33 @@ final readonly class CustomEventData
             $this->scrollPercent,
             $this->fileExtension,
             $this->engagedSeconds,
+            $this->eventId,
+        );
+    }
+
+    /**
+     * Return a copy carrying the id that makes storing this event idempotent across queue retries.
+     */
+    public function withEventId(string $eventId): self
+    {
+        return new self(
+            $this->type,
+            $this->visitorId,
+            $this->name,
+            $this->value,
+            $this->properties,
+            $this->path,
+            $this->language,
+            $this->ip,
+            $this->userAgent,
+            $this->isBot,
+            $this->occurredAt,
+            $this->targetHost,
+            $this->targetPath,
+            $this->scrollPercent,
+            $this->fileExtension,
+            $this->engagedSeconds,
+            $eventId,
         );
     }
 
@@ -94,6 +123,7 @@ final readonly class CustomEventData
     {
         return [
             'type' => $this->type,
+            'event_id' => $this->eventId,
             'visitor_id' => $this->visitorId,
             'name' => $this->name,
             'target_host' => $this->targetHost,

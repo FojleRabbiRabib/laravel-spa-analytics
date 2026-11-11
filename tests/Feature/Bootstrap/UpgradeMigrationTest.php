@@ -50,6 +50,10 @@ class UpgradeMigrationTest extends TestCase
      */
     private function downgradeTo(int $level): void
     {
+        // Every earlier release lacks the event id.
+        Schema::table('analytics_events', fn (Blueprint $table) => $table->dropUnique(['event_id']));
+        Schema::table('analytics_events', fn (Blueprint $table) => $table->dropColumn('event_id'));
+
         // Every release up to 0.9.0 lacks the region.
         Schema::table('analytics_sessions', fn (Blueprint $table) => $table->dropIndex(['started_at', 'region']));
         Schema::table('analytics_sessions', fn (Blueprint $table) => $table->dropColumn('region'));
@@ -129,7 +133,7 @@ class UpgradeMigrationTest extends TestCase
             $this->migration('create_analytics_rollups_table')->up();
         }
 
-        $this->migration('update_analytics_tables_rev_3')->up();
+        $this->migration('update_analytics_tables_rev_4')->up();
     }
 
     /**
@@ -151,7 +155,7 @@ class UpgradeMigrationTest extends TestCase
     {
         $fresh = $this->shape();
 
-        $this->migration('update_analytics_tables_rev_3')->up();
+        $this->migration('update_analytics_tables_rev_4')->up();
 
         $this->assertSame($fresh, $this->shape());
     }
@@ -174,7 +178,7 @@ class UpgradeMigrationTest extends TestCase
         $this->upgrade($level);
         $upgraded = $this->shape();
 
-        $this->migration('update_analytics_tables_rev_3')->up();
+        $this->migration('update_analytics_tables_rev_4')->up();
 
         $this->assertSame($upgraded, $this->shape());
     }
@@ -199,7 +203,7 @@ class UpgradeMigrationTest extends TestCase
     {
         $fresh = $this->shape();
 
-        $this->migration('update_analytics_tables_rev_3')->down();
+        $this->migration('update_analytics_tables_rev_4')->down();
 
         $this->assertSame($fresh, $this->shape());
     }

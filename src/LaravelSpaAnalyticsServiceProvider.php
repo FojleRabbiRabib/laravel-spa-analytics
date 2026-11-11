@@ -64,7 +64,7 @@ class LaravelSpaAnalyticsServiceProvider extends PackageServiceProvider
                 'create_analytics_sessions_table',
                 'create_analytics_visitor_links_table',
                 'create_analytics_rollups_table',
-                'update_analytics_tables_rev_3',
+                'update_analytics_tables_rev_4',
             ])
             ->hasInstallCommand(function (InstallCommand $command): void {
                 $command
