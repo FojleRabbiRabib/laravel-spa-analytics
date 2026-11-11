@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createQueue, DELAY_MS, MAX_EVENTS } from './queue';
-import type { ClientEvent, PayloadEvent } from './types';
+import type { ClientEvent, PayloadEvent, SendResult } from './types';
 
-const setup = () => {
+const setup = (results: SendResult[] = []) => {
     const sent: PayloadEvent[][] = [];
     const timers: Array<{ callback: () => void; ms: number; cleared: boolean }> = [];
     let clock = 1_000;
@@ -11,7 +11,7 @@ const setup = () => {
         send: (events) => {
             sent.push(events);
 
-            return Promise.resolve();
+            return Promise.resolve(results.shift() ?? 'sent');
         },
         now: () => clock,
         setTimer: (callback, ms) => {
@@ -88,6 +88,55 @@ describe('createQueue', () => {
         for (const batch of sent) {
             expect(new TextEncoder().encode(JSON.stringify({ events: batch })).length).toBeLessThanOrEqual(60_000);
         }
+    });
+
+    it('sends a batch again once when the send asks for a retry, with the age counted from the first push', async () => {
+        const { queue, sent, timers, advance } = setup(['retry', 'sent']);
+
+        queue.push(view('/a'));
+        advance(100);
+        await queue.flush();
+
+        expect(timers.filter((timer) => !timer.cleared)).toHaveLength(1);
+
+        advance(2_000);
+        await queue.flush();
+
+        expect(sent).toHaveLength(2);
+        expect(sent[0]?.map((event) => event.age)).toEqual([100]);
+        expect(sent[1]?.map((event) => event.age)).toEqual([2_100]);
+    });
+
+    it('drops a batch whose retry asks for a retry again', async () => {
+        const { queue, sent } = setup(['retry', 'retry', 'sent']);
+
+        queue.push(view('/a'));
+        await queue.flush();
+        await queue.flush();
+        await queue.flush();
+
+        expect(sent).toHaveLength(2);
+    });
+
+    it('does not send again after a drop result or a failed send', async () => {
+        const { queue, sent } = setup(['drop']);
+
+        queue.push(view('/a'));
+        await queue.flush();
+        await queue.flush();
+
+        expect(sent).toHaveLength(1);
+    });
+
+    it('keeps new events that arrive while a retry is waiting', async () => {
+        const { queue, sent } = setup(['retry']);
+
+        queue.push(view('/a'));
+        await queue.flush();
+        queue.push(view('/b'));
+        await queue.flush();
+
+        expect(sent[1]?.map((event) => (event as { path: string }).path)).toEqual(['/a', '/b']);
     });
 
     it('does nothing when there is nothing to send and survives a failing send', async () => {

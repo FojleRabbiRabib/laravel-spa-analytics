@@ -1,13 +1,14 @@
 import { buildApi, replayQueued } from './api';
-import { downloadTarget } from './download';
 import { createEngagementTracker } from './engagement';
 import { inertiaPagePath, isInertiaPage } from './inertia';
 import { watchNavigation } from './navigation';
-import { outboundTarget } from './outbound';
 import { createQueue } from './queue';
-import { createScrollTracker, scrollDepth } from './scroll';
+import { createScrollTracker } from './scroll';
 import { postEvents } from './transport';
 import { viewportWidth } from './viewport';
+import { wireClicks } from './wire-clicks';
+import { wireEngagement } from './wire-engagement';
+import { wireScroll } from './wire-scroll';
 
 /**
  * Wire the page to the collect endpoint: the window width once per load (queued, not flushed, so the server's own page
@@ -75,78 +76,9 @@ export const startEvents = (collectUrl: string, downloadExtensions: readonly str
         },
     );
 
-    const onClick = (event: MouseEvent): void => {
-        const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
-
-        if (!(link instanceof HTMLAnchorElement)) {
-            return;
-        }
-
-        const file = downloadTarget(link.href, window.location.href, downloadExtensions, link.hasAttribute('download'));
-
-        if (file !== null) {
-            queue.push({ kind: 'download', path: window.location.pathname, url: file }, true);
-
-            return;
-        }
-
-        const target = outboundTarget(link.href, window.location.href);
-
-        if (target !== null) {
-            queue.push({ kind: 'outbound', path: window.location.pathname, url: target }, true);
-        }
-    };
-
-    document.addEventListener('click', onClick, true);
-    document.addEventListener('auxclick', onClick, true);
-
-    let frame = 0;
-
-    window.addEventListener(
-        'scroll',
-        () => {
-            if (frame !== 0) {
-                return;
-            }
-
-            frame = window.requestAnimationFrame(() => {
-                frame = 0;
-                scroll.update(scrollDepth(window.scrollY, window.innerHeight, document.documentElement.scrollHeight));
-            });
-        },
-        { passive: true },
-    );
-
-    for (const type of ['keydown', 'pointerdown', 'pointermove', 'touchstart', 'wheel', 'scroll']) {
-        window.addEventListener(type, () => engagement.activity(Date.now()), { passive: true, capture: true });
-    }
-
-    window.addEventListener('blur', () => engagement.hidden(Date.now()));
-    window.addEventListener('focus', () => {
-        if (document.visibilityState === 'visible') {
-            engagement.visible(Date.now());
-        }
-    });
-    window.addEventListener('pageshow', (event) => {
-        if (event.persisted && document.visibilityState === 'visible') {
-            engagement.visible(Date.now());
-        }
-    });
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') {
-            reportEngagement(window.location.pathname);
-            engagement.hidden(Date.now());
-            void queue.flush();
-        } else {
-            engagement.visible(Date.now());
-        }
-    });
-    window.addEventListener('pagehide', () => {
-        reportEngagement(window.location.pathname);
-        engagement.hidden(Date.now());
-        void queue.flush();
-    });
+    wireClicks(queue, downloadExtensions);
+    wireScroll(scroll);
+    wireEngagement(engagement, queue, reportEngagement);
 
     const queued = window.spaAnalytics;
     const api = buildApi(queue.push, () => window.location.pathname);

@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optional MaxMind GeoLite2 and GeoIP2 support. Set `audience.maxmind_database` to a local `.mmdb` file and `MaxMindGeoLookup` reads the country and region from the request address, in memory only, with no request to any service; the database is then the only source and the headers are ignored. It needs `maxmind-db/reader` (a suggested package, not required). A Country database gives no region; private addresses give nothing; a missing or invalid file throws `GeoDatabaseUnavailable`, which only loses the geo values.
 
 - `ClientScript::nonce()`: the CSP nonce of the script tag is read from the bound `ClientScript`, which takes it from Laravel's `Vite::cspNonce()` by default. An app that uses another CSP package binds a subclass and overrides `nonce()`. The view `client-script.blade.php` renders the `$nonce` it receives; a copy you published keeps working with the Vite nonce.
+- The browser script sends a batch once more when it was certainly not stored (419, 429, 503) or the browser is offline, keeping each event's original age. Other failures still drop the batch. `PayloadEvent` batches are unchanged on the wire.
 
 ### Deprecated
 
@@ -24,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The browser script used the first `script[data-spa-analytics]` tag and sent its XSRF token to whatever URL its `data-*` attributes named, so markup injected into a page could redirect the requests to another site. It now prefers the tag it runs from and ignores a handshake, identify or collect URL that is not on the page's own origin. Re-publish the script after upgrading.
 - Referrers were classified by a substring of the host, so `x.com` matched `fedex.com`, `wix.com` and `box.com`, and `t.co` matched `microsoft.com`, and those visits were counted as social. A pattern in `tracking.search_hosts` and `tracking.social_hosts` now matches the host or a subdomain of it: from the start or after a dot, and a pattern that does not end in a dot must also end at the host or at a dot. The shipped patterns are unchanged and keep matching their own domains and subdomains. Rows already stored keep the type they were saved with, and the rollups read that stored type, so past numbers do not change.
 - A report over the repeated hour of a daylight saving fall-back (two hours with the same local start, one rollup row) was always `incomplete`, because the planned hours were counted twice against the one row, and the hourly series counted that hour's page views twice. The distinct hours are compared now and the series has one point for the hour.
 - The update migration repeats safely at one more point: if it stopped after adding `name` to `analytics_events` and before `value`, running it again adds `value` (it was skipped because `name` marked the step as done).

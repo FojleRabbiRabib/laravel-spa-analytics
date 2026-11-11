@@ -80,7 +80,9 @@ Add the collector to your root Blade layout, for example just before `</body>`:
 The directive renders one `<script>` tag (with your CSP nonce when the app
 uses one: the one of Laravel's `Vite::useCspNonce()`, or, from another CSP package, the value
 returned by `nonce()` of your own `ClientScript` subclass, see below). It renders nothing when
-`SPA_ANALYTICS_ENABLED=false`.
+`SPA_ANALYTICS_ENABLED=false`. The script only talks to URLs of the page's own origin: a
+`data-handshake`, `data-identify` or `data-collect` attribute that points elsewhere is ignored, so
+the XSRF token is never sent to another site.
 
 The script URL ends in `?v=` and a hash of the published `client.js`, so browsers
 can cache it for as long as you like and a re-published script gets a new URL, which
@@ -590,7 +592,11 @@ The collector script also reports what the server cannot see, to
 cookie as the identity endpoints, with its own throttle, see
 `collect.*`). Events are batched (up to 20 per request, sent after two seconds,
 on route changes and clicks at once, and when the page is hidden) with
-`fetch` and `keepalive`.
+`fetch` and `keepalive`. A batch that was certainly not stored (an expired CSRF token, the
+throttle, maintenance mode, or no network) is sent once more with the next flush, with its
+original age. Any other failure drops the batch, because the request may have reached the
+server and a second send could count it twice; a visitor whose browser keeps failing loses
+those events.
 
 | Event | What is sent | Stored as |
 |---|---|---|
