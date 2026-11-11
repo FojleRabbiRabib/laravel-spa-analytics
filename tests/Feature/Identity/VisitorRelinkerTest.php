@@ -31,6 +31,13 @@ class VisitorRelinkerTest extends TestCase
         config()->set('spa-analytics.identity.relink', true);
     }
 
+    protected function tearDown(): void
+    {
+        VisitorLink::flushEventListeners();
+
+        parent::tearDown();
+    }
+
     private function fingerprint(string $stable = 'stable', ?string $canvas = 'canvas'): Fingerprint
     {
         return new Fingerprint($stable, $canvas, null, null, null);
@@ -90,8 +97,6 @@ class VisitorRelinkerTest extends TestCase
 
         $this->assertSame(2, AnalyticsEvent::query()->where('visitor_id', 'old')->count());
         $this->assertSame(1, VisitorLink::query()->where('visitor_id', 'new')->count());
-
-        VisitorLink::flushEventListeners();
     }
 
     public function test_a_link_is_recorded_and_older_links_are_repointed(): void
@@ -166,7 +171,7 @@ class VisitorRelinkerTest extends TestCase
         $this->assertNull($this->relink(new VisitorIdentity('new', IdentitySource::Cookie)));
     }
 
-    public function test_the_relink_waits_on_the_visitor_lock(): void
+    public function test_the_relink_times_out_on_the_visitor_lock(): void
     {
         $this->known('old');
         Cache::lock('session:new', 10)->get();
@@ -178,7 +183,7 @@ class VisitorRelinkerTest extends TestCase
         $relinker->relink($this->identity());
     }
 
-    public function test_the_relink_waits_on_the_adopted_visitor_lock(): void
+    public function test_the_relink_times_out_on_the_adopted_visitor_lock(): void
     {
         $this->known('old');
         Cache::lock('session:old', 10)->get();

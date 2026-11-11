@@ -295,10 +295,12 @@ class ClientEventRecorder
 
     /**
      * Whether the path matches one of the excluded path patterns; the patterns are written without a leading slash.
+     * The browser reports the percent-encoded path, so it is decoded first, the form request()->is() matches on the
+     * server; the stored path stays encoded.
      */
     private function isExcluded(string $path): bool
     {
-        return Str::is((array) config('spa-analytics.tracking.excluded_paths'), ltrim($path, '/'));
+        return Str::is((array) config('spa-analytics.tracking.excluded_paths'), ltrim(rawurldecode($path), '/'));
     }
 
     private function sameSite(string $host, string $ownHost): bool

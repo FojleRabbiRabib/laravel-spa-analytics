@@ -78,7 +78,11 @@ Add the collector to your root Blade layout, for example just before `</body>`:
 ```
 
 The directive renders one `<script>` tag (with your CSP nonce when the app
-uses one). It renders nothing when `SPA_ANALYTICS_ENABLED=false`.
+uses one: the one of Laravel's `Vite::useCspNonce()`, or, from another CSP package, the value
+returned by `nonce()` of your own `ClientScript` subclass, see below). It renders nothing when
+`SPA_ANALYTICS_ENABLED=false`. The script only talks to URLs of the page's own origin: a
+`data-handshake`, `data-identify` or `data-collect` attribute that points elsewhere is ignored, so
+the XSRF token is never sent to another site.
 
 The script URL ends in `?v=` and a hash of the published `client.js`, so browsers
 can cache it for as long as you like and a re-published script gets a new URL, which
@@ -134,9 +138,10 @@ To go back to 0.7.x, do not publish the migrations again: the schema is identica
 and publishing under 0.7.x would add the seven old files with new timestamps, which
 fail with "duplicate column" on a database that already has the columns.
 
-**From 0.9.x**: one new migration, adding `region` to the sessions table. Publish
-the migrations again and migrate (the update migration is now `rev_4`; the package
-deletes the published `rev_2` and `rev_3` files for you). The browser script changed for Inertia
+**From 0.9.x**: new migrations, adding `region` to the sessions table, `event_id` to
+the events table and the `analytics_state` table. Publish
+the migrations again and migrate (the update migration is now `rev_5`; the package
+deletes the published `rev_2`, `rev_3` and `rev_4` files for you). The browser script changed for Inertia
 `replace: true` visits, so re-publish it too. A `GeoLocator` you bound keeps
 working: its country is used, with no region. To get a region, bind a `GeoLookup`
 (see [Audience](#audience)), set `audience.region_header`, or point
@@ -263,7 +268,7 @@ All keys live in `config/spa-analytics.php`.
 | `tracking.connection` / `tracking.queue` | `null` | Queue connection and queue name used by `queue` mode |
 | `tracking.excluded_paths` | `up`, `spa-analytics/*`, `reset-password/*`, `password/reset/*` | `request()->is()` patterns that are never recorded, also applied to the paths the browser script reports; add any other URL that carries a secret |
 | `tracking.bot_patterns` | see file | Case-insensitive user agent substrings that flag a request as a bot |
-| `tracking.search_hosts` / `tracking.social_hosts` | see file | Case-insensitive host substrings used to classify referrers |
+| `tracking.search_hosts` / `tracking.social_hosts` | see file | Case-insensitive domain patterns used to classify referrers. A pattern matches the host or a subdomain of it, from a dot or the start of the host: `x.com` matches `x.com` and `mobile.x.com` but not `fedex.com`, and `google.` matches `google.com`, `mail.google.co.uk` but not `notgoogle.com` |
 | `audience.country_header` | `null` | Request header your CDN fills with the visitor's country code (see [Audience](#audience)); `null` leaves the country empty |
 | `audience.region_header` | `null` | Request header your CDN fills with the visitor's region code, the part of the ISO 3166-2 code after the dash; `null` leaves the region empty |
 | `audience.maxmind_database` | `null` | Path to a local MaxMind `.mmdb` file (needs `maxmind-db/reader`); when set, it replaces both headers |
@@ -587,7 +592,11 @@ The collector script also reports what the server cannot see, to
 cookie as the identity endpoints, with its own throttle, see
 `collect.*`). Events are batched (up to 20 per request, sent after two seconds,
 on route changes and clicks at once, and when the page is hidden) with
-`fetch` and `keepalive`.
+`fetch` and `keepalive`. A batch that was certainly not stored (an expired CSRF token, the
+throttle, maintenance mode, or no network) is sent once more with the next flush, with its
+original age. Any other failure drops the batch, because the request may have reached the
+server and a second send could count it twice; a visitor whose browser keeps failing loses
+those events.
 
 | Event | What is sent | Stored as |
 |---|---|---|
@@ -829,6 +838,13 @@ fills days that have no daily rollup yet (their raw rows are still all there, so
 this is how you unblock the prune), and leaves days that already have one alone,
 so a backfill cannot overwrite them with zeros.
 
+The prune takes the same cache lock as the rollup, so it never deletes rows a rollup is reading: while a rollup runs, the prune skips that run and the next schedule tries again.
+
+The prune records how far it went in the `analytics_state` table. A day before
+that moment is never rebuilt from raw rows (not by the scheduled run, its seven
+day heal or `rollup --since`), and any raw row that still turns up for such a
+day, such as a queued write that landed late, is deleted by the next prune.
+
 Things to know: lengthening `retention_days` later does not bring pruned days
 back; after pruning, a returning visitor whose old sessions are gone is
 recorded as new, which shifts the `visitor_type` numbers; a custom event kept
@@ -943,7 +959,7 @@ How the numbers are built:
   sum of daily counts. They are counted from the raw events with
   `count(distinct ...)`, which gets slower as the range and traffic grow, and
   for `top()` and `goals()` only for the rows returned. Days whose raw rows were
-  pruned fall back to the sum of daily uniques, which counts someone who came on
+  pruned (every day before the prune marker, even if a late raw row exists on it) fall back to the sum of daily uniques, which counts someone who came on
   two days twice; then `usersExact` is `false`.
 - **Conversion rate** is the visitors who completed any goal and also viewed a
   page in the range, divided by users, at most 1. A goal's own rate counts the
@@ -979,7 +995,7 @@ is recorded after its controller has fired its goal; a goal fired during
 `/thank-you` therefore follows that page view, while one fired a full second
 earlier does not. Event and goal steps with the same
 name are different steps, and matching is case-exact. Funnels read raw events,
-which rollups cannot replace: days whose raw rows were pruned are not counted,
+which rollups cannot replace: days whose raw rows were pruned (every day before the prune marker, even if a late raw row sits on one) are not counted,
 `coveredFrom` says where counting starts and `complete` is `false` then. Like
 long-range users, a funnel scans every matching raw event in the range, and
 Laravel notes that `cursor()` still lets PDO buffer the raw result, so memory

@@ -23,6 +23,7 @@ abstract class TestCase extends Orchestra
         'analytics_events',
         'analytics_rollups',
         'analytics_sessions',
+        'analytics_state',
         'analytics_visitor_fingerprints',
         'analytics_visitor_links',
         'cache',

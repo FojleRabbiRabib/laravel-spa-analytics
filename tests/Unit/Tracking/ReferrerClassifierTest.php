@@ -49,4 +49,24 @@ class ReferrerClassifierTest extends TestCase
         $this->assertSame('example.org', $referral->host);
         $this->assertSame(ReferrerType::Referral, $referral->type);
     }
+
+    public function test_a_host_that_only_contains_a_pattern_is_a_referral(): void
+    {
+        $classifier = new ReferrerClassifier(['google.'], ['x.com', 't.co', 'facebook.']);
+
+        foreach (['https://fedex.com/', 'https://wix.com/', 'https://microsoft.com/', 'https://t.com/', 'https://notgoogle.com/', 'https://notfacebook.com/'] as $referer) {
+            $this->assertSame(ReferrerType::Referral, $classifier->classify($referer, 'site.test')->type, $referer);
+        }
+    }
+
+    public function test_a_host_matches_its_pattern_and_the_subdomains_of_it(): void
+    {
+        $classifier = new ReferrerClassifier(['google.'], ['x.com', 't.co', 'facebook.']);
+
+        foreach (['https://x.com/', 'https://mobile.x.com/', 'https://t.co/a', 'https://m.facebook.com/', 'https://l.facebook.com/l.php'] as $referer) {
+            $this->assertSame(ReferrerType::Social, $classifier->classify($referer, 'site.test')->type, $referer);
+        }
+
+        $this->assertSame(ReferrerType::Search, $classifier->classify('https://mail.google.co.uk/', 'site.test')->type);
+    }
 }

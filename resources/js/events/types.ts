@@ -12,4 +12,9 @@ export type ClientEvent =
 
 export type PayloadEvent = ClientEvent & { age: number };
 
-export type SendBatch = (events: PayloadEvent[]) => Promise<void>;
+/**
+ * What happened to a batch: stored, worth sending once more because the server did not process it, or lost.
+ */
+export type SendResult = 'sent' | 'retry' | 'drop';
+
+export type SendBatch = (events: PayloadEvent[]) => Promise<SendResult>;

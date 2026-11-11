@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace FojleRabbiRabib\LaravelSpaAnalytics\Services\Tracking;
 
+use Illuminate\Support\Facades\Vite;
+
 class ClientScript
 {
     /**
@@ -21,6 +23,17 @@ class ClientScript
         $version = $this->version();
 
         return $version === null ? $url : $url.'?v='.$version;
+    }
+
+    /**
+     * The CSP nonce for the script tag: the one Laravel's Vite helper holds, or none. Override it in a subclass bound in
+     * the container to take the nonce from another CSP package.
+     */
+    public function nonce(): ?string
+    {
+        $nonce = Vite::cspNonce();
+
+        return is_string($nonce) && $nonce !== '' ? $nonce : null;
     }
 
     private function version(): ?string

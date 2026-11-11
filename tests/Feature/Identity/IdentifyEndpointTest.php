@@ -7,15 +7,17 @@ namespace FojleRabbiRabib\LaravelSpaAnalytics\Tests\Feature\Identity;
 use FojleRabbiRabib\LaravelSpaAnalytics\Data\Identity\VisitorIdentity;
 use FojleRabbiRabib\LaravelSpaAnalytics\Enums\IdentitySource;
 use FojleRabbiRabib\LaravelSpaAnalytics\Events\VisitorIdentified;
+use FojleRabbiRabib\LaravelSpaAnalytics\Tests\Support\EnforcesCsrf;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\Support\PayloadEncoder;
 use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
-use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Testing\TestResponse;
 use Orchestra\Testbench\Attributes\DefineEnvironment;
 
 class IdentifyEndpointTest extends TestCase
 {
+    use EnforcesCsrf;
+
     private const COOKIE = 'spa_analytics_vid';
 
     private const VISITOR = '11111111-1111-4111-8111-111111111111';
@@ -162,14 +164,12 @@ class IdentifyEndpointTest extends TestCase
         $this->identify($this->validBody($this->handshake()))->assertOk();
     }
 
-    public function test_endpoints_are_csrf_protected_and_throttled(): void
+    public function test_a_post_without_a_csrf_token_is_rejected_on_both_endpoints(): void
     {
-        foreach (['handshake', 'identify'] as $name) {
-            $route = app('router')->getRoutes()->getByName('spa-analytics.identity.'.$name);
-            $middleware = app('router')->gatherRouteMiddleware($route);
+        $this->enforceCsrf();
 
-            $this->assertContains(PreventRequestForgery::class, $middleware);
-            $this->assertContains('Illuminate\Routing\Middleware\ThrottleRequests:spa-analytics-identity', $middleware);
+        foreach (['handshake', 'identify'] as $name) {
+            $this->postJson(route('spa-analytics.identity.'.$name))->assertStatus(419);
         }
     }
 

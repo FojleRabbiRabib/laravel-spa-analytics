@@ -136,6 +136,27 @@ class BladeDirectiveTest extends TestCase
         $this->assertSame('https://cdn.example.com/own.js?v=custom', $this->scriptSrc());
     }
 
+    public function test_an_app_can_supply_the_csp_nonce_from_its_own_source(): void
+    {
+        $this->publishScript('console.log(1);');
+        $this->app->instance(ClientScript::class, new class extends ClientScript
+        {
+            public function nonce(): ?string
+            {
+                return 'from-csp-package';
+            }
+        });
+
+        $this->assertStringContainsString('nonce="from-csp-package"', $this->render());
+    }
+
+    public function test_no_nonce_attribute_is_rendered_without_a_nonce(): void
+    {
+        $this->publishScript('console.log(1);');
+
+        $this->assertStringNotContainsString('nonce=', $this->render());
+    }
+
     public function test_the_script_is_not_hashed_at_all_when_tracking_is_disabled(): void
     {
         config()->set('spa-analytics.enabled', false);

@@ -67,9 +67,9 @@ PHP);
      */
     protected function publishCurrentMigration(): string
     {
-        $path = database_path('migrations/2026_01_02_000000_update_analytics_tables_rev_4.php');
+        $path = database_path('migrations/2026_01_02_000000_update_analytics_tables_rev_5.php');
 
-        copy(__DIR__.'/../../../../database/migrations/update_analytics_tables_rev_4.php.stub', $path);
+        copy(__DIR__.'/../../../../database/migrations/update_analytics_tables_rev_5.php.stub', $path);
 
         return $path;
     }

@@ -10,7 +10,7 @@ use PHPUnit\Framework\TestCase;
 
 class RollupPeriodTest extends TestCase
 {
-    public function test_helpers(): void
+    public function test_is_label_color_values_default_and_options_describe_the_cases(): void
     {
         $this->assertTrue(RollupPeriod::Hour->is(RollupPeriod::Hour));
         $this->assertFalse(RollupPeriod::Hour->is(RollupPeriod::Day));

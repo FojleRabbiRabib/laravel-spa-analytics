@@ -15,7 +15,7 @@ class MigrateFlowTest extends TestCase
     use WithConsoleEvents;
     use WritesMigrationFiles;
 
-    private const TABLES = ['analytics_events', 'analytics_sessions', 'analytics_rollups', 'analytics_visitor_fingerprints', 'analytics_visitor_links'];
+    private const TABLES = ['analytics_events', 'analytics_sessions', 'analytics_rollups', 'analytics_state', 'analytics_visitor_fingerprints', 'analytics_visitor_links'];
 
     protected function setUp(): void
     {
@@ -71,7 +71,8 @@ class MigrateFlowTest extends TestCase
         $this->assertTrue(Schema::hasColumns('analytics_events', ['name', 'value', 'target_host', 'target_path', 'scroll_percent', 'file_extension', 'engaged_seconds']));
         $this->assertTrue(Schema::hasColumns('analytics_sessions', ['device_type', 'os', 'browser', 'browser_version', 'country', 'region', 'viewport']));
         $this->assertTrue(Schema::hasColumn('analytics_rollups', 'engaged_seconds'));
-        $this->assertSame(6, DB::table('migrations')->where('migration', 'like', '%analytics%')->count());
+        $this->assertTrue(Schema::hasColumns('analytics_state', ['name', 'value']));
+        $this->assertSame(7, DB::table('migrations')->where('migration', 'like', '%analytics%')->count());
     }
 
     public function test_the_update_migration_is_published_last_so_it_runs_after_every_create(): void
@@ -80,8 +81,8 @@ class MigrateFlowTest extends TestCase
 
         $files = $this->published();
 
-        $this->assertCount(6, $files);
-        $this->assertStringEndsWith('update_analytics_tables_rev_4.php', (string) end($files));
+        $this->assertCount(7, $files);
+        $this->assertStringEndsWith('update_analytics_tables_rev_5.php', (string) end($files));
     }
 
     public function test_publishing_again_adds_nothing_and_migrating_again_changes_nothing(): void
@@ -94,14 +95,14 @@ class MigrateFlowTest extends TestCase
         $this->artisan('migrate')->assertExitCode(0);
 
         $this->assertSame($files, $this->published());
-        $this->assertSame(6, DB::table('migrations')->where('migration', 'like', '%analytics%')->count());
+        $this->assertSame(7, DB::table('migrations')->where('migration', 'like', '%analytics%')->count());
     }
 
     public function test_a_0_7_0_app_publishes_again_and_ends_with_the_old_update_files_gone_and_nothing_else_changed(): void
     {
         $this->artisan('vendor:publish', ['--tag' => 'spa-analytics-migrations'])->assertExitCode(0);
 
-        foreach (glob(database_path('migrations/*_update_analytics_tables_rev_4.php')) ?: [] as $current) {
+        foreach (glob(database_path('migrations/*_update_analytics_tables_rev_5.php')) ?: [] as $current) {
             unlink($current);
         }
 
@@ -114,14 +115,14 @@ class MigrateFlowTest extends TestCase
         $this->artisan('vendor:publish', ['--tag' => 'spa-analytics-migrations'])->assertExitCode(0);
 
         $this->assertSame($creates, $this->hashes('*_create_analytics_*.php'));
-        $this->assertCount(1, glob(database_path('migrations/*_update_analytics_tables_rev_4.php')) ?: []);
+        $this->assertCount(1, glob(database_path('migrations/*_update_analytics_tables_rev_5.php')) ?: []);
         $this->assertFileDoesNotExist($oldWithColumn);
         $this->assertFileDoesNotExist($oldHarmless);
         $this->assertSame(2, DB::table('migrations')->where('migration', 'like', '2026_01_01_%')->count());
 
         $this->artisan('migrate')->assertExitCode(0);
 
-        $this->assertTrue(DB::table('migrations')->where('migration', 'like', '%update_analytics_tables_rev_4')->exists());
+        $this->assertTrue(DB::table('migrations')->where('migration', 'like', '%update_analytics_tables_rev_5')->exists());
     }
 
     /**

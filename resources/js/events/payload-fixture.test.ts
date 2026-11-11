@@ -11,7 +11,7 @@ describe('collect batch fixture (shared with the PHP endpoint)', () => {
             send: (events) => {
                 sent.push(events);
 
-                return Promise.resolve();
+                return Promise.resolve('sent');
             },
             now: () => clock,
             setTimer: () => null,

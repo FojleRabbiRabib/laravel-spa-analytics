@@ -9,7 +9,7 @@ use PHPUnit\Framework\TestCase;
 
 class DeviceTypeTest extends TestCase
 {
-    public function test_helpers(): void
+    public function test_is_label_color_values_default_and_options_describe_the_cases(): void
     {
         $this->assertTrue(DeviceType::Mobile->is(DeviceType::Mobile));
         $this->assertFalse(DeviceType::Mobile->is(DeviceType::Tablet));

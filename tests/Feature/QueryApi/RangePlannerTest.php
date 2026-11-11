@@ -111,7 +111,7 @@ class RangePlannerTest extends TestCase
         $this->assertSame(['day 2026-03-02 00:00:00'], $this->summary($plan->buckets));
     }
 
-    public function test_an_empty_or_reversed_range_is_rejected(): void
+    public function test_an_empty_range_is_rejected(): void
     {
         $this->expectException(\InvalidArgumentException::class);
 

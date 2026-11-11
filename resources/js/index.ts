@@ -1,16 +1,19 @@
 import { parseExtensions } from './events/download';
 import { startEvents } from './events/start';
 import { identify } from './identity/handshake-client';
+import { readScriptConfig } from './script-config';
 
-const script = document.querySelector<HTMLScriptElement>('script[data-spa-analytics]');
-const handshakeUrl = script?.dataset.handshake;
-const identifyUrl = script?.dataset.identify;
-const collectUrl = script?.dataset.collect;
+const running = document.currentScript;
+const script =
+    running instanceof HTMLScriptElement && running.hasAttribute('data-spa-analytics')
+        ? running
+        : document.querySelector<HTMLScriptElement>('script[data-spa-analytics]');
+const config = readScriptConfig(script, location.href);
 
-if (handshakeUrl && identifyUrl) {
-    identify(handshakeUrl, identifyUrl).catch(() => undefined);
+if (config.handshake && config.identify) {
+    identify(config.handshake, config.identify).catch(() => undefined);
 }
 
-if (collectUrl) {
-    startEvents(collectUrl, parseExtensions(script?.dataset.downloads));
+if (config.collect) {
+    startEvents(config.collect, parseExtensions(config.downloads));
 }

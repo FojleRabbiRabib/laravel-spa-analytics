@@ -13,7 +13,7 @@ class OldPatchMigrations
      * The update migration that brings any earlier version to the current shape. Rename it, and add the old name to
      * NAMES, whenever the database changes again.
      */
-    public const CURRENT = 'update_analytics_tables_rev_4';
+    public const CURRENT = 'update_analytics_tables_rev_5';
 
     /**
      * Update migrations of earlier versions that the current one replaces: the seven separate files of versions up to
@@ -29,6 +29,7 @@ class OldPatchMigrations
         'update_analytics_rollups_table_for_engagement',
         'update_analytics_tables_rev_2',
         'update_analytics_tables_rev_3',
+        'update_analytics_tables_rev_4',
     ];
 
     public function __construct(private readonly Migrator $migrator) {}
@@ -85,11 +86,15 @@ class OldPatchMigrations
         $found = [];
 
         foreach ($this->directories() as $directory) {
-            foreach (File::glob($directory.'/*.php') as $file) {
-                $name = basename($file, '.php');
+            foreach (File::files($directory) as $file) {
+                if ($file->getExtension() !== 'php') {
+                    continue;
+                }
+
+                $name = $file->getBasename('.php');
 
                 if (preg_match('/^\d{4}_\d{2}_\d{2}_\d{6}_(.+)$/', $name, $match) === 1 && in_array($match[1], $names, true)) {
-                    $found[(string) realpath($file)] = $name;
+                    $found[$file->getPathname()] = $name;
                 }
             }
         }
@@ -109,7 +114,7 @@ class OldPatchMigrations
         foreach ($this->migrator->paths() as $path) {
             $real = realpath($path);
 
-            if ($real === false || ($vendor !== '' && str_starts_with($real.DIRECTORY_SEPARATOR, $vendor.DIRECTORY_SEPARATOR))) {
+            if ($real === false || ! is_dir($real) || ($vendor !== '' && str_starts_with($real.DIRECTORY_SEPARATOR, $vendor.DIRECTORY_SEPARATOR))) {
                 continue;
             }
 

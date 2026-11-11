@@ -113,7 +113,7 @@ class FileDownloadCollectTest extends TestCase
         $this->assertSame(0, AnalyticsEvent::query()->count());
     }
 
-    public function test_an_excluded_file_path_is_not_stored(): void
+    public function test_an_excluded_file_path_is_stored_without_its_path(): void
     {
         config()->set('spa-analytics.tracking.excluded_paths', ['private/*']);
 

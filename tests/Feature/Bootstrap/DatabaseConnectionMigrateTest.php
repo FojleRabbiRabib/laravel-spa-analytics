@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
 
 class DatabaseConnectionMigrateTest extends TestCase
 {
-    private const TABLES = ['analytics_events', 'analytics_sessions', 'analytics_rollups', 'analytics_visitor_fingerprints', 'analytics_visitor_links'];
+    private const TABLES = ['analytics_events', 'analytics_sessions', 'analytics_rollups', 'analytics_state', 'analytics_visitor_fingerprints', 'analytics_visitor_links'];
 
     protected function setUp(): void
     {
@@ -69,7 +69,7 @@ class DatabaseConnectionMigrateTest extends TestCase
         }
 
         $this->assertTrue(Schema::connection('analytics')->hasColumns('analytics_events', ['name', 'engaged_seconds']));
-        $this->assertSame(6, DB::connection('testing')->table('migrations')->where('migration', 'like', '%analytics%')->count());
+        $this->assertSame(7, DB::connection('testing')->table('migrations')->where('migration', 'like', '%analytics%')->count());
         $this->assertFalse(Schema::connection('analytics')->hasTable('migrations'));
     }
 
@@ -77,7 +77,7 @@ class DatabaseConnectionMigrateTest extends TestCase
     {
         $this->migrate();
         Schema::connection('analytics')->table('analytics_events', fn ($table) => $table->dropColumn('engaged_seconds'));
-        DB::connection('testing')->table('migrations')->where('migration', 'like', '%update_analytics_tables_rev_4')->delete();
+        DB::connection('testing')->table('migrations')->where('migration', 'like', '%update_analytics_tables_rev_5')->delete();
 
         $this->artisan('migrate')->assertExitCode(0);
 

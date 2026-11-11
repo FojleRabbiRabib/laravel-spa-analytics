@@ -1,0 +1,17 @@
+{
+    "valid": [
+        "a",
+        "signup_clicked",
+        "Checkout.completed:v2-final_1",
+        "ABC-123"
+    ],
+    "invalid": [
+        "",
+        "has space",
+        "slash/name",
+        "emoji🙂",
+        "new\nline",
+        "trailing\n",
+        "umlaut_ü"
+    ]
+}

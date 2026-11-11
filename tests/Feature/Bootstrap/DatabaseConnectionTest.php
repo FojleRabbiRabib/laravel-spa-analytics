@@ -31,7 +31,7 @@ use Illuminate\Support\Facades\Schema;
  */
 class DatabaseConnectionTest extends TestCase
 {
-    private const TABLES = ['analytics_events', 'analytics_sessions', 'analytics_rollups', 'analytics_visitor_fingerprints', 'analytics_visitor_links'];
+    private const TABLES = ['analytics_events', 'analytics_sessions', 'analytics_rollups', 'analytics_state', 'analytics_visitor_fingerprints', 'analytics_visitor_links'];
 
     private const VISITOR = '11111111-1111-4111-8111-111111111111';
 

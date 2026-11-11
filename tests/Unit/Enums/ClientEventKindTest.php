@@ -9,7 +9,7 @@ use PHPUnit\Framework\TestCase;
 
 class ClientEventKindTest extends TestCase
 {
-    public function test_helpers(): void
+    public function test_is_label_color_values_default_and_options_describe_the_cases(): void
     {
         $this->assertTrue(ClientEventKind::Goal->is(ClientEventKind::Goal));
         $this->assertFalse(ClientEventKind::Goal->is(ClientEventKind::Event));

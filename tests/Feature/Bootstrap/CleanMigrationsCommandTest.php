@@ -115,6 +115,60 @@ class CleanMigrationsCommandTest extends TestCase
         $this->assertSame(['2026_01_01_000000_update_analytics_events_table_for_custom_events'], app(OldPatchMigrations::class)->delete());
     }
 
+    public function test_a_migration_path_that_is_a_single_file_does_not_stop_the_cleanup(): void
+    {
+        $this->publishCurrentMigration();
+        $old = $this->harmlessFile('update_analytics_events_table_for_custom_events');
+        $base = (string) tempnam(sys_get_temp_dir(), 'spa-single-');
+        $single = $base.'.php';
+        file_put_contents($single, '<?php return new class extends \Illuminate\Database\Migrations\Migration {};');
+        app('migrator')->path($single);
+
+        try {
+            $this->assertSame(['2026_01_01_000000_update_analytics_events_table_for_custom_events'], app(OldPatchMigrations::class)->delete());
+            $this->assertFileDoesNotExist($old);
+        } finally {
+            @unlink($single);
+            @unlink($base);
+        }
+    }
+
+    public function test_a_symlinked_old_file_loses_the_link_and_never_its_target(): void
+    {
+        $this->publishCurrentMigration();
+        $target = tempnam(sys_get_temp_dir(), 'spa-target-');
+        $link = database_path('migrations/2026_01_01_000000_update_analytics_events_table_for_custom_events.php');
+        symlink((string) $target, $link);
+
+        try {
+            $this->assertCount(1, app(OldPatchMigrations::class)->delete());
+
+            $this->assertFalse(is_link($link));
+            $this->assertFileExists((string) $target);
+        } finally {
+            @unlink($link);
+            @unlink((string) $target);
+        }
+    }
+
+    public function test_a_migration_folder_with_glob_characters_in_its_name_is_cleaned(): void
+    {
+        $this->publishCurrentMigration();
+        $directory = sys_get_temp_dir().'/spa[1]-migrations-'.Str::random(6);
+        File::ensureDirectoryExists($directory);
+        $file = $directory.'/2026_01_01_000000_update_analytics_events_table_for_custom_events.php';
+        file_put_contents($file, '<?php return new class extends \Illuminate\Database\Migrations\Migration {};');
+        app('migrator')->path($directory);
+
+        try {
+            $this->assertCount(1, app(OldPatchMigrations::class)->published());
+            $this->assertCount(1, app(OldPatchMigrations::class)->delete());
+            $this->assertFileDoesNotExist($file);
+        } finally {
+            File::deleteDirectory($directory);
+        }
+    }
+
     public function test_the_about_command_lists_old_files(): void
     {
         $about = function (): string {

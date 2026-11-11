@@ -9,7 +9,7 @@ use PHPUnit\Framework\TestCase;
 
 class ReferrerTypeTest extends TestCase
 {
-    public function test_helpers(): void
+    public function test_is_label_color_values_default_and_options_describe_the_cases(): void
     {
         $this->assertTrue(ReferrerType::Search->is(ReferrerType::Search));
         $this->assertFalse(ReferrerType::Search->is(ReferrerType::Social));

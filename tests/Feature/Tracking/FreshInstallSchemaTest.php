@@ -8,7 +8,7 @@ use FojleRabbiRabib\LaravelSpaAnalytics\Tests\TestCase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-class CustomEventMigrationTest extends TestCase
+class FreshInstallSchemaTest extends TestCase
 {
     /**
      * @return array<string, mixed>

@@ -28,6 +28,7 @@ return new class extends Migration
         $this->events();
         $this->sessions();
         $this->rollups();
+        $this->state();
     }
 
     /**
@@ -58,13 +59,11 @@ return new class extends Migration
                 $table->unsignedSmallInteger('status')->nullable()->change();
             });
 
-            Schema::table('analytics_events', function (Blueprint $table) {
-                $table->string('name', 128)->nullable()->after('type');
-                $table->decimal('value', 12, 2)->nullable()->after('properties');
-            });
+            Schema::table('analytics_events', fn (Blueprint $table) => $table->string('name', 128)->nullable()->after('type'));
         }
 
         $this->addColumns('analytics_events', [
+            'value' => fn (Blueprint $table) => $table->decimal('value', 12, 2)->nullable()->after('properties'),
             'event_id' => fn (Blueprint $table) => $table->string('event_id', 26)->nullable(),
             'target_host' => fn (Blueprint $table) => $table->string('target_host', 255)->nullable(),
             'target_path' => fn (Blueprint $table) => $table->string('target_path', 512)->nullable(),
@@ -114,6 +113,18 @@ return new class extends Migration
         $this->addColumns('analytics_rollups', [
             'engaged_seconds' => fn (Blueprint $table) => $table->unsignedBigInteger('engaged_seconds')->default(0),
         ]);
+    }
+
+    private function state(): void
+    {
+        if (Schema::hasTable('analytics_state')) {
+            return;
+        }
+
+        Schema::create('analytics_state', function (Blueprint $table) {
+            $table->string('name', 64)->primary();
+            $table->string('value', 255);
+        });
     }
 
     /**
