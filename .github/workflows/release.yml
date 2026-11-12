@@ -11,18 +11,52 @@ on:
         required: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release:
+  verify:
     runs-on: ubuntu-latest
     env:
       TAG: ${{ inputs.tag || github.ref_name }}
+    outputs:
+      tag: ${{ env.TAG }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check the tag points at a commit on main
+        run: |
+          git merge-base --is-ancestor "$(git rev-list -n 1 "$TAG")" origin/main \
+            || { echo "$TAG is not on main"; exit 1; }
+
+  tests:
+    needs: verify
+    uses: ./.github/workflows/run-tests.yml
+    with:
+      ref: ${{ needs.verify.outputs.tag }}
+
+  collector:
+    needs: verify
+    uses: ./.github/workflows/collector.yml
+    with:
+      ref: ${{ needs.verify.outputs.tag }}
+
+  release:
+    needs: [verify, tests, collector]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.verify.outputs.tag }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
+          persist-credentials: false
 
       - name: Extract release notes from the changelog
         run: |
@@ -38,5 +72,5 @@ jobs:
       - name: Create the GitHub release
         run: |
           flags=""
-          case "$TAG" in v0.*) flags="--prerelease" ;; esac
+          case "$TAG" in v0.*|*-*) flags="--prerelease" ;; esac
           gh release create "$TAG" --title "$TAG" --notes-file notes.md --verify-tag $flags
