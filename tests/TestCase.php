@@ -31,6 +31,8 @@ abstract class TestCase extends Orchestra
         'migrations',
     ];
 
+    private static bool $redisIndexChecked = false;
+
     /**
      * @return array<int, class-string>
      */
@@ -139,8 +141,24 @@ abstract class TestCase extends Orchestra
         }
     }
 
+    /**
+     * Refuse a Redis index that holds keys before the suite first flushes it: the per-test flush would delete them.
+     */
+    protected static function refuseNonEmptyRedis(int $keys): void
+    {
+        if ($keys > 0) {
+            throw new \RuntimeException('The Redis database index for real-engine tests is not empty; use an empty dedicated index.');
+        }
+    }
+
     protected function defineDatabaseMigrations(): void
     {
+        if ($this->usesSharedCache() && getenv('SPA_ANALYTICS_TEST_CACHE') === 'redis' && ! self::$redisIndexChecked) {
+            self::$redisIndexChecked = true;
+
+            self::refuseNonEmptyRedis((int) $this->app['redis']->connection('cache')->dbsize());
+        }
+
         if ($this->usesRealEngine()) {
             foreach (self::OWN_TABLES as $table) {
                 Schema::dropIfExists($table);
