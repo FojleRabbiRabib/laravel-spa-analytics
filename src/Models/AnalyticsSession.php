@@ -45,7 +45,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[UseFactory(AnalyticsSessionFactory::class)]
 class AnalyticsSession extends Model
 {
+    /** @use HasFactory<AnalyticsSessionFactory> */
     use HasFactory;
+
     use UsesAnalyticsConnection;
 
     protected $table = 'analytics_sessions';
