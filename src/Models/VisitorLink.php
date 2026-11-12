@@ -13,7 +13,9 @@ use Illuminate\Database\Eloquent\Model;
 #[UseFactory(VisitorLinkFactory::class)]
 class VisitorLink extends Model
 {
+    /** @use HasFactory<VisitorLinkFactory> */
     use HasFactory;
+
     use UsesAnalyticsConnection;
 
     protected $table = 'analytics_visitor_links';

@@ -19,7 +19,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[UseFactory(AnalyticsEventFactory::class)]
 class AnalyticsEvent extends Model
 {
+    /** @use HasFactory<AnalyticsEventFactory> */
     use HasFactory;
+
     use UsesAnalyticsConnection;
 
     protected $table = 'analytics_events';

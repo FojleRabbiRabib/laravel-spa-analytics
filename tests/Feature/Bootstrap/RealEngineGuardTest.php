@@ -141,6 +141,21 @@ class RealEngineGuardTest extends TestCase
         ]);
     }
 
+    public function test_a_redis_index_that_already_holds_keys_is_refused(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('not empty');
+
+        self::refuseNonEmptyRedis(3);
+    }
+
+    public function test_an_empty_redis_index_is_accepted(): void
+    {
+        self::refuseNonEmptyRedis(0);
+
+        $this->addToAssertionCount(1);
+    }
+
     public function test_the_mode_stays_off_without_the_ci_flag(): void
     {
         $this->withEnvironment(['SPA_ANALYTICS_TEST_DB' => 'mysql'], function (): void {

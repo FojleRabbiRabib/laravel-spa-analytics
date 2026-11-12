@@ -5,6 +5,15 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref to test (the release workflow passes its tag)
+        type: string
+        default: ''
+
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -14,11 +23,15 @@ jobs:
       fail-fast: false
       matrix:
         php: [8.3, 8.4, 8.5]
+        dependencies: [stable, lowest]
 
-    name: PHP ${{ matrix.php }}
+    name: PHP ${{ matrix.php }} with ${{ matrix.dependencies }} dependencies
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -27,7 +40,7 @@ jobs:
           coverage: none
 
       - name: Install dependencies
-        run: composer update --prefer-dist --no-interaction
+        run: composer update --prefer-dist --no-interaction --prefer-${{ matrix.dependencies }}
 
       - name: Run tests
         run: vendor/bin/phpunit
@@ -107,6 +120,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2

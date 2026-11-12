@@ -25,7 +25,9 @@ use Illuminate\Database\Eloquent\Model;
 #[UseFactory(VisitorFingerprintFactory::class)]
 class VisitorFingerprint extends Model
 {
+    /** @use HasFactory<VisitorFingerprintFactory> */
     use HasFactory;
+
     use UsesAnalyticsConnection;
 
     protected $table = 'analytics_visitor_fingerprints';
