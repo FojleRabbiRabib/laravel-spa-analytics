@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-20
+
+Region of the visitor, optional MaxMind lookups, queued writes that are safe to run twice, and fixes to the browser script, referrer types, pruning and the migration clean-up. There is a new migration (`rev_5`): publish the migrations again, migrate and re-publish the assets. You can upgrade from any version straight to this one.
+
 ### Added
 
 - Region of the visitor. The new `GeoLookup` contract returns a `GeoLocation` (country and region) in one lookup, so the two always come from the same source. `HeaderGeoLocator` implements it and reads the new `audience.region_header` (for example `CF-Region-Code` on Cloudflare or `CloudFront-Viewer-Country-Region` on CloudFront); the region is stored as the full ISO 3166-2 code, such as `US-CA`, and only when the country is known. Sessions get a `region` column, and `region` is a rollup dimension (`RollupDimension::Region`, so `top(RollupDimension::Region)` and `disabled_dimensions` work). `AudienceData` has a new trailing `region`; a region from any lookup is kept only as a full code of its country, in uppercase. Region is empty for sessions recorded before the upgrade.
@@ -193,7 +197,8 @@ Reporting only: no migration and no new config. Run `spa-analytics:rollup --sinc
 - `BotDetector` and `EventStore` contracts, bound in the register phase so an app can replace them.
 - Publish tags `spa-analytics-config`, `spa-analytics-migrations` and `spa-analytics-assets`.
 
-[Unreleased]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/FojleRabbiRabib/laravel-spa-analytics/compare/v0.6.1...v0.7.0
