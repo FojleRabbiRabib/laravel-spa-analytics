@@ -149,6 +149,14 @@ class RealEngineGuardTest extends TestCase
         self::refuseNonEmptyRedis(3);
     }
 
+    public function test_a_redis_key_count_that_could_not_be_read_is_refused(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('could not be read');
+
+        self::refuseNonEmptyRedis(false);
+    }
+
     public function test_an_empty_redis_index_is_accepted(): void
     {
         self::refuseNonEmptyRedis(0);

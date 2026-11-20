@@ -144,8 +144,12 @@ abstract class TestCase extends Orchestra
     /**
      * Refuse a Redis index that holds keys before the suite first flushes it: the per-test flush would delete them.
      */
-    protected static function refuseNonEmptyRedis(int $keys): void
+    protected static function refuseNonEmptyRedis(mixed $keys): void
     {
+        if (! is_int($keys)) {
+            throw new \RuntimeException('The key count of the Redis database index could not be read.');
+        }
+
         if ($keys > 0) {
             throw new \RuntimeException('The Redis database index for real-engine tests is not empty; use an empty dedicated index.');
         }
@@ -156,7 +160,7 @@ abstract class TestCase extends Orchestra
         if ($this->usesSharedCache() && getenv('SPA_ANALYTICS_TEST_CACHE') === 'redis' && ! self::$redisIndexChecked) {
             self::$redisIndexChecked = true;
 
-            self::refuseNonEmptyRedis((int) $this->app['redis']->connection('cache')->dbsize());
+            self::refuseNonEmptyRedis($this->app['redis']->connection('cache')->dbsize());
         }
 
         if ($this->usesRealEngine()) {
