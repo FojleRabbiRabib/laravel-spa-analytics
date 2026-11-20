@@ -19,7 +19,9 @@ use Illuminate\Database\Eloquent\Model;
 #[UseFactory(AnalyticsStateFactory::class)]
 class AnalyticsState extends Model
 {
+    /** @use HasFactory<AnalyticsStateFactory> */
     use HasFactory;
+
     use UsesAnalyticsConnection;
 
     public const PRUNED_THROUGH = 'pruned_through';

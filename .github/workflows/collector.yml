@@ -5,6 +5,15 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref to build and test (the release workflow passes its tag)
+        type: string
+        default: ''
+
+permissions:
+  contents: read
 
 jobs:
   collector:
@@ -13,6 +22,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
 
       - name: Setup Node
         uses: actions/setup-node@v7

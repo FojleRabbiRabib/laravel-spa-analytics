@@ -32,7 +32,9 @@ use Illuminate\Database\Eloquent\Model;
 #[UseFactory(AnalyticsRollupFactory::class)]
 class AnalyticsRollup extends Model
 {
+    /** @use HasFactory<AnalyticsRollupFactory> */
     use HasFactory;
+
     use UsesAnalyticsConnection;
 
     protected $table = 'analytics_rollups';
